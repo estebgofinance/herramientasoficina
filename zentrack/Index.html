@@ -1228,7 +1228,7 @@ const isShipped=e=>e.st==='shipping'||e.st==='shipped';
 /* Andrés no siempre llena el proyecto; que nunca se vea un guión suelto */
 const nombreEq=e=>{const p=(''+(e.proj||'')).trim();return (p&&p!=='-'&&!/^Orden\s/.test(p))?p:('Pedido '+(e.derrame||e.ordenId));};
 const term=mfg=>mfg==='Singsun'?90:60;
-let CONFIG={Singsun:{reserveFrom:'confirm',antPct:0.10,dias:90,receptor:'Nexus'},Eaglerise:{reserveFrom:'confirm',antPct:0.20,dias:60,receptor:'Eaglerise'},trmProy:4050,logDias:30,pagoMinDias:15,cupoRegla:'andres'};
+let CONFIG={Singsun:{reserveFrom:'confirm',antPct:0.10,dias:90,receptor:'Nexus'},Eaglerise:{reserveFrom:'confirm',antPct:0.20,dias:60,receptor:'Eaglerise'},trmProy:4050,logDias:30,pagoMinDias:15,cupoRegla:'sinosure'};
 /* Cómo se cuenta el cupo Sinosure que consume un pedido. Tres reglas, porque los archivos
    no usan una sola:
      'saldo'  → el saldo por pagar al fabricante (columna O). Es el 90% del tracker o el 80%
@@ -1236,7 +1236,27 @@ let CONFIG={Singsun:{reserveFrom:'confirm',antPct:0.10,dias:90,receptor:'Nexus'}
      'monto'  → el monto completo del pedido (columna M) mientras el pedido siga vivo.
      'andres' → como lo arma Andrés en la hoja Sinosure: monto completo mientras está en
                 fábrica, y saldo por pagar cuando ya embarcó.  */
-const CUPO_REGLAS={saldo:'Saldo por pagar al fabricante (col. O)',monto:'Monto completo del pedido (col. M)',andres:'Como la hoja Sinosure de Andrés (monto en fábrica · saldo si ya embarcó)'};
+const CUPO_REGLAS={
+  sinosure:'Lo que declara la hoja Sinosure de Andrés, pedido por pedido',
+  saldo:'Saldo por pagar al fabricante (col. O)',
+  monto:'Monto completo del pedido (col. M)',
+  andres:'Al estilo de Andrés, calculado del ORDER REPORT (monto en fábrica · saldo si ya embarcó)'};
+/* Lo que la hoja Sinosure le asigna a un pedido, menos los giros a China que hayas
+   registrado después del corte (la hoja es una foto del día que Andrés la armó). */
+function sinoDeclarado(e){
+  const m=(CONCILIA&&CONCILIA.sinoPorDerrame)||null;
+  if(!m||m[e.derrame]==null) return null;
+  const girado=Math.max(0,(+e.cupoSaldo0||0)-(+e.cupoSaldo||0));
+  return Math.max(0,m[e.derrame]-girado);
+}
+/* Pedidos vivos que la hoja Sinosure todavía no lista: no cuentan en el consumo declarado,
+   pero son plata que va a caer al cupo apenas Andrés los cargue. */
+function sinCargarAlCupo(mfg){
+  const m=(CONCILIA&&CONCILIA.sinoPorDerrame)||null; if(!m) return [];
+  return EQ.filter(e=>e.mfg===mfg&&(+e.cupoSaldo||0)>0.5&&m[e.derrame]==null)
+           .map(e=>({e,monto:consumoEq(e,mfg,'andres')})).filter(x=>x.monto>0.5)
+           .sort((a,b)=>b.monto-a.monto);
+}
 function cov(mfg){return 1-CONFIG[mfg].antPct;}
 
 // equipo (un proyecto dentro de un derrame o aún en la orden madre)
@@ -1252,7 +1272,14 @@ function consumoEq(e,mfg,regla){
   const O=(e.cupoSaldo!=null)?(+e.cupoSaldo||0):((e.antSaldo||0)+(e.balSaldo||0));
   const M=(e.cupoMonto!=null)?(+e.cupoMonto||0):(+e.mfgAmt||0);
   if(O<=0.5) return 0;                                         // pagado del todo: libera el cupo
-  const r=regla||CONFIG.cupoRegla||'andres';
+  let r=regla||CONFIG.cupoRegla||'sinosure';
+  if(r==='sinosure'){
+    const d=sinoDeclarado(e);
+    if(d!=null) return d;
+    /* sin hoja Sinosure cargada no hay nada que declarar: se cae al cálculo del ORDER REPORT */
+    if(!(CONCILIA&&CONCILIA.sinoPorDerrame)) r='andres';
+    else return 0;                    /* Andrés todavía no lo carga al cupo */
+  }
   if(r==='monto') return M;
   if(r==='andres') return isShipped(e)?O:M;
   return O;
@@ -1735,9 +1762,10 @@ function drawTreemap(mfg){
     });
   });
   const pct=committed/cupo*100, disp=cupo-committed;
-  document.getElementById('cap'+mfg).innerHTML = disp>=0
+  document.getElementById('cap'+mfg).innerHTML = (disp>=0
     ? `<b>${fmtUSD(disp)}</b> disponibles · ${pct.toFixed(0)}% del cupo usado (${fmtUSDs(cupo)})`
-    : `<b class="capover">Sobregirado ${fmtUSDs(-disp)}</b> · ${pct.toFixed(0)}% del cupo (${fmtUSDs(cupo)}) · sin disponible`;
+    : `<b class="capover">Sobregirado ${fmtUSDs(-disp)}</b> · ${pct.toFixed(0)}% del cupo (${fmtUSDs(cupo)}) · sin disponible`)
+    + notaSinCargar(mfg);
 }
 
 
@@ -1858,9 +1886,11 @@ function renderHoy(){
   renderVenc();renderDesfase();renderProveedoresExt();renderAlertasDatos();renderPuente();renderCupoConc();
   document.getElementById('hoyDate').textContent = TODAY.toLocaleDateString('es-CO',{weekday:'long',day:'numeric',month:'long',year:'numeric'}).replace(/^\w/,c=>c.toUpperCase());
   const fu=document.getElementById('tbFuente');
-  if(fu) fu.innerHTML = CONCILIA
-    ? `Último cargue: <b>${CONCILIA.or||'ORDER REPORT'}</b>${CONCILIA.det?' cruzado con <b>'+CONCILIA.det+'</b>':' <span style="color:var(--dato-vencido)">sin cruzar con el detailed</span>'} · ${fmtD(CONCILIA.ts)}`
-    : (EQ.length?'Cargado sin registro del cruce · vuelve a cargar el ORDER REPORT para tener la conciliación':'Sin order report cargado · ve a Ajustes → Cargar order report');
+  if(fu) fu.innerHTML = !CONCILIA
+    ? (EQ.length?'<span style="color:var(--dato-vencido)">Cargado sin cruzar con el detailed</span> · el cupo sale calculado del ORDER REPORT, no de la hoja Sinosure':'Sin order report cargado · ve a Ajustes → Cargar order report')
+    : (CONCILIA.viejo
+      ? `Último cargue: <b>${CONCILIA.orNuevo||'ORDER REPORT'}</b> · ${fmtD(CONCILIA.tsNuevo)} · <b style="color:var(--dato-vencido)">no lo cruzaste con el detailed</b>: el cupo sale del cruce viejo con ${CONCILIA.det||'el detailed'} del ${fmtD(CONCILIA.ts)}`
+      : `Último cargue: <b>${CONCILIA.or||'ORDER REPORT'}</b>${CONCILIA.det?' cruzado con <b>'+CONCILIA.det+'</b>':''} · ${fmtD(CONCILIA.ts)}`);
   const v=document.getElementById('tbVent');
   if(v) v.innerHTML=[[15,'15 días'],[30,'30 días'],[60,'60 días'],[0,'Todo']].map(([d,l])=>
     `<button class="${TB_VENT===d?'on':''}" onclick="setVent(${d},this)">${l}</button>`).join('');
@@ -1879,9 +1909,11 @@ function renderHoy(){
   /* ---- KPIs ---- */
   const cS=cupoConcilia('Singsun'), cE=cupoConcilia('Eaglerise');
   const dispS=cS.cupo-cS.usado, dispE=cE.cupo-cE.usado;
-  const kcupo=(n,c)=>`<div class="kpi"><div class="kl">Cupo ${n==='Singsun'?'Singsun · trackers':'Eaglerise · shelters'} ${c.cupo-c.usado<0?'<span class="chipst mal">sobregirado</span>':'<span class="chipst ok">con aire</span>'}</div>
-      <div class="kv ${c.cupo-c.usado<0?'alerta':''}">${c.cupo-c.usado<0?'−':''}US$ ${fmtUSDs(Math.abs(c.cupo-c.usado))}</div>
-      <div class="kd">usado <b>${fmtUSDs(c.usado)}</b> de ${fmtUSDs(c.cupo)}${c.declarado!=null?` · Andrés dice ${fmtUSDs(c.declarado)}`:''}</div></div>`;
+  const kcupo=(n,c)=>{const disp=c.cupo-c.usado, pend=sinCargarAlCupo(n), sp=pend.reduce((s,x)=>s+x.monto,0);
+    return `<div class="kpi"><div class="kl">Cupo ${n==='Singsun'?'Singsun · trackers':'Eaglerise · shelters'} ${disp<0?'<span class="chipst mal">sobregirado</span>':'<span class="chipst ok">con aire</span>'}</div>
+      <div class="kv ${disp<0?'alerta':''}">${disp<0?'−':''}US$ ${fmtUSDs(Math.abs(disp))}</div>
+      <div class="kd">usado <b>${fmtUSDs(c.usado)}</b> de ${fmtUSDs(c.cupo)}${c.declarado!=null&&Math.abs(c.usado-c.declarado)>2?` · Andrés dice ${fmtUSDs(c.declarado)}`:''}
+      ${sp>0.5?`<br><b style="color:var(--dato-debo)">+${fmtUSDs(sp)} por cargar</b> (${pend.map(x=>x.e.derrame).join(', ')}): cuando Andrés los meta a la hoja, quedas ${c.cupo-c.usado-sp<0?'<b style="color:var(--dato-vencido)">sobregirado '+fmtUSDs(sp+c.usado-c.cupo)+'</b>':'en '+fmtUSDs(c.cupo-c.usado-sp)}`:''}</div></div>`;};
   const k=document.getElementById('tbKpis');
   if(k) k.innerHTML=`
     <div class="kpi"><div class="kl">Vencido con China ${TT.vencido>0?'<span class="chipst mal">girar ya</span>':'<span class="chipst ok">al día</span>'}</div>
@@ -2004,6 +2036,12 @@ function renderPuente(){
 }
 
 /* ---------- Conciliación del cupo con la hoja Sinosure de Andrés ---------- */
+/* Aviso bajo cada treemap: pedidos vivos que la hoja Sinosure todavía no carga */
+function notaSinCargar(mfg){
+  const pend=sinCargarAlCupo(mfg); if(!pend.length) return '';
+  const sp=pend.reduce((s,x)=>s+x.monto,0);
+  return ` · <b style="color:var(--dato-debo)">no dibujado: ${fmtUSDs(sp)}</b> en ${pend.length} pedido(s) que Andrés aún no carga a la hoja Sinosure (${pend.map(x=>x.e.derrame+' '+fmtUSDs(x.monto)).join(', ')})`;
+}
 function renderCupoConc(){
   const el=document.getElementById('modCupoConc'); if(!el) return;
   if(!EQ.length){el.innerHTML='';return;}
@@ -2014,6 +2052,9 @@ function renderCupoConc(){
       ${c.declarado!=null?`<div class="cline"><span>Consumo que declara Andrés (hoja Sinosure)</span><span><b>${fmtUSDs(c.declarado)}</b></span></div>`:'<div class="cline"><span>Sin hoja Sinosure cargada</span><span>—</span></div>'}
       ${Object.keys(CUPO_REGLAS).map(filaR).join('')}
       ${c.declarado!=null?`<div class="cline"><span>Diferencia con la regla que usas</span><span style="color:${Math.abs(c.reglas[CONFIG.cupoRegla]-c.declarado)>2?'var(--dato-vencido)':'var(--dato-entra)'}">${fmtUSDs(Math.abs(c.reglas[CONFIG.cupoRegla]-c.declarado))}</span></div>`:''}
+      ${(function(){const pend=sinCargarAlCupo(mfg);if(!pend.length)return '';
+        const sp=pend.reduce((s,x)=>s+x.monto,0);
+        return `<div class="cline" style="color:var(--dato-debo)"><span>Pedidos vivos que Andrés aún no carga a la hoja: ${pend.map(x=>x.e.derrame).join(', ')}</span><span><b>+${fmtUSDs(sp)}</b></span></div>`;})()}
       <div class="cline tot"><span>Cupo ${disp<0?'SOBREGIRADO':'disponible'} (techo ${fmtUSDs(c.cupo)})</span><span style="color:${disp<0?'var(--dato-vencido)':'var(--dato-entra)'}">${disp<0?'−':''}${fmtUSDs(Math.abs(disp))}</span></div>
       ${c.techoDeclarado&&Math.abs(c.techoDeclarado-c.cupo)>2?`<div style="font-size:11.5px;color:var(--dato-vencido);margin-top:6px">El techo de tu herramienta (${fmtUSDs(c.cupo)}) no es el de la hoja de Andrés (${fmtUSDs(c.techoDeclarado)}). Ajústalo en Ajustes.</div>`:''}
       ${(function(){const ex=cupoExplica(mfg);if(!ex.length||c.declarado==null)return '';
@@ -2022,6 +2063,8 @@ function renderCupoConc(){
           ${ex.length>8?`<div style="font-size:11.5px;color:var(--ink3);padding-top:5px">y ${ex.length-8} pedido(s) más</div>`:''}</div>`;})()}
     </div>`;};
   el.innerHTML=`<h3>De dónde sale el cupo · tu ORDER REPORT contra la hoja Sinosure de Andrés</h3>
+    ${CONCILIA&&CONCILIA.viejo?`<div style="font-size:12.5px;color:var(--dato-vencido);margin:6px 0"><b>Ojo:</b> el último cargue no se cruzó con el detailed, así que estas cifras del cupo vienen del cruce del ${fmtD(CONCILIA.ts)}. Vuelve a cargar los dos archivos para que queden al día.</div>`:''}
+    ${!CONCILIA?`<div style="font-size:12.5px;color:var(--dato-vencido);margin:6px 0">Todavía no has cruzado el detailed, así que el cupo sale calculado del ORDER REPORT y no de la hoja Sinosure.</div>`:''}
     <div class="cfgnote2">La hoja de Andrés no usa un solo criterio: en unos pedidos cuenta el monto completo y en otros el saldo después del anticipo. Aquí ves las tres formas de contarlo y cuál se parece más a lo que él reporta. La regla que manda en el tablero y en el treemap se cambia en Ajustes.</div>
     <div class="cc2">${box('Singsun')}${box('Eaglerise')}</div>`;
 }
@@ -3442,7 +3485,7 @@ function wizApprove(){
     const antSaldo=w.antPaid?0:Math.min(O,(+w.antPend>0?+w.antPend:antTot));
     const e={proj:w.proj,tipo:w.tipo||(w.mfg==='Singsun'?'Tracker':'Shelter'),mfg:w.mfg,ordenId:w.ordenId,cliente:w.cliente||o.cliente,st:w.st,
       mfgAmt:M,antTot,balTot:M-antTot,antSaldo,balSaldo:Math.max(0,O-antSaldo),antPaid:!!w.antPaid,balPaid:O<=0.5,
-      cupoMonto:M,cupoPagado:+w.cupoPagado||0,cupoSaldo:O,
+      cupoMonto:M,cupoPagado:+w.cupoPagado||0,cupoSaldo:O,cupoSaldo0:O,
       otrosMonto:+w.otrosMonto||0,otrosPagado:+w.otrosPagado||0,otrosSaldo:+w.otrosSaldo||0,otrosDesglose:w.otrosDesglose||null,
       totalChina:+w.totalChina||0,totalPagado:+w.totalPagado||0,totalSaldo:(w.totalSaldo!=null&&w.totalSaldo!=='')?+w.totalSaldo:O+(+w.otrosSaldo||0),
       antFuente:w.antFuente||'porcentaje',antStatus:w.antStatus||null,pagosChina:w.pagosChina||null,bloqueDet:w.bloqueDet||null,integ:w.integ||[],
@@ -3474,7 +3517,7 @@ function wizApprove(){
     agregados:WIZ.concilia.agregados, huerfanos:WIZ.concilia.huerfanos,
     sinBloque:WIZ.concilia.sinBloque, sinoSueltos:WIZ.concilia.sinoSueltos,
     ranuras:WIZ.concilia.ranuras, posicional:WIZ.concilia.posicional
-  } : (CONCILIA?{...CONCILIA, viejo:true}:null);
+  } : (CONCILIA?{...CONCILIA, viejo:true, orNuevo:(WIZ.orNombre||''), tsNuevo:new Date()}:null);
   WIZ.avisosOR=WIZ.avisos||[];
   if(CONCILIA) CONCILIA.avisosOR=WIZ.avisos||[];
   closeRecon();toast('ORDER REPORT cargado'+(WIZ.concilia?' y cruzado con el detailed':'')+' · facturas, pagos y precios conservados');
@@ -3898,7 +3941,7 @@ function hydrateDates(s){
   });
   (s.PAGOS||[]).forEach(function(p){ ['fecha','ts'].forEach(function(k){ if(p[k]) p[k]=_rev(p[k]); }); });
   (s.HIST||[]).forEach(function(h){ if(h.ts) h.ts=_rev(h.ts); });
-  if(s.CONCILIA && s.CONCILIA.ts) s.CONCILIA.ts=_rev(s.CONCILIA.ts);
+  if(s.CONCILIA){ if(s.CONCILIA.ts) s.CONCILIA.ts=_rev(s.CONCILIA.ts); if(s.CONCILIA.tsNuevo) s.CONCILIA.tsNuevo=_rev(s.CONCILIA.tsNuevo); }
 }
 function serializeState(){
   return JSON.stringify({ v:'0.19', ORD:ORD, FACT:FACT, PAGOS:PAGOS, CONFIG:CONFIG, CLI:CLI, HIST:HIST, CUPO:CUPO, CONCILIA:CONCILIA });
