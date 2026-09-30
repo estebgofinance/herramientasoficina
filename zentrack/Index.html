@@ -912,6 +912,81 @@ table.stmt td.l{font-variant-numeric:normal}
 .cc-pago i{font-style:normal;color:var(--ink3)}
 .cc-warn{font-size:12px;color:var(--danger);margin:6px 0}
 .upg-banner{background:var(--danger-soft);color:var(--danger);border:1px solid var(--danger);border-radius:8px;padding:10px 14px;margin:0 0 14px;font-size:13px}
+/* ===== v0.19 · TABLERO ===== */
+:root{ --dato-debo:#C87A00; --dato-entra:#2E6E5A; --dato-vencido:#B3261E; --dato-neutro:#A2A7AD; }
+.tb-top{display:flex;align-items:flex-start;justify-content:space-between;gap:24px;flex-wrap:wrap}
+.tb-sub{font-size:12px;color:var(--ink3);margin-top:2px}
+.tb-vent{display:flex;gap:2px;background:var(--surface);border:1px solid var(--rule);border-radius:8px;padding:2px}
+.tb-vent button{border:none;background:none;font:inherit;font-size:12px;color:var(--ink2);padding:5px 11px;border-radius:6px;cursor:pointer}
+.tb-vent button.on{background:var(--ink);color:#fff;font-weight:600}
+.hero{margin:20px 0 4px}
+.hero .hl{font-size:12.5px;color:var(--ink2)}
+.hero .hv{font-size:50px;font-weight:700;letter-spacing:-.03em;font-variant-numeric:tabular-nums;line-height:1.05;margin-top:2px}
+.hero .hv.pos{color:var(--dato-entra)} .hero .hv.neg{color:var(--dato-vencido)}
+.hero .hn{font-size:13px;color:var(--ink2);margin-top:6px;max-width:760px}
+.hero .hn b{color:var(--ink)}
+.kpis{display:flex;gap:0;margin:20px 0 26px;border-top:1px solid var(--rule);border-bottom:1px solid var(--rule);flex-wrap:wrap}
+.kpi{flex:1 1 190px;padding:15px 22px 15px 0;border-right:1px solid var(--rule)}
+.kpi:last-child{border-right:none}
+.kpi:not(:first-child){padding-left:22px}
+.kpi .kl{font-size:11.5px;color:var(--ink2);display:flex;align-items:center;gap:5px}
+.kpi .kv{font-size:25px;font-weight:700;font-variant-numeric:tabular-nums;margin-top:4px;letter-spacing:-.02em}
+.kpi .kv.alerta{color:var(--dato-vencido)} .kpi .kv.bien{color:var(--dato-entra)}
+.kpi .kd{font-size:11.5px;color:var(--ink2);margin-top:4px;font-variant-numeric:tabular-nums}
+.kpi .kd b{color:var(--ink)}
+.chipst{font-size:10px;font-weight:700;padding:1px 6px;border-radius:4px;text-transform:uppercase;letter-spacing:.03em}
+.chipst.mal{background:var(--danger-soft);color:var(--dato-vencido)}
+.chipst.ok{background:#E7F1EC;color:var(--dato-entra)}
+.chipst.ojo{background:var(--z-orange-soft);color:#8a5300}
+/* puente */
+.pu-h{display:flex;align-items:baseline;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:4px}
+.pu-leg{display:flex;gap:16px;font-size:11.5px;color:var(--ink2);margin:6px 0 12px;flex-wrap:wrap}
+.pu-leg .lg{display:flex;align-items:center;gap:6px}
+.pu-leg .lg i{width:10px;height:10px;border-radius:2px}
+.pu-tbl{width:100%;border-collapse:collapse;font-size:12.5px}
+.pu-tbl th{font-size:10.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--ink3);font-weight:700;padding:0 8px 7px;text-align:left;border-bottom:1px solid var(--rule)}
+.pu-tbl th.r,.pu-tbl td.r{text-align:right}
+.pu-tbl th.c,.pu-tbl td.c{text-align:center}
+.pu-tbl td{padding:8px;border-bottom:1px solid var(--rule);vertical-align:middle}
+.pu-tbl tr.fila{cursor:pointer}
+.pu-tbl tr.fila:hover td{background:var(--surface)}
+.pu-tbl tr.venc td{background:var(--band)}
+.pu-ped b{font-size:13px} .pu-ped small{display:block;color:var(--ink3);font-size:11px;margin-top:1px}
+.pu-lim{font-variant-numeric:tabular-nums;white-space:nowrap}
+.pu-lim.venc{color:var(--dato-vencido);font-weight:700}
+.pu-lim small{display:block;color:var(--ink3);font-size:10px;font-weight:400}
+.pu-n{font-variant-numeric:tabular-nums;white-space:nowrap}
+.pu-n small{display:block;color:var(--ink3);font-size:10px}
+.pu-bar{display:flex;align-items:center;gap:1px;height:16px;min-width:120px}
+.pu-bar i{height:12px;border-radius:2px;display:block}
+.pu-bar .sale{background:var(--dato-debo)}
+.pu-bar .entra{background:var(--dato-entra)}
+.pu-bar .vencb{background:var(--dato-vencido)}
+.pu-bar .mid{width:1px;height:16px;background:var(--rule2);flex:0 0 1px}
+.pu-neto{font-weight:700;font-variant-numeric:tabular-nums}
+.pu-neto.pos{color:var(--dato-entra)} .pu-neto.neg{color:var(--dato-debo)}
+.pu-foot td{border-top:2px solid var(--ink);border-bottom:none;font-weight:700;padding-top:10px}
+.pu-est{font-size:10px;color:var(--ink3);font-style:italic}
+.pr-tbl .pr-row{cursor:pointer} .pr-tbl .pr-row:hover td{background:var(--surface)}
+.pr-tbl .pr-row td:first-child small{display:block;color:var(--ink3);font-size:11px;margin-top:1px;padding-left:16px}
+.pr-c{display:inline-block;width:16px;color:var(--ink3)}
+.pr-tbl .pr-sub td{background:var(--surface);font-size:11.5px;cursor:pointer;border-bottom:1px solid var(--rule)}
+.pr-tbl .pr-sub:hover td{background:var(--accent-soft)}
+/* alertas de datos */
+.al-h{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.al-row{display:grid;grid-template-columns:150px 1fr auto;gap:10px;padding:7px 10px;border-top:1px solid var(--rule);font-size:12.5px;align-items:center}
+.al-row:first-of-type{border-top:none}
+.al-row b{font-size:12.5px}
+.al-row .al-q{color:var(--ink2)}
+.al-row .al-n{font-variant-numeric:tabular-nums;white-space:nowrap;color:var(--ink2)}
+/* conciliación de cupo */
+.cc2{display:grid;grid-template-columns:1fr 1fr;gap:34px;margin-top:10px}
+@media(max-width:820px){.cc2{grid-template-columns:1fr;gap:22px}}
+.cc2 .cbox{font-size:12.5px}
+.cc2 .cline{display:flex;justify-content:space-between;gap:10px;padding:5px 0;border-bottom:1px solid var(--rule);font-variant-numeric:tabular-nums}
+.cc2 .cline.tot{border-bottom:none;border-top:2px solid var(--ink);font-weight:700;padding-top:8px}
+.cc2 .cline span:last-child{white-space:nowrap}
+.cc2 h4{font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--ink3);margin-bottom:6px}
 </style>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
@@ -927,12 +1002,12 @@ table.stmt td.l{font-variant-numeric:normal}
     <button class="loadbtn" onclick="verifyOpen()"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" style="width:14px;height:14px"><path d="M8 2v8M5 7l3 3 3-3M3 13h10"/></svg> Cargar order report</button>
     <button class="loadbtn" style="margin-left:6px;background:#0d9488;color:#fff;border-color:#0d9488" onclick="facWizOpen()"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" style="width:14px;height:14px"><path d="M4 2h6l3 3v9H4V2zM10 2v3h3"/></svg> Cargar facturas</button>
     <div class="corte">
-      <b>v0.18</b> · 29 sep 2026 · ORDER REPORT manda + detailed leído por bloque completo<br><span style="color:var(--ink3)">si no ves "v0.5" arriba a la derecha, tu navegador está mostrando la versión vieja</span>
+      <b>v0.19</b> · 30 sep 2026 · tablero + puente de caja + cuentas con China<br><span style="color:var(--ink3)">si arriba a la derecha no dice v0.19, tu navegador está mostrando la versión vieja: Ctrl+Shift+R</span>
     </div>
   </header>
 
   <nav class="tabs">
-    <button data-v="hoy" class="on">Hoy</button>
+    <button data-v="hoy" class="on">Tablero</button>
     <button data-v="caja">Caja</button>
     <button data-v="pedidos">Pedidos</button>
     <button data-v="clientes">Clientes</button>
@@ -951,7 +1026,22 @@ table.stmt td.l{font-variant-numeric:normal}
   <main>
     <!-- ============ HOY ============ -->
     <section class="view on" id="v-hoy">
-      <h2 class="title" id="hoyDate"></h2>
+      <div class="tb-top">
+        <div><h2 class="title" id="hoyDate"></h2><div class="tb-sub" id="tbFuente"></div></div>
+        <div class="tb-vent" id="tbVent"></div>
+      </div>
+
+      <!-- Lo que manda la caja: lo que le debo a China contra lo que me deben -->
+      <div class="hero" id="tbHero"></div>
+      <div class="kpis" id="tbKpis"></div>
+
+      <!-- Alertas de datos: dónde no cuadran el ORDER REPORT y el detailed -->
+      <div class="mod" id="modAlertas" style="display:none"></div>
+
+      <!-- EL PUENTE: el mismo pedido, lo que debo y lo que me deben -->
+      <div class="mod" id="modPuente"></div>
+
+      <!-- Cupo Sinosure -->
       <div class="seg tm-mode" id="tmModeSeg">
         <button data-tm="proyecto" class="on" onclick="setTmMode('proyecto',this)">Ver por proyecto</button>
         <button data-tm="orden" onclick="setTmMode('orden',this)">Ver por orden</button>
@@ -969,6 +1059,8 @@ table.stmt td.l{font-variant-numeric:normal}
         </div>
       </div>
       <div class="tm-legend" id="tmLegend"></div>
+      <div class="mod" id="modCupoConc"></div>
+
       <div class="board" style="margin-top:8px">
         <div class="mod mod-pay" id="modPay"></div>
         <div class="mod mod-arr" id="modArr"></div>
@@ -981,8 +1073,8 @@ table.stmt td.l{font-variant-numeric:normal}
 
     <!-- ============ TIEMPO ============ -->
     <section class="view" id="v-caja">
-      <h2 class="title">Caja</h2>
-      <div class="sub">13 semanas en USD, método directo. La misma información en tres vistas: semana a semana, la curva y por orden. Prueba un embarque abajo y las tres se mueven a la vez.</div>
+      <h2 class="title">Caja · 13 semanas</h2>
+      <div class="sub">Trece semanas en dólares. Lo que sale a China (anticipos, balance del cupo y otros componentes) contra lo que entra de tus clientes. Simula que sacas un pedido de una orden madre y las tres vistas se mueven a la vez.</div>
       <div class="caja-controls">
         <label>Saldo inicial (USD) <input id="cajaInit" type="number" value="150000" onchange="renderCaja()"></label>
         <label>TRM de proyección <input id="cajaTRM" type="number" value="4050" onchange="CONFIG.trmProy=+this.value||4050;renderCaja()"></label>
@@ -1017,8 +1109,8 @@ table.stmt td.l{font-variant-numeric:normal}
 
     <!-- ============ PEDIDOS ============ -->
     <section class="view" id="v-pedidos">
-      <h2 class="title">Pedidos</h2>
-      <div class="sub">Una fila por pedido. Ábrelo para ver lo que le debes a China y lo que te debe el cliente, y la brecha entre los dos.</div>
+      <h2 class="title">Órdenes y pedidos</h2>
+      <div class="sub">La orden madre es el pedido completo que montamos a fábrica; cada pedido que se saca de ella es una fila del ORDER REPORT (7-2, 7-3, CFM 3-4…). Abre una orden para ver, pedido por pedido, el saldo del cupo, los otros componentes y lo que te debe el cliente.</div>
 
       <div class="filters" id="filters">
         <button class="chip on" data-f="todos">Todas</button>
@@ -1043,7 +1135,7 @@ table.stmt td.l{font-variant-numeric:normal}
     <!-- ============ CLIENTES ============ -->
     <section class="view" id="v-clientes">
       <h2 class="title">Clientes</h2>
-      <div class="sub">Cartera por cliente. Previsualiza el estado de cuenta como lo verá el cliente y genéralo en PDF o Excel.</div>
+      <div class="sub">Lo que te deben. Solenium va por el ORDER REPORT (anticipo, balance y logística de cada pedido); los clientes externos van por factura. Previsualiza el estado de cuenta como lo va a ver el cliente y sácalo en PDF o Excel.</div>
       <div class="cl-grid">
         <div class="cl-list" id="clList"></div>
         <div class="cl-detail" id="clDetail"></div>
@@ -1053,7 +1145,7 @@ table.stmt td.l{font-variant-numeric:normal}
     <!-- ============ PLANIFICADOR ============ -->
     <section class="view" id="v-pagos">
       <h2 class="title">Pagos</h2>
-      <div class="sub">Registra lo que entra de clientes y lo que sale a China. El sistema propone el reparto y tú lo confirmas; todo es parcial, editable y reversable, y queda quién lo movió.</div>
+      <div class="sub">Lo que entra de tus clientes y lo que le giras a China (Nexus por los trackers, Eaglerise por los shelters, y los otros componentes). La herramienta propone cómo repartir el giro y tú lo confirmas; todo admite abonos parciales y se puede reversar.</div>
       <div class="pagos-grid">
         <div class="pagos-form">
           <div class="seg" id="pagoTipoSeg">
@@ -1068,22 +1160,23 @@ table.stmt td.l{font-variant-numeric:normal}
 
     <!-- ============ CONFIG CUPO ============ -->
     <section class="view" id="v-config">
-      <h2 class="title">Ajustes de reglas</h2>
-      <div class="sub">Todo lo que funciona por reglas se parametriza aquí: el cupo, los plazos, la TRM de proyección y los clientes. El resto de la herramienta lo lee en vivo.</div>
+      <h2 class="title">Ajustes</h2>
+      <div class="sub">Aquí se tunea todo lo que funciona por regla: cómo se cuenta el cupo Sinosure, el anticipo y el plazo de cada fabricante, los días que le transmites a cada cliente y la TRM de proyección. Lo demás lo lee la herramienta del ORDER REPORT.</div>
       <div class="cfgsec">Cupo Sinosure</div>
+      <div id="cfgReglaCupo"></div>
       <div id="cfgBody" class="cfg-cards"></div>
-      <div class="cfgsec">TRM de proyección</div>
+      <div class="cfgsec">TRM para lo que aún no tiene factura</div>
       <div id="cfgTrm"></div>
       <div class="cfgsec">Clientes y plazos</div>
-      <div class="cfgnote2">A cada cliente le transmitimos menos días de los que nos da China (nos guardamos gávela operativa). Ajusta el plazo por cliente; un cliente nuevo entra con su plazo y su regla de aplicación.</div>
+      <div class="cfgnote2">A cada cliente le transmites menos días de los que te da China: esa gávela es tuya. Ajusta los días cliente por cliente. Un cliente nuevo entra con su plazo y con la forma en que le aplicas los pagos.</div>
       <div id="cfgClientes"></div>
       <div class="cfgsec">Mantenimiento</div>
       <div class="cfgnote2">Si vienes de una versión anterior y ves saldos que no cuadran (por ejemplo un balance que no refleja los pagos ya hechos a China), recalcula los saldos desde el último order report. No borra precios de venta, logística, ni configuración de clientes.</div>
       <div style="margin:10px 0"><button class="prbtn" style="background:var(--z-orange);color:#fff;border:none" onclick="recalcularSaldos()">↻ Re-repartir saldo (col. O) entre anticipo y balance</button></div>
-      <div class="cfgsec">Historial de cargas del order report</div>
+      <div class="cfgsec">Cargas del ORDER REPORT · para devolverte si algo salió mal</div>
       <div class="cfgnote2">Cada aprobación queda archivada. Puedes revertir a la anterior (deshace la carga; los pagos que registraste después se pierden si dependían de ese corte), o volver a abrir la última para corregir un dato (se aprueba como corrección y las anteriores se conservan).</div>
       <div id="cfgHist"></div>
-      <div class="cfgsec">Excepciones por equipo</div>
+      <div class="cfgsec">Excepciones · pedidos que consumen cupo distinto</div>
       <div class="cfgnote2">Cuando un caso se sale de la regla (un shelter que salió sin anticipo y cargó 100%, un equipo guardado en zona franca), fíjalo aquí sin tocar la regla general.</div>
       <div id="cfgExc"></div>
     </section>
@@ -1132,8 +1225,18 @@ const fmtCOPs=n=>'$ '+Math.round(n/1e6).toLocaleString('es-CO')+' M';
 const STAGE={confirm:'Por confirmar',prod:'En producción',finished:'Producción terminada',booked:'Embarque reservado',shipping:'Embarcando',shipped:'Embarcado'};
 const RANK={confirm:0,prod:1,finished:2,booked:3,shipping:4,shipped:5};
 const isShipped=e=>e.st==='shipping'||e.st==='shipped';
+/* Andrés no siempre llena el proyecto; que nunca se vea un guión suelto */
+const nombreEq=e=>{const p=(''+(e.proj||'')).trim();return (p&&p!=='-'&&!/^Orden\s/.test(p))?p:('Pedido '+(e.derrame||e.ordenId));};
 const term=mfg=>mfg==='Singsun'?90:60;
-let CONFIG={Singsun:{reserveFrom:'confirm',antPct:0.10,dias:90,receptor:'Nexus'},Eaglerise:{reserveFrom:'confirm',antPct:0.20,dias:60,receptor:'Eaglerise'},trmProy:4050,logDias:30,pagoMinDias:15};
+let CONFIG={Singsun:{reserveFrom:'confirm',antPct:0.10,dias:90,receptor:'Nexus'},Eaglerise:{reserveFrom:'confirm',antPct:0.20,dias:60,receptor:'Eaglerise'},trmProy:4050,logDias:30,pagoMinDias:15,cupoRegla:'andres'};
+/* Cómo se cuenta el cupo Sinosure que consume un pedido. Tres reglas, porque los archivos
+   no usan una sola:
+     'saldo'  → el saldo por pagar al fabricante (columna O). Es el 90% del tracker o el 80%
+                del shelter una vez pagado el anticipo.
+     'monto'  → el monto completo del pedido (columna M) mientras el pedido siga vivo.
+     'andres' → como lo arma Andrés en la hoja Sinosure: monto completo mientras está en
+                fábrica, y saldo por pagar cuando ya embarcó.  */
+const CUPO_REGLAS={saldo:'Saldo por pagar al fabricante (col. O)',monto:'Monto completo del pedido (col. M)',andres:'Como la hoja Sinosure de Andrés (monto en fábrica · saldo si ya embarcó)'};
 function cov(mfg){return 1-CONFIG[mfg].antPct;}
 
 // equipo (un proyecto dentro de un derrame o aún en la orden madre)
@@ -1142,12 +1245,17 @@ function E(proj,tipo,mfgAmt,st,antPaid,balPaid,derrame,dt){
   return {proj,tipo,mfgAmt,st,antPaid,balPaid,derrame:derrame||null,bl:dt.bl||null,etd:dt.etd||null,eta:dt.eta||null,prodFin:dt.prodFin||null};
 }
 // consumo de cupo de un equipo = saldo del cupo Sinosure, LEÍDO del order report (col 14)
-function consumoEq(e,mfg){
+function consumoEq(e,mfg,regla){
+  mfg=mfg||e.mfg;
   if(RANK[e.st] < RANK[CONFIG[mfg].reserveFrom]) return 0;    // aún no reserva según la regla
-  if(e.pctOverride!=null) return e.mfgAmt*e.pctOverride;       // excepción manual
-  /* Fuente de verdad: columna O del ORDER REPORT (menos los pagos a China registrados después del corte). */
-  if(e.cupoSaldo!=null) return +e.cupoSaldo||0;
-  return (e.antSaldo||0) + (e.balSaldo||0);
+  if(e.pctOverride!=null) return (+e.cupoMonto||e.mfgAmt||0)*e.pctOverride;   // excepción manual
+  const O=(e.cupoSaldo!=null)?(+e.cupoSaldo||0):((e.antSaldo||0)+(e.balSaldo||0));
+  const M=(e.cupoMonto!=null)?(+e.cupoMonto||0):(+e.mfgAmt||0);
+  if(O<=0.5) return 0;                                         // pagado del todo: libera el cupo
+  const r=regla||CONFIG.cupoRegla||'andres';
+  if(r==='monto') return M;
+  if(r==='andres') return isShipped(e)?O:M;
+  return O;
 }
 
 let ORD=[]; // órdenes
@@ -1228,6 +1336,94 @@ let EQ=ORD.flatMap(o=>o.equipos);
 const antP=mfg=>mfg==='Singsun'?0.10:0.20;
 EQ.forEach((e,i)=>{e._i=i;e.antTot=e.mfgAmt*antP(e.mfg);e.balTot=e.mfgAmt-e.antTot;e.antSaldo=e.antPaid?0:e.antTot;e.balSaldo=e.balPaid?0:e.balTot;});
 function syncFlags(){EQ.forEach(e=>{e.antPaid=e.antSaldo<1;e.balPaid=e.balSaldo<1;});}
+
+
+/* ================================================================
+   PUENTE DE CAJA — por pedido: lo que YO le debo a China contra lo que
+   el CLIENTE me debe a mí por ese mismo pedido. Es el mismo pedido visto
+   de los dos lados; el neto es lo que ese pedido le hace a mi caja.
+   ================================================================ */
+/* Lo que le debo a China por un pedido, partido en sus dos cuentas */
+function deboChina(e){
+  const cupo=(+e.cupoSaldo||0);                       /* al fabricante (col. O) — lo cubre Sinosure */
+  const otros=(+e.otrosSaldo||0);                     /* a Jingwei, Restar, Wenzhong, Qiyuan (col. R) — fuera del cupo */
+  const receptor=CONFIG[e.mfg]?CONFIG[e.mfg].receptor:e.mfg;
+  return {cupo,otros,total:cupo+otros,receptor};
+}
+/* Fecha límite del pedido: la que puso Andrés en PAGOS PRIORITARIOS manda;
+   si no la trae, se estima con el BL y el plazo del fabricante. */
+function limiteChina(e){
+  if(e.limitePago) return {fecha:e.limitePago, fuente:'Andrés (pagos prioritarios)'};
+  if(isShipped(e)&&e.bl) return {fecha:addD(e.bl,CONFIG[e.mfg].dias), fuente:'BL + '+CONFIG[e.mfg].dias+' días'};
+  if(e.etd) return {fecha:addD(e.etd,CONFIG[e.mfg].dias), fuente:'ETD + '+CONFIG[e.mfg].dias+' días (estimado)'};
+  return {fecha:null, fuente:null};
+}
+/* Lo que me debe el cliente por ese pedido: hitos del cliente interno, o los
+   hitos pendientes de las facturas del cliente externo vinculadas al pedido. */
+function meDebenEq(e){
+  if(esInterno(e.cliente)) return hitosEqInterno(e).map(h=>({lbl:h.lbl,monto:h.pend,fecha:h.fecha,vencido:h.vencido,estimado:!(+e.precioVenta>0)}));
+  const out=[];
+  FACT.filter(f=>f.cliente===e.cliente&&(f.eqRefs||[]).indexOf(e.derrame)>=0).forEach(f=>{
+    hitosResueltos(f).forEach(h=>{ if(h.pend>0.01) out.push({lbl:f.num+' · '+h.etiq,monto:h.pend,fecha:h.fecha,vencido:h.fecha&&h.fecha<TODAY,estimado:false}); });
+  });
+  return out;
+}
+function puenteEq(e,evs){
+  const debo=deboChina(e), lim=limiteChina(e);
+  const mios=(evs||pagosPend()).filter(p=>p.eq===e);
+  const venc=mios.filter(p=>p.fecha<TODAY).reduce((s,p)=>s+p.monto,0);
+  const cobros=meDebenEq(e), entra=cobros.reduce((s,h)=>s+h.monto,0);
+  const prox=cobros.filter(h=>h.fecha).sort((a,b)=>a.fecha-b.fecha)[0];
+  return {e, debo, limite:lim.fecha, limiteFuente:lim.fuente, eventos:mios, vencidoMonto:venc,
+    vencido:venc>0.5,
+    dias:lim.fecha?days(TODAY,lim.fecha):null,
+    cobros, entra, cobroProx:prox?prox.fecha:null, neto:entra-debo.total,
+    sinPrecio:esInterno(e.cliente)&&!(+e.precioVenta>0)};
+}
+function puente(){ const evs=pagosPend(); return EQ.map(e=>puenteEq(e,evs)).filter(p=>p.debo.total>0.5||p.entra>0.5); }
+/* Totales del puente dentro de una ventana de días (null = todo) */
+function puenteTot(dias){
+  const lim=dias==null?null:addD(TODAY,dias);
+  let debo=0,cupo=0,otros=0,entra=0,vencido=0,vencidoCobro=0,sinPrecio=0;
+  puente().forEach(p=>{
+    const dentro = lim==null || (p.limite && p.limite<=lim);
+    if(dentro){debo+=p.debo.cupo;cupo+=p.debo.cupo;}
+    /* los otros componentes se le pagan a Jingwei, Restar y compañía apenas se monta el pedido:
+       no tienen plazo, se deben ya, así que entran en cualquier ventana */
+    debo+=p.debo.otros; otros+=p.debo.otros;
+    vencido+=p.vencidoMonto;
+    if(p.sinPrecio) sinPrecio++;
+    p.cobros.forEach(h=>{ const d=lim==null||(h.fecha&&h.fecha<=lim); if(d)entra+=h.monto; if(h.vencido)vencidoCobro+=h.monto; });
+  });
+  return {debo,cupo,otros,entra,vencido,vencidoCobro,sinPrecio,neto:entra-debo};
+}
+
+/* ---- Conciliación del cupo contra la hoja Sinosure de Andrés ---- */
+/* Por qué mi total no es el de Andrés: pedido por pedido, qué cuenta él y qué cuento yo */
+function cupoExplica(mfg){
+  const reg=CONFIG.cupoRegla||'andres';
+  const idx=(CONCILIA&&CONCILIA.sinoPorDerrame)||{};
+  const lineas=[];
+  EQ.filter(e=>e.mfg===mfg).forEach(e=>{
+    const mio=consumoEq(e,mfg,reg);
+    const suyo=(idx[e.derrame]!=null)?idx[e.derrame]:null;
+    const dif=(suyo==null?mio:mio-suyo);
+    if(Math.abs(dif)>2) lineas.push({derrame:e.derrame, proj:e.proj, st:e.st, mio, suyo, dif,
+      motivo: suyo==null?'la hoja Sinosure no lo lista':(mio>suyo?'cuento más que él':'cuento menos que él')});
+  });
+  lineas.sort((a,b)=>Math.abs(b.dif)-Math.abs(a.dif));
+  return lineas;
+}
+function cupoConcilia(mfg){
+  const eqs=EQ.filter(e=>e.mfg===mfg);
+  const por=r=>eqs.reduce((s,e)=>s+consumoEq(e,mfg,r),0);
+  const decl=CONCILIA&&CONCILIA.sino?(mfg==='Singsun'?CONCILIA.sino.totalSingsun:CONCILIA.sino.totalEagle):null;
+  const reglas={saldo:por('saldo'),monto:por('monto'),andres:por('andres')};
+  let mejor=null,mejorD=Infinity;
+  if(decl!=null) Object.keys(reglas).forEach(r=>{const d=Math.abs(reglas[r]-decl);if(d<mejorD){mejorD=d;mejor=r;}});
+  return {usado:por(), reglas, declarado:decl, mejor, difMejor:decl==null?null:mejorD,
+    cupo:CUPO[mfg], techoDeclarado:CONCILIA&&CONCILIA.sino?CONCILIA.sino.cupos[mfg]:null};
+}
 
 /* ---- derivaciones de cupo ---- */
 function cargaViva(mfg){ return EQ.filter(e=>e.mfg===mfg).reduce((s,e)=>s+consumoEq(e,mfg),0); }
@@ -1377,10 +1573,11 @@ let ordenOpen={};
 let cajaView='semanas';
 function toggleVenc(oid){vencOpen[oid]=!vencOpen[oid];renderVenc();}
 let HIST=[]; // historial de cargas del order report
+let CONCILIA=null; // último cruce ORDER REPORT ↔ detailed (para el tablero y las alertas de datos)
 let _prevSnap=null;
 function snapNow(){ return {ORD:JSON.parse(JSON.stringify(ORD)), FACT:JSON.parse(JSON.stringify(FACT)), PAGOS:JSON.parse(JSON.stringify(PAGOS)), CLI:JSON.parse(JSON.stringify(CLI)), CONFIG:JSON.parse(JSON.stringify(CONFIG)), CUPO:JSON.parse(JSON.stringify(CUPO))}; }
 function hydrateSnap(s){
-  ORD.length=0;s.ORD.forEach(o=>{o.equipos.forEach(e=>{['bl','etd','eta','vence','prodFin'].forEach(k=>{if(e[k])e[k]=new Date(e[k]);});});ORD.push(o);});
+  ORD.length=0;s.ORD.forEach(o=>{o.equipos.forEach(e=>{['bl','etd','eta','vence','prodFin','corte','limitePago'].forEach(k=>{if(e[k])e[k]=new Date(e[k]);});});ORD.push(o);});
   EQ.length=0;ORD.flatMap(o=>o.equipos).forEach((e,i)=>{e._i=i;EQ.push(e);});
   FACT.length=0;s.FACT.forEach(f=>{['fecha','vence'].forEach(k=>{if(f[k])f[k]=new Date(f[k]);});FACT.push(f);});
   PAGOS.length=0;s.PAGOS.forEach(p=>{['fecha','ts'].forEach(k=>{if(p[k])p[k]=new Date(p[k]);});PAGOS.push(p);});
@@ -1436,16 +1633,23 @@ function registrarPago(p){p.id=PID++;p.ts=new Date();PAGOS.push(p);applyPago(p);
 // foto inicial: giro global Solenium 3.200 M COP aplicado FIFO
 /* pago demo Solenium desactivado — arrancamos limpio */
 
-/* ---- eventos de pago (necesidades de caja) ---- */
+/* ---- LO QUE LE DEBO A CHINA Y CUÁNDO — una sola definición para todo el sistema ----
+   Por cada pedido: el anticipo que falte, el balance del cupo y los otros componentes.
+   anticipo + balance = saldo del cupo (col. O); + otros componentes = saldo total a China (col. U). */
 function pagosPend(){
   const ev=[];
   EQ.forEach(e=>{
-    if(isShipped(e)&&e.balSaldo>0&&e.vence) ev.push({tipo:'balance',mfg:e.mfg,fecha:e.vence,monto:e.balSaldo,eq:e});
-    if(e.mfg==='Singsun'&&e.antSaldo>0&&RANK[e.st]>=RANK.prod) ev.push({tipo:'nexus',mfg:e.mfg,fecha:e.prodFin||TODAY,monto:e.antSaldo,eq:e});
-    if(e.mfg==='Eaglerise'&&e.antSaldo>0&&RANK[e.st]>=RANK.finished) ev.push({tipo:'eagle',mfg:e.mfg,fecha:e.prodFin||e.etd||TODAY,monto:e.antSaldo,eq:e});
+    const lim=limiteChina(e).fecha;
+    const ant=+e.antSaldo||0, bal=+e.balSaldo||0, otros=+e.otrosSaldo||0;
+    if(ant>0.5) ev.push({tipo:e.mfg==='Singsun'?'nexus':'eagle',mfg:e.mfg,
+      fecha:(RANK[e.st]>=RANK.finished?(e.prodFin||e.etd||TODAY):(e.prodFin||e.etd||lim||TODAY)),monto:ant,eq:e});
+    if(bal>0.5) ev.push({tipo:'balance',mfg:e.mfg,fecha:lim||e.etd||TODAY,monto:bal,eq:e});
+    if(otros>0.5) ev.push({tipo:'otros',mfg:e.mfg,fecha:TODAY,monto:otros,eq:e});
   });
   return ev.sort((a,b)=>a.fecha-b.fecha);
 }
+function vencidoEq(e){ return pagosPend().filter(p=>p.eq===e&&p.fecha<TODAY).reduce((s,p)=>s+p.monto,0); }
+function vencidoChina(){ return pagosPend().filter(p=>p.fecha<TODAY).reduce((s,p)=>s+p.monto,0); }
 /* ---- próximos embarques/llegadas (lo que viene) ---- */
 function proximos(){
   return EQ.filter(e=>!isShipped(e)&&e.etd).sort((a,b)=>a.etd-b.etd);
@@ -1484,7 +1688,7 @@ function eqColor(e){return isOver(e)?'#B3261E':RAMP[e.st];}
 function eqTextDark(e){return !isOver(e)&&(e.st==='confirm'||e.st==='prod');}
 
 let tmMode='proyecto';
-function projOf(e){return /^Orden\s/.test(e.proj)?null:e.proj;}
+function projOf(e){return nombreEq(e);}
 function setTmMode(m,btn){tmMode=m;document.querySelectorAll('#tmModeSeg button').forEach(b=>b.classList.remove('on'));btn.classList.add('on');drawTreemap('Singsun');drawTreemap('Eaglerise');}
 function drawTreemap(mfg){
   const svg=document.getElementById('tm'+mfg);svg.innerHTML='';
@@ -1544,7 +1748,8 @@ function renderVenc(){
   const cobros=[];FACT.forEach(f=>{hitosResueltos(f).forEach(h=>{if(h.pend>0&&h.fecha)cobros.push({cliente:f.cliente,derrame:(f.eqRefs&&f.eqRefs[0])||'',proj:(EQ.find(e=>e.derrame===(f.eqRefs&&f.eqRefs[0]))||{proj:f.num}).proj,saldoUSD:h.pend,vence:h.fecha,num:f.num,etiq:h.etiq});});});
   const ordOfDer=d=>d.replace(/-\d+$/,'').replace(/[A-Z]+$/,'');
   const rows=ORD.map(o=>{
-    const salidas=evs.filter(p=>p.eq.ordenId===o.id).map(p=>({tipo:p.tipo==='balance'?'Balance a China':(p.tipo==='nexus'?'Anticipo Nexus':'Anticipo Eaglerise'),receptor:p.mfg==='Singsun'?'Nexus':'Eaglerise',proj:p.eq.proj,derr:p.eq.derrame||'—',fecha:p.fecha,monto:p.monto,dir:'out',vencido:p.tipo==='balance'&&p.fecha<TODAY}));
+    const _lbl={balance:'Balance del cupo',nexus:'Anticipo Nexus',eagle:'Anticipo Eaglerise',otros:'Otros componentes'};
+    const salidas=evs.filter(p=>p.eq.ordenId===o.id).map(p=>({tipo:_lbl[p.tipo]||p.tipo,receptor:p.tipo==='otros'?'proveedores':(p.mfg==='Singsun'?'Nexus':'Eaglerise'),proj:nombreEq(p.eq),derr:p.eq.derrame||'—',fecha:p.fecha,monto:p.monto,dir:'out',vencido:p.fecha<TODAY}));
     const entradas=cobros.filter(f=>ordOfDer(f.derrame||'')===o.id).map(f=>({tipo:'Cobro '+f.cliente+' · '+f.etiq,receptor:f.cliente,proj:f.proj,derr:f.derrame||'—',fecha:f.vence,monto:f.saldoUSD,dir:'in',vencido:f.vence<TODAY}));
     const items=[...salidas,...entradas].sort((a,b)=>a.fecha-b.fecha);
     const totOut=salidas.reduce((s,x)=>s+x.monto,0),totIn=entradas.reduce((s,x)=>s+x.monto,0);
@@ -1552,15 +1757,15 @@ function renderVenc(){
     const prox=items.filter(x=>!x.vencido&&x.fecha>=TODAY)[0];
     return {o,items,totOut,totIn,vencOut,prox};
   }).filter(r=>r.items.length>0);
-  if(!rows.length){el.innerHTML='<h3>Vencimientos por orden</h3><div style="color:var(--ink3);font-size:13px">Sin vencimientos activos</div>';return;}
+  if(!rows.length){el.innerHTML='<h3>Vencimientos por orden madre</h3><div style="color:var(--ink3);font-size:13px">Sin vencimientos activos</div>';return;}
   rows.sort((a,b)=>(b.vencOut>0?1:0)-(a.vencOut>0?1:0) || (a.prox?a.prox.fecha:9e15)-(b.prox?b.prox.fecha:9e15));
   const totVencido=rows.reduce((s,r)=>s+r.vencOut,0);
   const detail=(r)=>r.items.map(x=>`<div class="venc-row ${x.vencido?'venc':''} ${x.dir}">
     <span class="vr-d">${x.vencido?days(x.fecha,TODAY)+'d':fmtD(x.fecha)}</span>
     <span class="vr-t">${x.tipo}<small>${x.proj} · ${x.derr}${x.dir==='out'?' → '+x.receptor:''}</small></span>
     <span class="vr-m ${x.dir}">${x.dir==='out'?'−':'+'}${fmtUSDs(x.monto)}</span></div>`).join('');
-  el.innerHTML=`<h3>Vencimientos por orden ${totVencido>0?`<span class="vsub out" style="margin-left:auto">Vencido total ${fmtUSDs(totVencido)}</span>`:''}</h3>
-    <div class="vencnote">El monto de cada vencimiento es el saldo real que se debe hoy (no el total de la orden). Balance a China solo cuenta cuando el equipo ya está embarcado y con fecha; los anticipos, según la regla del fabricante.</div>
+  el.innerHTML=`<h3>Vencimientos por orden madre ${totVencido>0?`<span class="vsub out" style="margin-left:auto">Vencido total ${fmtUSDs(totVencido)}</span>`:''}</h3>
+    <div class="vencnote">Cada monto es el saldo que de verdad se debe hoy, no el total de la orden madre. La fecha límite es la que Andrés pone en PAGOS PRIORITARIOS del ORDER REPORT; cuando no la trae, se estima con el BL y el plazo del fabricante.</div>
     <div class="venctable">${rows.map(r=>`
       <div class="venc-ord ${vencOpen[r.o.id]?'op':''}" onclick="toggleVenc('${r.o.id}')">
         <span class="voc">${vencOpen[r.o.id]?'▾':'▸'}</span>
@@ -1574,75 +1779,119 @@ function renderVenc(){
 function renderDesfase(){
   const el=document.getElementById("modDesfase");if(!el)return;
   const cls=[...new Set(FACT.map(f=>f.cliente))].filter(Boolean);
-  if(!cls.length){el.innerHTML='<h3>Desfase de financiación por cliente</h3><div style="color:var(--ink3);font-size:13px">Sin facturas cargadas todavía. Al cargar facturas aparecerá el desfase de plazos por cliente.</div>';return;}
+  if(!cls.length){el.innerHTML='<h3>Cuántos días le estoy financiando a cada cliente</h3><div style="color:var(--ink3);font-size:13px">Sin facturas cargadas todavía. Al cargar facturas aparecerá el desfase de plazos por cliente.</div>';return;}
   const rows=cls.map(c=>({c,d:desfaseCliente(c)})).filter(x=>x.d).sort((a,b)=>(b.d.neto||0)-(a.d.neto||0));
   const totalFin=rows.filter(r=>r.d.neto>0).reduce((s,r)=>s+r.d.neto,0);
-  el.innerHTML=`<h3>Desfase de financiación por cliente ${totalFin?`<span class="vsub out" style="margin-left:auto">${rows.filter(r=>r.d.neto>30).length} clientes con desfase &gt;30d</span>`:''}</h3>
-    <div class="desfnote">Días netos que le financias a cada cliente (plazo cliente ponderado &minus; plazo China ponderado). Rojo &gt; 30d.</div>
+  el.innerHTML=`<h3>Cuántos días le estoy financiando a cada cliente ${totalFin?`<span class="vsub out" style="margin-left:auto">${rows.filter(r=>r.d.neto>30).length} clientes con desfase &gt;30d</span>`:''}</h3>
+    <div class="desfnote">Los días que le das al cliente menos los días que te da China por ese mismo pedido. Si sale en rojo (más de 30), esa plata la estás poniendo tú mientras el cliente paga.</div>
     <table class="desftable"><thead><tr><th>Cliente</th><th class="r">Plazo cliente</th><th class="r">Plazo China</th><th class="r">Desfase neto</th></tr></thead><tbody>${rows.map(r=>`<tr><td>${r.c}</td><td class="r">${Math.round(r.d.plazoCliente)}d</td><td class="r">${Math.round(r.d.plazoChina)}d</td><td class="r neto ${r.d.neto>30?'danger':(r.d.neto>0?'ok':'')}">${r.d.neto>0?'+':''}${Math.round(r.d.neto)}d</td></tr>`).join('')}</tbody></table>`;
 }
-function renderProveedoresExt(){
-  /* Cuenta B: lo que Zentrack le debe a los proveedores externos de otros componentes (Jingwei, Restar, HCC, etc.).
-     Solo aplica a trackers. Aparece sólo si algún equipo tiene otrosSaldo>0. */
-  const el=document.getElementById('modProvExt'); if(!el) return;
-  const eqCon=EQ.filter(function(e){return e.mfg==='Singsun' && (+e.otrosSaldo||0)>0;});
-  if(!eqCon.length){el.style.display='none'; el.innerHTML=''; return;}
-  /* Agrupar por proveedor cuando hay desglose; si no, cae en "Sin identificar" */
-  const porProv={}; let totalGeneral=0;
-  eqCon.forEach(function(e){
-    if(e.otrosDesglose && e.otrosDesglose.length){
-      /* Distribuir el saldo consolidado nuevo entre los proveedores según % del desglose */
-      /* reparto del saldo R (ORDER REPORT) según lo que cada proveedor tiene pendiente en el detailed;
-         si el detailed no marca pendientes, por peso del monto */
-      const totPend=e.otrosDesglose.reduce(function(s,p){return s+(+p.saldo||0);},0);
-      const totalDesglose=totPend>0.5?totPend:e.otrosDesglose.reduce(function(s,p){return s+(+p.monto||0);},0);
-      e.otrosDesglose.forEach(function(p){
-        const factor=totalDesglose?((totPend>0.5?(+p.saldo||0):(+p.monto||0))/totalDesglose):0;
-        const saldoProv=(+e.otrosSaldo||0)*factor;
-        if(saldoProv<0.5) return;
-        if(!porProv[p.nombre]) porProv[p.nombre]={total:0, equipos:[]};
-        porProv[p.nombre].total+=saldoProv;
-        porProv[p.nombre].equipos.push({eq:e, monto:saldoProv});
-        totalGeneral+=saldoProv;
-      });
-    } else {
-      if(!porProv['Sin identificar']) porProv['Sin identificar']={total:0, equipos:[]};
-      porProv['Sin identificar'].total+=(+e.otrosSaldo||0);
-      porProv['Sin identificar'].equipos.push({eq:e, monto:(+e.otrosSaldo||0)});
-      totalGeneral+=(+e.otrosSaldo||0);
+/* ---------- MIS CUENTAS CON CHINA: el estado de cuenta de yo hacia cada proveedor ----------
+   Dos capas: el fabricante que cubre Sinosure (Singsun vía Nexus, Eaglerise directo) y los
+   proveedores de otros componentes, que van por fuera del cupo y se pagan de inmediato. */
+function cuentasProveedor(){
+  const acc={};
+  const add=(nombre,tipo,e,monto,limite)=>{
+    if(monto<0.5) return;
+    const k=nombre;
+    const a=acc[k]||(acc[k]={nombre,tipo,total:0,vencido:0,prox:null,items:[]});
+    a.total+=monto;
+    const venc=limite&&limite<TODAY;
+    if(venc) a.vencido+=monto;
+    if(limite&&!venc&&(!a.prox||limite<a.prox)) a.prox=limite;
+    a.items.push({e,monto,limite,venc});
+  };
+  EQ.forEach(e=>{
+    const lim=limiteChina(e).fecha;
+    add(CONFIG[e.mfg]?CONFIG[e.mfg].receptor:e.mfg, e.mfg==='Singsun'?'cupo':'cupo', e, +e.cupoSaldo||0, lim);
+    const R=+e.otrosSaldo||0;
+    if(R>0.5){
+      if(e.otrosDesglose&&e.otrosDesglose.length){
+        const tp=e.otrosDesglose.reduce((s,x)=>s+(+x.saldo||0),0);
+        const base=tp>0.5?'saldo':'monto';
+        const tt=e.otrosDesglose.reduce((s,x)=>s+(+x[base]||0),0);
+        e.otrosDesglose.forEach(x=>add(x.nombre,'otros',e, tt?R*((+x[base]||0)/tt):R/e.otrosDesglose.length, TODAY));
+      } else add('Otros componentes (sin desglosar)','otros',e,R,TODAY);
     }
   });
-  const provs=Object.keys(porProv).sort(function(a,b){return porProv[b].total-porProv[a].total;});
+  return Object.values(acc).sort((a,b)=>(a.tipo===b.tipo?b.total-a.total:(a.tipo==='cupo'?-1:1)));
+}
+let provOpen={};
+function toggleProv(k){provOpen[k]=!provOpen[k];renderProveedoresExt();}
+function renderProveedoresExt(){
+  const el=document.getElementById('modProvExt'); if(!el) return;
+  const cts=cuentasProveedor().filter(c=>c.total>0.5);
+  if(!cts.length){el.style.display='none';el.innerHTML='';return;}
   el.style.display='';
-  el.innerHTML=`
-    <h3 style="display:flex;align-items:center;justify-content:space-between">
-      <span>Cuenta con proveedores externos <small style="color:var(--ink3);font-weight:400">de otros componentes · solo trackers</small></span>
-      <span class="num" style="color:var(--z-orange);font-weight:700">${fmtUSD(totalGeneral)}</span>
-    </h3>
-    <div class="cfgnote2" style="margin-bottom:10px">Lo que Zentrack le debe a los proveedores fuera del cupo Sinosure (Jingwei, Restar, HCC, motores, paneles). Estas compras se pagan con el anticipo del 10% que Solenium abona por los trackers. Aparecen aquí sólo los saldos pendientes.</div>
-    <table class="mini"><tbody>
-      ${provs.map(function(nombre){
-        const p=porProv[nombre];
-        const eqRows=p.equipos.sort(function(a,b){return b.monto-a.monto;}).map(function(x){
-          return `<tr class="ext-eq" style="background:var(--surface)" onclick="openPanel('${x.eq.ordenId}')">
-            <td class="md" style="padding-left:24px;color:var(--ink3);font-size:11px">${x.eq.derrame}</td>
-            <td class="mc" style="color:var(--ink2);font-size:12px">${x.eq.proj}<small>${x.eq.cliente}</small></td>
-            <td class="mm num" style="font-size:12px">${fmtUSDs(x.monto)}</td>
-          </tr>`;
-        }).join('');
-        return `<tr class="ext-prov" style="cursor:pointer" onclick="this.dataset.o=this.dataset.o==='1'?'0':'1';document.querySelectorAll('.ext-eq-of-'+this.dataset.k).forEach(function(r){r.style.display=this.dataset.o==='1'?'':'none';}.bind(this));" data-k="${nombre.replace(/[^a-z0-9]/gi,'')}" data-o="0">
-          <td class="md"><b>${nombre}</b></td>
-          <td class="mc"><small>${p.equipos.length} equipo(s) — click para ver</small></td>
-          <td class="mm num"><b>${fmtUSDs(p.total)}</b></td>
-        </tr>
-        ${eqRows.replace(/class="ext-eq"/g,'class="ext-eq ext-eq-of-'+nombre.replace(/[^a-z0-9]/gi,'')+'" style="display:none;background:var(--surface)"').replace(/style="background:var\(--surface\)"/g,'')}`;
-      }).join('')}
-    </tbody></table>`;
+  const tot=cts.reduce((s,c)=>s+c.total,0), totV=cts.reduce((s,c)=>s+c.vencido,0);
+  const totCupo=cts.filter(c=>c.tipo==='cupo').reduce((s,c)=>s+c.total,0);
+  const totOtros=tot-totCupo;
+  const fila=c=>{
+    const k=c.nombre.replace(/[^a-z0-9]/gi,'');
+    const abierto=!!provOpen[k];
+    return `<tr class="pr-row" onclick="toggleProv('${k}')">
+      <td><span class="pr-c">${abierto?'▾':'▸'}</span><b>${c.nombre}</b>
+        <small>${c.tipo==='cupo'?'fabricante · lo cubre el cupo Sinosure':'otros componentes · por fuera del cupo, se paga de inmediato'} · ${c.items.length} pedido(s)</small></td>
+      <td class="r pu-n">${c.vencido>0.5?`<b style="color:var(--dato-vencido)">${fmtUSDs(c.vencido)}</b>`:'<span style="color:var(--ink3)">—</span>'}</td>
+      <td class="r pu-n">${c.prox?fmtD(c.prox):'<span style="color:var(--ink3)">—</span>'}</td>
+      <td class="r pu-n"><b>${fmtUSDs(c.total)}</b></td></tr>
+      ${abierto?c.items.sort((x,y)=>(y.venc?1:0)-(x.venc?1:0)||y.monto-x.monto).map(i=>`
+        <tr class="pr-sub" onclick="openPanel('${i.e.ordenId}')">
+          <td><span style="padding-left:22px">${i.e.derrame}</span> <span style="color:var(--ink3)">${nombreEq(i.e)} · ${i.e.cliente}</span></td>
+          <td class="r pu-n">${i.venc?`<span style="color:var(--dato-vencido)">${fmtUSDs(i.monto)}</span>`:''}</td>
+          <td class="r pu-n" style="color:var(--ink3)">${i.limite?(i.venc?days(i.limite,TODAY)+'d vencido':fmtD(i.limite)):'sin fecha'}</td>
+          <td class="r pu-n">${fmtUSDs(i.monto)}</td></tr>`).join(''):''}`;
+  };
+  el.innerHTML=`<div class="pu-h"><h3 style="margin:0">Mis cuentas con China · lo que le debo a cada uno</h3>
+      <span style="font-size:12px;color:var(--ink2)">cupo Sinosure ${fmtUSDs(totCupo)} · otros componentes ${fmtUSDs(totOtros)}</span></div>
+    <div class="cfgnote2">Es el estado de cuenta al revés: yo frente a mis proveedores. Singsun se le paga a <b>Nexus</b>, los shelters directo a <b>Eaglerise</b>, y Jingwei, Wenzhong, Restar y Qiyuan por fuera del cupo. Clic en un proveedor para ver por qué pedido.</div>
+    <table class="pu-tbl pr-tbl"><thead><tr><th>Proveedor</th><th class="r">Vencido</th><th class="r">Próximo</th><th class="r">Saldo</th></tr></thead>
+      <tbody>${cts.map(fila).join('')}</tbody>
+      <tfoot><tr class="pu-foot"><td>Total a China</td>
+        <td class="r pu-n" style="color:${totV>0.5?'var(--dato-vencido)':'inherit'}">${fmtUSDs(totV)}</td><td></td>
+        <td class="r pu-n">${fmtUSDs(tot)}</td></tr></tfoot></table>`;
 }
 
+let TB_VENT=30;   /* ventana del tablero, en días */
+function setVent(d,btn){TB_VENT=d;document.querySelectorAll('#tbVent button').forEach(x=>x.classList.remove('on'));if(btn)btn.classList.add('on');renderHoy();}
 function renderHoy(){
-  renderVenc();renderDesfase();renderProveedoresExt();
+  renderVenc();renderDesfase();renderProveedoresExt();renderAlertasDatos();renderPuente();renderCupoConc();
   document.getElementById('hoyDate').textContent = TODAY.toLocaleDateString('es-CO',{weekday:'long',day:'numeric',month:'long',year:'numeric'}).replace(/^\w/,c=>c.toUpperCase());
+  const fu=document.getElementById('tbFuente');
+  if(fu) fu.innerHTML = CONCILIA
+    ? `Último cargue: <b>${CONCILIA.or||'ORDER REPORT'}</b>${CONCILIA.det?' cruzado con <b>'+CONCILIA.det+'</b>':' <span style="color:var(--dato-vencido)">sin cruzar con el detailed</span>'} · ${fmtD(CONCILIA.ts)}`
+    : (EQ.length?'Cargado sin registro del cruce · vuelve a cargar el ORDER REPORT para tener la conciliación':'Sin order report cargado · ve a Ajustes → Cargar order report');
+  const v=document.getElementById('tbVent');
+  if(v) v.innerHTML=[[15,'15 días'],[30,'30 días'],[60,'60 días'],[0,'Todo']].map(([d,l])=>
+    `<button class="${TB_VENT===d?'on':''}" onclick="setVent(${d},this)">${l}</button>`).join('');
+
+  /* ---- Hero: el neto de caja de la ventana ---- */
+  const T=puenteTot(TB_VENT||null), TT=puenteTot(null);
+  const h=document.getElementById('tbHero');
+  const vent=TB_VENT?('en los próximos '+TB_VENT+' días'):'en total, sin fecha de corte';
+  if(h) h.innerHTML=`
+    <div class="hl">Neto de caja ${vent} — lo que me entra menos lo que tengo que girarle a China</div>
+    <div class="hv ${T.neto>=0?'pos':'neg'}">${T.neto>=0?'+':'−'}US$ ${fmtUSDs(Math.abs(T.neto))}</div>
+    <div class="hn">Le debo <b>US$ ${fmtUSDs(T.debo)}</b> a China ${vent}: <b>${fmtUSDs(T.cupo)}</b> de cupo Sinosure al fabricante y <b>${fmtUSDs(T.otros)}</b> de otros componentes (esos se deben ya). Me deben <b>US$ ${fmtUSDs(T.entra)}</b> mis clientes.
+    ${T.neto<0?`<b style="color:var(--dato-vencido)"> Faltan US$ ${fmtUSDs(-T.neto)} que tengo que poner de mi caja o salir a cobrar.</b>`:' Alcanza, si cobro a tiempo.'}
+    ${T.sinPrecio?`<br><b style="color:var(--dato-debo)">Ojo: ${T.sinPrecio} pedido(s) no tienen precio de venta cargado</b>, así que el lado de lo que te deben está incompleto y este neto sale peor de lo que es. Ponlos en Clientes → Editar cliente.`:''}</div>`;
+
+  /* ---- KPIs ---- */
+  const cS=cupoConcilia('Singsun'), cE=cupoConcilia('Eaglerise');
+  const dispS=cS.cupo-cS.usado, dispE=cE.cupo-cE.usado;
+  const kcupo=(n,c)=>`<div class="kpi"><div class="kl">Cupo ${n==='Singsun'?'Singsun · trackers':'Eaglerise · shelters'} ${c.cupo-c.usado<0?'<span class="chipst mal">sobregirado</span>':'<span class="chipst ok">con aire</span>'}</div>
+      <div class="kv ${c.cupo-c.usado<0?'alerta':''}">${c.cupo-c.usado<0?'−':''}US$ ${fmtUSDs(Math.abs(c.cupo-c.usado))}</div>
+      <div class="kd">usado <b>${fmtUSDs(c.usado)}</b> de ${fmtUSDs(c.cupo)}${c.declarado!=null?` · Andrés dice ${fmtUSDs(c.declarado)}`:''}</div></div>`;
+  const k=document.getElementById('tbKpis');
+  if(k) k.innerHTML=`
+    <div class="kpi"><div class="kl">Vencido con China ${TT.vencido>0?'<span class="chipst mal">girar ya</span>':'<span class="chipst ok">al día</span>'}</div>
+      <div class="kv ${TT.vencido>0?'alerta':'bien'}">US$ ${fmtUSDs(TT.vencido)}</div>
+      <div class="kd">de un saldo total de <b>${fmtUSDs(TT.debo)}</b></div></div>
+    <div class="kpi"><div class="kl">Me deben mis clientes</div>
+      <div class="kv">US$ ${fmtUSDs(TT.entra)}</div>
+      <div class="kd">${TT.vencidoCobro>0?`<b style="color:var(--dato-vencido)">${fmtUSDs(TT.vencidoCobro)} ya vencido</b> de cobro`:'nada vencido de cobro'}</div></div>
+    ${kcupo('Singsun',cS)}${kcupo('Eaglerise',cE)}`;
+
   document.getElementById('h3Singsun').textContent='Cupo Singsun · trackers (Solenium)';
   document.getElementById('h3Eaglerise').textContent='Cupo Eaglerise · shelters (grupo Solenium + Zentrack)';
   drawTreemap('Singsun');drawTreemap('Eaglerise');
@@ -1655,18 +1904,18 @@ function renderHoy(){
     <span class="lg"><i style="background:#E7F1EC;border:1px solid #B7D4C9"></i>Disponible</span>`;
 
   // vencimientos con China (vencidos + próximos)
-  const lblP={balance:'Balance a China',nexus:'Anticipo 10% · Nexus',eagle:'Anticipo 20% · Eaglerise'};
-  const efP={balance:'libera cupo al pagar',nexus:'para no adeudar a Nexus',eagle:'para poder despachar'};
+  const lblP={balance:'Balance del cupo · a China',nexus:'Anticipo 10% · Nexus',eagle:'Anticipo 20% · Eaglerise',otros:'Otros componentes · fuera del cupo'};
+  const efP={balance:'libera cupo Sinosure al pagar',nexus:'para no quedarle debiendo a Nexus',eagle:'para que lo despachen',otros:'Jingwei, Restar y compañía · se paga de inmediato'};
   const all=pagosPend();
   const vencidos=all.filter(p=>p.fecha<TODAY).sort((a,b)=>a.fecha-b.fecha);
   const porVencer=all.filter(p=>p.fecha>=TODAY&&days(TODAY,p.fecha)<=75).sort((a,b)=>a.fecha-b.fecha);
   const totV=vencidos.reduce((s,p)=>s+p.monto,0);
   const rowP=(p,venc)=>`<tr onclick="openPanel('${p.eq.ordenId}')" style="cursor:pointer">
       <td class="md ${venc?'out':''}">${venc?days(p.fecha,TODAY)+'d':fmtD(p.fecha)}</td>
-      <td class="mc">${lblP[p.tipo]}<small>${p.eq.proj} · orden ${p.eq.ordenId} · ${efP[p.tipo]}</small></td>
+      <td class="mc">${lblP[p.tipo]}<small>${nombreEq(p.eq)} · orden ${p.eq.ordenId} · ${efP[p.tipo]}</small></td>
       <td class="mm ${venc?'out':''}">${fmtUSDs(p.monto)}</td></tr>`;
   document.getElementById('modPay').innerHTML=`
-    <h3>Vencimientos con China</h3>
+    <h3>Qué le tengo que girar a China</h3>
     ${vencidos.length?`<div class="vsub out">Vencidos · ${fmtUSD(totV)}</div><table class="mini"><tbody>${vencidos.map(p=>rowP(p,true)).join('')}</tbody></table>`:''}
     <div class="vsub">Próximos (75 días)</div>
     <table class="mini"><tbody>${porVencer.slice(0,7).map(p=>rowP(p,false)).join('')||'<tr><td style="color:var(--ink3)">Sin vencimientos próximos</td></tr>'}</tbody></table>`;
@@ -1674,12 +1923,12 @@ function renderHoy(){
   // qué viene (embarques / llegadas)
   const prox=proximos().slice(0,7);
   document.getElementById('modArr').innerHTML=`
-    <h3>Qué viene · embarques y llegadas</h3>
+    <h3>Qué viene · zarpes y llegadas</h3>
     <table class="mini"><tbody>
     ${prox.map(e=>`<tr onclick="openPanel('${e.ordenId}')" style="cursor:pointer">
       <td class="md">${fmtD(e.etd)}</td>
-      <td class="mc">${e.proj}<small>orden ${e.ordenId} · ${STAGE[e.st]} · llega ~${fmtD(e.eta)}</small></td>
-      <td class="mm">${fmtUSDs(consumoEq(e,e.mfg))}<small style="display:block;font-size:10px;color:var(--ink3);font-weight:500">cupo</small></td></tr>`).join('')}
+      <td class="mc">${nombreEq(e)}<small>orden ${e.ordenId} · ${STAGE[e.st]} · llega ~${fmtD(e.eta)}</small></td>
+      <td class="mm">${fmtUSDs(consumoEq(e,e.mfg))}<small style="display:block;font-size:10px;color:var(--ink3);font-weight:500">cupo</small></td></tr>`).join('')||'<tr><td style="color:var(--ink3)">Nada en camino</td></tr>'}
     </tbody></table>`;
 
   // cartera + registro
@@ -1687,8 +1936,12 @@ function renderHoy(){
   const cliArr=CLIENTES.map(c=>[c,saldoCliente(c)]).filter(c=>c[1]>0).sort((a,b)=>b[1]-a[1]);
   const total=cliArr.reduce((a,b)=>a+b[1],0);
   const mora=CLIENTES.reduce((s,c)=>s+moraCliente(c),0);
+  renderCartera(cliArr,total,mora,pal);
+}
+
+function renderCartera(cliArr,total,mora,pal){
   document.getElementById('modCart').innerHTML=`
-    <h3>Cartera y registro de pagos</h3>
+    <h3>Lo que me deben y los pagos que he registrado</h3>
     <div class="board" style="margin:0">
       <div style="grid-column:1/8;padding-right:36px">
         <div class="kpis"><div><div class="kl">Por cobrar</div><div class="kv">${fmtCOPs(total)}</div></div><div><div class="kl">En mora</div><div class="kv ${mora>0?'red':''}">${fmtCOPs(mora)}</div></div></div>
@@ -1704,7 +1957,108 @@ function renderHoy(){
     </div>`;
 }
 
-/* ================= PEDIDOS ================= */
+/* ---------- EL PUENTE: lo que debo contra lo que me deben, pedido por pedido ---------- */
+function renderPuente(){
+  const el=document.getElementById('modPuente'); if(!el) return;
+  const lim=TB_VENT?addD(TODAY,TB_VENT):null;
+  let filas=puente();
+  if(lim) filas=filas.filter(p=>(p.limite&&p.limite<=lim)||p.vencido||(p.cobroProx&&p.cobroProx<=lim));
+  filas.sort((a,b)=>(b.vencido?1:0)-(a.vencido?1:0)||((a.limite||9e15)-(b.limite||9e15)));
+  if(!EQ.length){el.innerHTML='<h3>El puente · lo que debo contra lo que me deben</h3><div style="color:var(--ink3);font-size:13px">Carga el ORDER REPORT para ver el puente.</div>';return;}
+  const max=Math.max(1,...filas.map(p=>Math.max(p.debo.total,p.entra)));
+  const W=90;
+  const bar=p=>{const s=Math.round(p.debo.total/max*W), e=Math.round(p.entra/max*W);
+    return `<div class="pu-bar" title="Le debo ${fmtUSD(p.debo.total)} · me deben ${fmtUSD(p.entra)}">
+      <i class="${p.vencido?'vencb':'sale'}" style="width:${s}px;margin-left:${W-s}px"></i><i class="mid"></i><i class="entra" style="width:${e}px"></i></div>`;};
+  const T={debo:filas.reduce((s,p)=>s+p.debo.total,0),cupo:filas.reduce((s,p)=>s+p.debo.cupo,0),
+           otros:filas.reduce((s,p)=>s+p.debo.otros,0),entra:filas.reduce((s,p)=>s+p.entra,0)};
+  const nEst=filas.filter(p=>p.sinPrecio).length;
+  el.innerHTML=`
+    <div class="pu-h"><h3 style="margin:0">El puente · lo que le debo a China contra lo que me deben por el mismo pedido</h3>
+      <span style="font-size:12px;color:var(--ink2)">${filas.length} pedido(s)${TB_VENT?' con movimiento en '+TB_VENT+' días':''}</span></div>
+    <div class="cfgnote2" style="margin:2px 0 0">Cada fila es un pedido del ORDER REPORT. A la izquierda lo que sale (saldo del cupo al fabricante + otros componentes a Jingwei, Restar, Wenzhong, Qiyuan); a la derecha lo que entra (anticipo, balance y logística que le cobro al cliente por ese pedido). El neto es lo que ese pedido le hace a la caja.</div>
+    <div class="pu-leg">
+      <span class="lg"><i style="background:var(--dato-debo)"></i>Le debo a China</span>
+      <span class="lg"><i style="background:var(--dato-vencido)"></i>Le debo y ya está vencido</span>
+      <span class="lg"><i style="background:var(--dato-entra)"></i>Me debe el cliente</span>
+      ${nEst?`<span class="lg pu-est">${nEst} pedido(s) sin precio de venta: el cobro sale en cero hasta que lo pongas en Clientes → Editar</span>`:''}
+    </div>
+    <div style="overflow-x:auto"><table class="pu-tbl">
+      <thead><tr><th>Pedido</th><th>Fecha límite</th><th class="r">Cupo (O)</th><th class="r">Otros comp. (R)</th><th class="r">Le debo</th><th class="c">Puente</th><th class="r">Me deben</th><th class="r">Neto</th></tr></thead>
+      <tbody>${filas.map(p=>{const e=p.e;
+        return `<tr class="fila ${p.vencido?'venc':''}" onclick="openPanel('${e.ordenId}')">
+        <td class="pu-ped"><b>${e.derrame}</b><small>${nombreEq(e)} · ${e.cliente} · ${STAGE[e.st]}</small></td>
+        <td class="pu-lim ${p.vencido?'venc':''}">${p.vencido?fmtUSDs(p.vencidoMonto)+' vencido':(p.limite?fmtD(p.limite):'—')}<small>${p.vencido&&p.limite?'límite '+fmtD(p.limite):(p.limiteFuente||'sin fecha')}</small></td>
+        <td class="r pu-n">${p.debo.cupo>0.5?fmtUSDs(p.debo.cupo):'—'}</td>
+        <td class="r pu-n">${p.debo.otros>0.5?fmtUSDs(p.debo.otros):'—'}</td>
+        <td class="r pu-n"><b>${p.debo.total>0.5?fmtUSDs(p.debo.total):'—'}</b><small>a ${p.debo.receptor}</small></td>
+        <td class="c">${bar(p)}</td>
+        <td class="r pu-n">${p.entra>0.5?fmtUSDs(p.entra):(p.sinPrecio?'<span class="pu-est">sin precio</span>':'—')}<small>${p.cobros.length?p.cobros.length+' hito(s)':''}</small></td>
+        <td class="r pu-neto ${p.neto>=0?'pos':'neg'}">${p.neto>=0?'+':'−'}${fmtUSDs(Math.abs(p.neto))}</td></tr>`;}).join('')}
+      </tbody>
+      <tfoot><tr class="pu-foot"><td>Total${TB_VENT?' en '+TB_VENT+' días':''}</td><td></td>
+        <td class="r pu-n">${fmtUSDs(T.cupo)}</td><td class="r pu-n">${fmtUSDs(T.otros)}</td>
+        <td class="r pu-n">${fmtUSDs(T.debo)}</td><td></td><td class="r pu-n">${fmtUSDs(T.entra)}</td>
+        <td class="r pu-neto ${T.entra-T.debo>=0?'pos':'neg'}">${T.entra-T.debo>=0?'+':'−'}${fmtUSDs(Math.abs(T.entra-T.debo))}</td></tr></tfoot>
+    </table></div>`;
+}
+
+/* ---------- Conciliación del cupo con la hoja Sinosure de Andrés ---------- */
+function renderCupoConc(){
+  const el=document.getElementById('modCupoConc'); if(!el) return;
+  if(!EQ.length){el.innerHTML='';return;}
+  const box=mfg=>{const c=cupoConcilia(mfg);
+    const disp=c.cupo-c.usado;
+    const filaR=r=>`<div class="cline"><span>${CUPO_REGLAS[r]}${r===CONFIG.cupoRegla?' <b>← la que estás usando</b>':''}${c.mejor===r&&c.declarado!=null?' <span class="chipst ok">la que más se parece a Andrés</span>':''}</span><span>${fmtUSDs(c.reglas[r])}</span></div>`;
+    return `<div class="cbox"><h4>${mfg==='Singsun'?'Singsun · trackers':'Eaglerise · shelters'}</h4>
+      ${c.declarado!=null?`<div class="cline"><span>Consumo que declara Andrés (hoja Sinosure)</span><span><b>${fmtUSDs(c.declarado)}</b></span></div>`:'<div class="cline"><span>Sin hoja Sinosure cargada</span><span>—</span></div>'}
+      ${Object.keys(CUPO_REGLAS).map(filaR).join('')}
+      ${c.declarado!=null?`<div class="cline"><span>Diferencia con la regla que usas</span><span style="color:${Math.abs(c.reglas[CONFIG.cupoRegla]-c.declarado)>2?'var(--dato-vencido)':'var(--dato-entra)'}">${fmtUSDs(Math.abs(c.reglas[CONFIG.cupoRegla]-c.declarado))}</span></div>`:''}
+      <div class="cline tot"><span>Cupo ${disp<0?'SOBREGIRADO':'disponible'} (techo ${fmtUSDs(c.cupo)})</span><span style="color:${disp<0?'var(--dato-vencido)':'var(--dato-entra)'}">${disp<0?'−':''}${fmtUSDs(Math.abs(disp))}</span></div>
+      ${c.techoDeclarado&&Math.abs(c.techoDeclarado-c.cupo)>2?`<div style="font-size:11.5px;color:var(--dato-vencido);margin-top:6px">El techo de tu herramienta (${fmtUSDs(c.cupo)}) no es el de la hoja de Andrés (${fmtUSDs(c.techoDeclarado)}). Ajústalo en Ajustes.</div>`:''}
+      ${(function(){const ex=cupoExplica(mfg);if(!ex.length||c.declarado==null)return '';
+        return `<div style="margin-top:10px"><h4>De dónde sale la diferencia</h4>
+          ${ex.slice(0,8).map(x=>`<div class="cline" style="font-size:12px"><span>${x.derrame} <span style="color:var(--ink3)">· ${x.motivo}</span></span><span>${x.dif>0?'+':'−'}${fmtUSDs(Math.abs(x.dif))}</span></div>`).join('')}
+          ${ex.length>8?`<div style="font-size:11.5px;color:var(--ink3);padding-top:5px">y ${ex.length-8} pedido(s) más</div>`:''}</div>`;})()}
+    </div>`;};
+  el.innerHTML=`<h3>De dónde sale el cupo · tu ORDER REPORT contra la hoja Sinosure de Andrés</h3>
+    <div class="cfgnote2">La hoja de Andrés no usa un solo criterio: en unos pedidos cuenta el monto completo y en otros el saldo después del anticipo. Aquí ves las tres formas de contarlo y cuál se parece más a lo que él reporta. La regla que manda en el tablero y en el treemap se cambia en Ajustes.</div>
+    <div class="cc2">${box('Singsun')}${box('Eaglerise')}</div>`;
+}
+
+/* ---------- Alertas de datos: dónde no cuadran tus dos archivos ---------- */
+function renderAlertasDatos(){
+  const el=document.getElementById('modAlertas'); if(!el) return;
+  if(!CONCILIA){el.style.display='none';return;}
+  const nomCol={M:'monto del cupo',N:'pagado al fabricante',O:'saldo del cupo',P:'monto otros comp.',Q:'pagado otros comp.',R:'saldo otros comp.',U:'consumo vs hoja Sinosure'};
+  const dif=CONCILIA.dif||[];
+  const avisos=CONCILIA.avisosOR||[];
+  const sueltos=(CONCILIA.sinBloque||[]);
+  if(!dif.length&&!avisos.length&&!sueltos.length&&!(CONCILIA.posicional)){
+    el.style.display='';
+    el.innerHTML=`<div class="al-h"><h3 style="margin:0">Salud de los datos</h3><span class="chipst ok">todo cuadra</span></div>
+      <div class="cfgnote2">Los ${CONCILIA.nOk} pedidos del ORDER REPORT cuadran con el detailed en monto, pagado y saldo.</div>`;
+    return;
+  }
+  el.style.display='';
+  /* los pedidos con exactamente la misma discrepancia se agrupan en una sola línea */
+  const grupos={};
+  dif.forEach(d=>{const k=d.cols.join('|')+'#'+d.cols.map(c=>Math.round(d.rep[c])+'/'+Math.round(d.det[c]||0)).join('|')+'#'+(d.sinoFilas||'');
+    (grupos[k]=grupos[k]||{...d,pos:[]}).pos.push(d.po);});
+  const fila=d=>`<div class="al-row"><b>${d.pos.join(', ')}</b>
+    <span class="al-q">no cuadra en <b>${d.cols.map(c=>nomCol[c]||c).join(', ')}</b>${d.sinoFilas?' · en la hoja Sinosure aparece como '+d.sinoFilas:''}</span>
+    <span class="al-n">${d.cols.map(c=>`${c}: order report ${fmtUSDs(d.rep[c])} vs detailed ${d.det[c]==null?'—':fmtUSDs(d.det[c])}`).join(' · ')}</span></div>`;
+  el.innerHTML=`<div class="al-h"><h3 style="margin:0">Salud de los datos · qué revisar con Andrés</h3>
+      ${dif.length?`<span class="chipst mal">${dif.length} pedido(s) no cuadran</span>`:''}
+      <span class="chipst ok">${CONCILIA.nOk} cuadran</span></div>
+    <div class="cfgnote2">Los montos que ves en toda la herramienta son los del ORDER REPORT. Esto es lo que el detailed dice distinto.</div>
+    ${CONCILIA.posicional?'<div style="font-size:12.5px;color:var(--dato-vencido);margin:6px 0">No reconocí los encabezados del Summary del detailed: se leyó por posición de columnas. Verifica un pedido abriéndolo en el cargador.</div>':''}
+    ${avisos.length?`<div style="font-size:12.5px;color:var(--dato-vencido);margin:6px 0">Filas del ORDER REPORT que no cuadran consigo mismas: ${avisos.join(' · ')}</div>`:''}
+    ${Object.values(grupos).map(fila).join('')}
+    ${sueltos.length?`<div class="cfgnote2" style="margin-top:8px">Pedidos del ORDER REPORT que el detailed no tiene (el anticipo queda calculado por porcentaje): ${sueltos.join(' · ')}</div>`:''}
+    ${(CONCILIA.agregados||[]).length?`<div class="cfgnote2">Filas agregadas o repetidas en el detailed que no se usaron: ${CONCILIA.agregados.map(a=>a.poRaw+' ('+fmtUSDs(a.monto)+')').join(' · ')}</div>`:''}`;
+}
+
 let filtP='todos';
 function renderLedger(){
   let os=ORD.slice();
@@ -1736,15 +2090,15 @@ function openPanel(id){
   const balPend=o.equipos.filter(e=>isShipped(e)).reduce((s,e)=>s+(+e.balSaldo||0),0);
   const totU=o.equipos.reduce((s,e)=>s+(e.totalSaldo!=null?+e.totalSaldo:consumoEq(e,o.mfg)),0);
   const pagosTxt=e=>(e.pagosChina&&e.pagosChina.length)?`<div class="umeta">${e.pagosChina.map(p=>p.implicito?`balance sin programar <b style="color:#8a5300">${fmtUSDs(p.monto)}</b>`:`${p.slot} ${fmtUSDs(p.monto)} <b style="color:${p.estado==='paid'?'var(--ok)':'#8a5300'}">${p.estado==='paid'?'Paid':'Pending'}</b>`).join(' · ')}</div>`:'';
-  // agrupar por derrame / madre
+  // agrupar por pedido dentro de la orden madre
   const grp={};o.equipos.forEach(e=>{const k=e.derrame||'__madre';(grp[k]=grp[k]||[]).push(e);});
   const badge=e=>{const c=isOver(e)?'over':isShipped(e)?'paid':'pend';return `<span class="ubadge ${c}">${STAGE[e.st]}</span>`;};
   let body='';
   Object.entries(grp).sort((a,b)=>a[0]==='__madre'?1:-1).forEach(([k,eqs])=>{
-    const head=k==='__madre'?'En la orden · sin derramar':'Derrame '+k;
+    const head=k==='__madre'?'Todavía en la orden madre · sin sacar':'Pedido '+k;
     body+=`<div class="dgrp"><div class="dgh">${head}</div>${eqs.map(e=>`
       <div class="urow">
-        <div><div class="uname">${e.proj}</div><div class="umeta">${e.antPaid?'anticipo pagado':'<span style="color:#8a5300">falta anticipo '+fmtUSDs(e.antSaldo||0)+'</span>'}${isShipped(e)&&e.vence?' · balance vence '+fmtD(e.vence):e.etd?' · zarpa ~'+fmtD(e.etd):''}${e.antFuente==='detailed'?'':' · <i>sin cruce con detailed</i>'}</div>${pagosTxt(e)}</div>
+        <div><div class="uname">${nombreEq(e)}</div><div class="umeta">${e.antPaid?'anticipo pagado':'<span style="color:#8a5300">falta anticipo '+fmtUSDs(e.antSaldo||0)+'</span>'}${isShipped(e)&&e.vence?' · balance vence '+fmtD(e.vence):e.etd?' · zarpa ~'+fmtD(e.etd):''}${e.antFuente==='detailed'?'':' · <i>sin cruce con detailed</i>'}</div>${pagosTxt(e)}</div>
         <div class="uright">${badge(e)}<div class="ucupo">${fmtUSD(e.totalSaldo!=null?e.totalSaldo:consumoEq(e,o.mfg))}</div><small style="display:block;font-size:10.5px;color:var(--ink3);text-align:right">cupo ${fmtUSDs(consumoEq(e,o.mfg))}${(+e.otrosSaldo||0)>0.5?' · otros '+fmtUSDs(e.otrosSaldo):''}</small></div>
       </div>`).join('')}</div>`;
   });
@@ -1762,9 +2116,9 @@ function openPanel(id){
       </div>
       ${body}
       <div class="pactions">
-        <button onclick="toast('Registrar pago de balance de la orden <b>${o.id}</b> — libera cupo')">Registrar pago a China</button>
-        <button onclick="toast('Planificar derrame de la orden <b>${o.id}</b>')">Planificar derrame</button>
-        <button class="primary" onclick="toast('Estado de cuenta de <b>${o.cliente}</b>')">Estado de cuenta</button>
+        <button onclick="navTo('pagos');closePanel()">Registrar giro a China</button>
+        <button onclick="navTo('caja');toast('Simula sacar pedidos de la orden <b>${o.id}</b> en Caja')">Simular sacar pedidos</button>
+        <button class="primary" onclick="navTo('clientes');closePanel()">Ver estado de cuenta de ${o.cliente}</button>
       </div>
     </div>`;
   document.getElementById('panel').classList.add('on');document.getElementById('scrim').classList.add('on');
@@ -1955,7 +2309,7 @@ function selCliData(c){
         <th class="l">Equipo</th><th class="l">Concepto</th><th class="r">Monto USD</th><th class="c">Fecha</th><th class="r">Saldo USD</th>
       </tr></thead><tbody>
       ${eqsInt.sort((a,b)=>(a.fecha||9e15)-(b.fecha||9e15)).map(h=>`<tr class="${h.vencido?'late':''} ${h.tipo}">
-        <td class="l"><b>${h.eq.derrame||'—'}</b><small>${h.eq.proj} · ${h.eq.mfg}${h.eq.blNo?` · BL ${h.eq.blNo}`:''}</small></td>
+        <td class="l"><b>${h.eq.derrame||'—'}</b><small>${nombreEq(h.eq)} · ${h.eq.mfg}${h.eq.blNo?` · BL ${h.eq.blNo}`:''}</small></td>
         <td class="l">${h.lbl}${h.tipo==='balance'?`<small>${CONFIG[h.eq.mfg].dias}d desde BL ${fmtD(h.eq.bl)}</small>`:''}${h.tipo==='logistica'?`<small>${CONFIG.logDias||30}d desde BL</small>`:''}${h.tipo==='anticipo'?'<small>cobrable ya · pedido existe</small>':''}</td>
         <td class="r">US$ ${fmtUSDs(h.monto)}</td>
         <td class="c">${h.tipo==='anticipo'?'<span class="tag-oblig">obligatorio</span>':(h.fecha?fmtD(h.fecha):'—')}${h.vencido&&h.tipo!=='anticipo'?` <small style="color:var(--z-red)">${days(h.fecha,TODAY)}d</small>`:''}</td>
@@ -2162,7 +2516,7 @@ function renderOrden(){
   const tot=rows.reduce((a,r)=>({salida:a.salida+r.salida,entrada:a.entrada+r.entrada,neto:a.neto+r.neto}),{salida:0,entrada:0,neto:0});
   const netCell=v=>`<td class="r num" style="font-weight:700;color:${v<0?'var(--danger)':'var(--ink)'}">${v<0?'−':''}${fmtUSDs(Math.abs(v))}</td>`;
   const subRows=o=>{
-    // agrupar por derrame (sub-orden) y luego equipos; los sin derramar van juntos
+    // agrupar por pedido dentro de la orden madre; lo que sigue en la orden va junto
     const grp={};o.equipos.forEach(e=>{const k=e.derrame||'En la orden (sin embarcar)';(grp[k]=grp[k]||[]).push(e);});
     return Object.entries(grp).sort((a,b)=>a[0]==='En la orden (sin embarcar)'?1:-1).map(([der,eqs])=>{
       const head=`<tr class="sub subhead"><td class="rl" colspan="2">${der==='En la orden (sin embarcar)'?der:'Sub-orden '+der}</td><td></td><td></td><td></td><td></td><td></td></tr>`;
@@ -2387,13 +2741,17 @@ function parseProjects(desc,n){desc=(''+(desc||'')).trim();if(!desc||/^Orden\s/.
       si no cuadra, se marca para revisar.
    ==================================================================== */
 const _sheet=(wb,name)=>{const t=name.toLowerCase().replace(/\s+/g,' ').trim();const n=wb.SheetNames.find(s=>s.toLowerCase().replace(/\s+/g,' ').trim()===t);return n?wb.Sheets[n]:null;};
-/* Llave única de pedido: "PO#7-2"→"7-2", "Pedido 7.2"→"7-2", "PO CFM3-1"/"CFM 3-1"/"CFM 3.1"→"CFM3-1", "PO#12"→"12" */
+/* Llave de pedido: "PO#7-2"→"7-2", "Pedido 7.2"→"7-2", "PO CFM3-2 INGEV2"→"CFM3-2",
+   "PO12 SOLARIS INGEV"→"12", "PO#10\nINGEV1\nMARIANGOLA"→"10", "CFM 2.3"→"CFM2-3" */
 function _poKey(s){
-  s=(''+(s==null?'':s)).toUpperCase().replace(/[\r\n]+/g,' ').replace(/PEDIDO|ORDEN|PO\s*#|PO\b|#/g,' ').replace(/\s+/g,' ').trim();
-  const m=s.match(/^(CFM)?\s*(\d+)(?:\s*[.\-]\s*(\d+))?\s*([A-Z])?\b/);
-  if(!m) return s.replace(/\s+/g,'');
+  s=(''+(s==null?'':s)).toUpperCase().replace(/[\r\n]+/g,' ').replace(/\s+/g,' ').trim();
+  const m=s.match(/^(?:PO|PEDIDO|ORDEN)?\s*#?\s*(CFM)?\s*#?\s*(\d+)\s*(?:[.\-]\s*(\d+))?\s*([A-Z])?(?![\w.])/);
+  if(!m||!m[2]) return s.replace(/\s+/g,'');
   return (m[1]||'')+m[2]+(m[3]?'-'+m[3]:'')+(m[4]||'');
 }
+/* Un pedido vive en el par fabricante+llave: el PO#7-2 de Singsun (tracker) y el PO#7-2 de
+   Eaglerise (shelter viejo) son dos pedidos distintos y no se pueden mezclar. */
+const _bKey=(mfg,k)=>(mfg||'?')+'|'+k;
 const _stPago=v=>{const s=(''+(v==null?'':v)).toLowerCase().trim();if(!s)return null;
   if(/^(paid|pagad[oa]|done|ok)$/.test(s))return 'paid';
   if(/pend|unpaid|paying|partial|parcial|due|por pagar/.test(s))return 'pending';
@@ -2401,195 +2759,280 @@ const _stPago=v=>{const s=(''+(v==null?'':v)).toLowerCase().trim();if(!s)return 
   return null;};
 const _numC=v=>{if(v==null||v==='')return null;if(typeof v==='number')return isFinite(v)?v:null;if(v instanceof Date)return null;const s=(''+v).replace(/[$,\s]|USD/gi,'');if(!/^-?\d+(\.\d+)?$/.test(s))return null;return +s;};
 const _txt=v=>(''+(v==null?'':v)).toLowerCase().replace(/[\r\n]+/g,' ').replace(/\s+/g,' ').trim();
-
-/* ---------- Hoja Summary del detailed → bloques completos por pedido ---------- */
+/* ---------- Hoja Summary del detailed → un bloque por pedido, con su fila de fabricante
+   (todos sus pagos: DP1, DP2, Balance 1, Balance 2) y las filas de otros componentes debajo ---------- */
 function parseDetailed(wb){
   const ws=_sheet(wb,'Summary'); if(!ws) return null;
   const rows=XLSX.utils.sheet_to_json(ws,{header:1,raw:true,cellDates:true,defval:null});
   let hr=-1;
   for(let i=0;i<Math.min(rows.length,20);i++){const r=(rows[i]||[]).map(_txt);if(r.indexOf('po')>=0||r.indexOf('po#')>=0){hr=i;break;}}
-  if(hr<0) return {error:'No encontré la fila de encabezados (celda "PO") en la hoja Summary.'};
-  const H0=rows[hr-1]||[], H1=rows[hr]||[], H2=rows[hr+1]||[];
-  const r2EsSub=H2.some(c=>/status|amount|date|fecha|monto|estado|%/.test(_txt(c))) && !H2.some(c=>_numC(c)!=null&&_numC(c)>100);
-  const ncol=Math.max(H0.length,H1.length,H2.length,...rows.slice(hr,hr+60).map(r=>(r||[]).length));
-  const colTxt=c=>[H0[c],H1[c],r2EsSub?H2[c]:null].map(_txt).filter(Boolean).join(' | ');
+  if(hr<0) return {error:'No encontré la fila de encabezados (celda "PO") en la hoja Summary del detailed.'};
+  const H0=rows[hr-1]||[], H1=rows[hr]||[];
+  const ncol=Math.max(H0.length,H1.length,...rows.slice(hr,hr+80).map(r=>(r||[]).length));
+  const t0=c=>_txt(H0[c]), t1=c=>_txt(H1[c]), colTxt=c=>[t0(c),t1(c)].filter(Boolean).join(' | ');
   const iPO=H1.map(_txt).findIndex(x=>x==='po'||x==='po#');
-  /* columnas de componente y monto: por nombre, si no, las posiciones conocidas (P=15, Q=16) */
-  let iComp=-1,iAmt=-1;
+  /* columna del fabricante/proveedor, su monto propio, y el monto total del pedido (Eaglerise
+     no trae "Manufacturer amount": su valor vive en "Total amount") */
+  let iComp=-1,iAmt=-1,iTot=-1;
   for(let c=0;c<ncol;c++){const t=colTxt(c);
-    if(iComp<0 && /(manufacturer|supplier|component|proveedor|fabricante|vendor)/.test(t) && !/amount|monto|status|payment/.test(t)) iComp=c;
+    if(iComp<0 && /(manufacturer|supplier|component|proveedor|fabricante|vendor)/.test(t) && !/amount|monto|status|payment|pago/.test(t)) iComp=c;
+    if(iTot<0 && /^total amount|monto total|valor total/.test(t)) iTot=c;
   }
-  if(iComp>=0){for(let c=iComp+1;c<Math.min(ncol,iComp+4);c++){const t=colTxt(c);if(/amount|monto|value|valor|total/.test(t)&&!/payment|status/.test(t)){iAmt=c;break;}}}
+  if(iComp>=0){for(let c=iComp+1;c<Math.min(ncol,iComp+4);c++){const t=colTxt(c);if(/amount|monto|value|valor/.test(t)&&!/payment|status|paid/.test(t)){iAmt=c;break;}}}
   let posicional=false;
-  if(iComp<0){iComp=15;posicional=true;} if(iAmt<0){iAmt=iComp+1;}
-  /* ranuras de pago (DP1, DP2, Balance 1, Balance 2…) leyendo los encabezados, con arrastre de grupos combinados */
+  if(iComp<0){iComp=15;posicional=true;} if(iAmt<0){iAmt=iComp+1;} if(iTot<0)iTot=iComp-1;
+  /* Ranuras de pago: cada columna después del monto es fecha/monto/%/estado de algún pago.
+     Arranca una ranura nueva cuando la fila de grupo trae título, o cuando llega otra fecha.
+     Una columna cuyo rol ya está ocupado (p. ej. "Paid amount" acumulado) se ignora. */
   const slots=[]; let cur=null;
+  const rolDe=t=>/status|estado/.test(t)?'st':(/date|fecha/.test(t)?'fecha':(/%|percent|porcentaje/.test(t)?'pct':(/amount|monto|value|valor/.test(t)?'amt':null)));
+  const tipoDe=t=>/(down\s*payment|anticipo|\bdp\b)/.test(t)?'anticipo':'balance';
   for(let c=iAmt+1;c<ncol;c++){
-    const t=colTxt(c);
-    const g=t.match(/(down\s*payment|anticipo|\bdp)\s*(\d)?|(balance(?:\s*payment)?|\bbal\b|saldo final)\s*(\d)?/);
-    const rol=/status|estado/.test(t)?'st':(/date|fecha/.test(t)?'fecha':(/%|percent|porcentaje/.test(t)?'pct':(/amount|monto|value|valor/.test(t)?'amt':(g?'amt':null))));
-    if(!g && t && !rol){cur=null;continue;}          /* otra columna (remarks, total…) corta el grupo */
-    if(g){
-      const tipo=g[1]?'anticipo':'balance'; const n=+(g[2]||g[4]||0);
-      /* mismo grupo si es la misma ranura y ese rol aún está libre; si no, ranura nueva */
-      if(!(cur&&cur.tipo===tipo&&cur.n===n&&cur[rol]==null)){
-        const k=slots.filter(x=>x.tipo===tipo).length+1;
-        cur={tipo,n,lbl:(tipo==='anticipo'?'DP':'Balance ')+(n||k),amt:null,st:null,fecha:null,pct:null};slots.push(cur);
-      }
+    const g=t0(c), t=colTxt(c), rol=rolDe(t);
+    const esPago=/(down\s*payment|anticipo|\bdp\b|balance|saldo)/.test(t);
+    if(!esPago && !g){ if(!rol) cur=null; continue; }        /* columna ajena (remarks, etc.) */
+    const nueva = (g && (!cur||cur.grupo!==g)) || (!cur) || (rol==='fecha' && cur.fecha!=null);
+    if(nueva){
+      const base=(g||t1(c).replace(/\s*(date|fecha|amount|monto|status|estado|percentage|%|\(usd\)).*/,'')).trim();
+      cur={grupo:g||base, tipo:tipoDe(t), lbl:(base||('Pago '+(slots.length+1))).replace(/\s+/g,' ').trim(), amt:null,st:null,fecha:null,pct:null};
+      slots.push(cur);
     }
-    if(!cur||!rol) continue;
-    if(cur[rol]==null) cur[rol]=c;
+    if(rol && cur[rol]==null) cur[rol]=c;
   }
   let ranuras=slots.filter(s=>s.st!=null||s.amt!=null);
   if(ranuras.filter(s=>s.st!=null).length<2){
-    /* Encabezados no reconocidos: posiciones conocidas del detailed SEP25 (R-U DP1, V-Y DP2, Z-AC Bal1, AD-AG Bal2) */
-    posicional=true;
-    ranuras=[{tipo:'anticipo',n:1,lbl:'DP1',fecha:17,amt:18,pct:19,st:20},{tipo:'anticipo',n:2,lbl:'DP2',fecha:21,amt:22,pct:23,st:24},
-             {tipo:'balance',n:1,lbl:'Balance 1',fecha:25,amt:26,pct:27,st:28},{tipo:'balance',n:2,lbl:'Balance 2',fecha:29,amt:30,pct:31,st:32}];
+    posicional=true;   /* encabezados no reconocidos: posiciones del detailed conocido */
+    ranuras=[{lbl:'Down payment 1',tipo:'anticipo',fecha:17,amt:18,pct:19,st:20},{lbl:'Down payment 2',tipo:'anticipo',fecha:21,amt:22,pct:23,st:24},
+             {lbl:'Balance payment 1',tipo:'balance',fecha:25,amt:26,pct:27,st:28},{lbl:'Balance payment 2',tipo:'balance',fecha:29,amt:30,pct:31,st:33}];
   }
   const colPO=iPO>=0?iPO:1;
-  const bloques={}; let b=null; const orden=[];
+  const bloques={}; const orden=[]; let b=null;
   const cerrar=()=>{if(!b)return;
     const fab=b.lineas.filter(l=>l.esFab), prov=b.lineas.filter(l=>!l.esFab);
     const S=(arr,f)=>arr.reduce((s,x)=>s+(+x[f]||0),0);
-    b.fab={monto:S(fab,'monto'),pagado:S(fab,'pagado'),pendiente:S(fab,'pendiente'),antPend:S(fab,'antPend'),balPend:S(fab,'balPend'),antPagado:S(fab,'antPagado'),sinEstado:fab.some(l=>l.sinEstado)};
+    b.mfg=b.mfg||'?';
+    b.fab={monto:S(fab,'monto'),pagado:S(fab,'pagado'),pendiente:S(fab,'pendiente'),antPend:S(fab,'antPend'),antPagado:S(fab,'antPagado'),sinEstado:fab.some(l=>l.sinEstado)};
     b.otros={monto:S(prov,'monto'),pagado:S(prov,'pagado'),pendiente:S(prov,'pendiente'),
-      proveedores:prov.map(l=>({nombre:l.nombre,monto:l.monto,pagado:l.pagado,saldo:l.pendiente,pagos:l.pagos}))};
-    /* último pago con monto de la línea del fabricante = lo que queda vivo (p. ej. Balance pendiente 119.125) */
+      proveedores:prov.map(l=>({nombre:l.nombre,monto:l.monto,pagado:l.pagado,saldo:l.pendiente,pagos:l.pagos,montoInferido:l.montoInferido}))};
     const pf=fab.flatMap(l=>l.pagos).filter(p=>p.monto>0.5), pfx=pf.filter(p=>!p.implicito);
     b.ultimoPago=pfx.length?pfx[pfx.length-1]:(pf.length?pf[pf.length-1]:null);
     b.sinProgramar=pf.filter(p=>p.implicito).reduce((s,p)=>s+p.monto,0);
-    /* estado del anticipo: pending si algún DP con monto está Pending; paid si todos los DP con monto están Paid */
     const dps=fab.flatMap(l=>l.pagos).filter(p=>p.tipo==='anticipo'&&(p.monto>0.5||p.estado));
     b.antStatus=dps.some(p=>p.estado==='pending')?'pending':(dps.some(p=>p.estado==='paid')?'paid':'unknown');
-    bloques[b.key]=b; orden.push(b.key); b=null;};
-  for(let i=hr+1+(r2EsSub?1:0);i<rows.length;i++){
+    const k=_bKey(b.mfg,b.key);
+    if(!bloques[k]){bloques[k]=[];orden.push(k);}
+    bloques[k].push(b); b=null;};
+  for(let i=hr+1;i<rows.length;i++){
     const r=rows[i]||[];
-    const poRaw=r[colPO];
-    const txtPO=poRaw==null?'':(''+poRaw).trim();
-    if(txtPO && !/\d/.test(txtPO)){cerrar();continue;}   /* título de sección o fila de totales: corta el bloque */
-    const hayPO=!!txtPO;
-    if(hayPO){cerrar();const key=_poKey(poRaw);b={key,poRaw:txtPO.replace(/[\r\n]+/g,' '),fila:i+1,lineas:[],mfg:null};if(bloques[key]){/* mismo PO repetido: se suma al mismo bloque */b=bloques[key];delete bloques[key];orden.splice(orden.indexOf(key),1);}}
+    const txtPO=r[colPO]==null?'':(''+r[colPO]).trim();
+    if(txtPO && !/\d/.test(txtPO)){cerrar();continue;}       /* título de sección o fila de totales */
+    if(txtPO){cerrar();b={key:_poKey(txtPO),poRaw:txtPO.replace(/[\r\n]+/g,' ').replace(/\s+/g,' '),fila:i+1,lineas:[],mfg:null};}
     if(!b) continue;
     const nombre=(''+(r[iComp]==null?'':r[iComp])).replace(/[\r\n]+/g,' ').trim();
-    const monto=_numC(r[iAmt]);
-    if(!nombre && monto==null) continue;
+    const propio=_numC(r[iAmt]), total=_numC(r[iTot]);
+    if(!nombre && propio==null && total==null) continue;
     if(/^(sub)?total/i.test(nombre)) continue;
-    if(!nombre && b.lineas.length>0) continue;          /* fila sin proveedor dentro del bloque (totales parciales) */
+    if(!nombre && b.lineas.length>0) continue;
     const esFab=/singsun|eagle/i.test(nombre)||(!nombre&&b.lineas.length===0);
     if(esFab&&!b.mfg) b.mfg=/eagle/i.test(nombre)?'Eaglerise':'Singsun';
+    /* monto de la línea: el propio del componente; si no lo trae (Eaglerise) el total del pedido */
+    let mTot=propio!=null?propio:(esFab&&total!=null?total:0);
     const pagos=ranuras.map(s=>{
-      const m=s.amt!=null?_numC(r[s.amt]):null; const est=s.st!=null?_stPago(r[s.st]):null;
+      const m=s.amt!=null?_numC(r[s.amt]):null, est=s.st!=null?_stPago(r[s.st]):null;
       const f=s.fecha!=null?r[s.fecha]:null; let pc=s.pct!=null?_numC(r[s.pct]):null; if(pc!=null&&pc>1)pc=pc/100;
-      return {slot:s.lbl,tipo:s.tipo,monto:m,pct:pc,estado:est,fecha:(f instanceof Date)?f:null,crudoEstado:s.st!=null&&r[s.st]!=null?(''+r[s.st]).trim():''};
+      return {slot:s.lbl,tipo:s.tipo,monto:m,pct:pc,estado:est,fecha:(f instanceof Date)?f:null};
     }).filter(p=>(p.monto!=null&&p.monto!==0)||p.estado);
-    const mTot=monto||0;
-    /* Pago con estado pero sin monto escrito: % si lo trae; proveedor → lo que falta de la línea;
-       anticipo del fabricante → % de anticipo; balance → lo que falta. */
+    /* pago con estado pero sin monto escrito: por su %, o lo que falte de la línea */
     const antPctL=CONFIG[b.mfg]?CONFIG[b.mfg].antPct:0.1;
     let acum=pagos.reduce((s,p)=>s+((p.monto>0)?p.monto:0),0);
     pagos.forEach(p=>{ if(p.estado && !(p.monto>0)){
-      let v = p.pct!=null ? p.pct*mTot : (!esFab ? mTot-acum : (p.tipo==='anticipo' ? antPctL*mTot : mTot-acum));
+      let v = p.pct!=null ? p.pct*mTot : (p.tipo==='anticipo'&&esFab ? antPctL*mTot : mTot-acum);
       v=Math.max(0,Math.round(v*100)/100); p.monto=v; p.montoInferido=true; acum+=v; }});
-    let pagado=0,pendiente=0,antPend=0,balPend=0,antPagado=0,sinEstado=false;
+    /* línea sin monto propio (Andrés escribe "-") pero con pagos: el monto es la suma de sus pagos */
+    let montoInferido=false;
+    if(mTot<0.5 && acum>0.5){ mTot=acum; montoInferido=true; }
+    /* Andrés a veces deja el estado en blanco o en "-" aunque la plata ya salió. Los pagos van en
+       orden: si un pago con monto no tiene estado y DESPUÉS hay otro pago con estado, el de antes
+       ya se hizo. Se marca pagado y se avisa que fue inferido. */
+    for(let k=0;k<pagos.length;k++){
+      if(pagos[k].estado||!(pagos[k].monto>0.5)) continue;
+      if(pagos.slice(k+1).some(q=>q.estado)){ pagos[k].estado='paid'; pagos[k].estadoInferido=true; }
+    }
+    let pagado=0,pendiente=0,antPend=0,antPagado=0,sinEstado=false;
     pagos.forEach(p=>{
       if(p.estado==='paid'){pagado+=p.monto||0;if(p.tipo==='anticipo')antPagado+=p.monto||0;}
-      else if(p.estado==='pending'){pendiente+=p.monto||0;if(p.tipo==='anticipo')antPend+=p.monto||0;else balPend+=p.monto||0;}
+      else if(p.estado==='pending'){pendiente+=p.monto||0;if(p.tipo==='anticipo')antPend+=p.monto||0;}
       else if(p.monto>0.5){sinEstado=true;}
     });
-    /* Lo que no está marcado Paid ni Pending también se debe (balance aún sin programar) */
     const faltante=Math.round((mTot-pagado-pendiente)*100)/100;
-    if(faltante>0.5){pendiente+=faltante; balPend+=faltante; pagos.push({slot:'Sin programar',tipo:'balance',monto:faltante,estado:'pending',implicito:true});}
-    b.lineas.push({fila:i+1,nombre:nombre||'(sin nombre)',esFab,monto:mTot,pagos,pagado,pendiente,antPend,balPend,antPagado,sinEstado});
+    if(faltante>0.5){pendiente+=faltante;pagos.push({slot:'Sin programar',tipo:'balance',monto:faltante,estado:'pending',implicito:true});}
+    b.lineas.push({fila:i+1,nombre:nombre||'(sin nombre)',esFab,monto:mTot,montoInferido,pagos,pagado,pendiente,antPend,antPagado,sinEstado});
   }
   cerrar();
-  return {bloques,orden,ranuras:ranuras.map(s=>s.lbl),posicional,cols:{po:colPO,comp:iComp,amt:iAmt}};
+  return {bloques,orden,ranuras:ranuras.map(s=>s.lbl),posicional,cols:{po:colPO,comp:iComp,amt:iAmt,tot:iTot}};
 }
 
-/* ---------- Hoja Sinosure del detailed: consumo por pedido (se compara contra U) ---------- */
+/* ---------- Hoja Sinosure del detailed: consumo declarado por pedido, cupos y sobregiro ---------- */
 function parseSinosureViejo(wb){
   const ws=_sheet(wb,'Sinosure'); if(!ws) return null;
   const rows=XLSX.utils.sheet_to_json(ws,{header:1,raw:true,defval:null});
   const singsun={}, eagle={};
-  let totalSingsun=null, totalEagle=null;
+  let totalSingsun=null, totalEagle=null, dispSingsun=null, dispEagle=null;
+  const cupos={Singsun:0, Eaglerise:0}, cuposPorEntidad={Singsun:{}, Eaglerise:{}};
+  let zona='cupos';
   for(const r of rows){
     const label=_txt(r[0]);
     if(label.indexOf('consumo total')>=0){ totalSingsun=_numC(r[1]); totalEagle=_numC(r[4]); continue; }
-    if(/pedido|po\b|^\d/i.test(''+(r[0]||'')) && _numC(r[1])!=null){ const k=_poKey(r[0]); singsun[k]=(singsun[k]||0)+_numC(r[1]); }
-    if(/cfm|po\b|pedido/i.test(''+(r[3]||'')) && _numC(r[4])!=null){ const k=_poKey(r[3]); eagle[k]=(eagle[k]||0)+_numC(r[4]); }
-  }
-  return {singsun, eagle, totalSingsun, totalEagle};
-}
-
-/* ---------- Emparejar bloques del detailed con filas del ORDER REPORT ----------
-   Directo por llave. Si un bloque agrupa varios pedidos del ORDER REPORT (ej. 7-5 = 7-5…7-9),
-   se toman hermanos consecutivos hasta que la suma del monto del fabricante (M) cuadre. */
-function emparejarDetailed(equipos, det){
-  const porKey={}; equipos.forEach(e=>{const k=_poKey(e.derrame);(porKey[k]=porKey[k]||[]).push(e);});
-  const usados=new Set(); const grupos=[]; const huerfanos=[];
-  det.orden.forEach(k=>{
-    const b=det.bloques[k];
-    let grupo=(porKey[k]||[]).filter(e=>!usados.has(e));
-    /* derrames partidos en el cargador (7-2A, 7-2B) cuelgan del mismo bloque */
-    Object.keys(porKey).forEach(k2=>{if(k2!==k&&k2.replace(/[A-Z]$/,'')===k)porKey[k2].forEach(e=>{if(!usados.has(e)&&grupo.indexOf(e)<0)grupo.push(e);});});
-    if(!grupo.length){huerfanos.push(b);return;}
-    const sumM=()=>grupo.reduce((s,e)=>s+(+e.cupoMonto||0),0);
-    const m=k.match(/^(CFM)?(\d+)-(\d+)$/);
-    if(m && b.fab.monto>0 && sumM()<b.fab.monto*0.97){
-      let n=+m[3]+1;
-      for(let t=0;t<15 && sumM()<b.fab.monto*0.97;t++,n++){
-        const sib=(porKey[(m[1]||'')+m[2]+'-'+n]||[]).filter(e=>!usados.has(e)); if(!sib.length)break;
-        if(det.bloques[(m[1]||'')+m[2]+'-'+n]) break;   /* el hermano tiene su propio bloque */
-        grupo=grupo.concat(sib);
+    if(label.indexOf('cupo disponible')>=0){ dispSingsun=_numC(r[1]); dispEagle=_numC(r[4]); continue; }
+    if(label==='consumo'){ zona='consumo'; continue; }
+    if(zona==='cupos'){
+      if(/solenium|zentrack/.test(label)){
+        if(_numC(r[1])!=null){cupos.Singsun+=_numC(r[1]);cuposPorEntidad.Singsun[(''+r[0]).trim()]=_numC(r[1]);}
+        if(_numC(r[4])!=null){cupos.Eaglerise+=_numC(r[4]);cuposPorEntidad.Eaglerise[(''+(r[3]||r[0])).trim()]=_numC(r[4]);}
       }
+      continue;
     }
-    grupo.forEach(e=>usados.add(e));
-    grupos.push({b,eqs:grupo});
-  });
-  const sinBloque=equipos.filter(e=>!usados.has(e));
-  return {grupos,huerfanos,sinBloque};
+    if(r[0]!=null && _numC(r[1])!=null){ const k=_poKey(r[0]); (singsun[k]=singsun[k]||{monto:0,filas:[]}); singsun[k].monto+=_numC(r[1]); singsun[k].filas.push((''+r[0]).trim()); }
+    if(r[3]!=null && _numC(r[4])!=null){ const k=_poKey(r[3]); (eagle[k]=eagle[k]||{monto:0,filas:[]}); eagle[k].monto+=_numC(r[4]); eagle[k].filas.push((''+r[3]).trim()); }
+  }
+  return {singsun, eagle, cupos, cuposPorEntidad, totalSingsun, totalEagle, dispSingsun, dispEagle};
 }
 
-/* ---------- Aplicar el detailed y construir la conciliación ----------
-   Lo único que el detailed DECIDE: estado del anticipo (antPaid), cuánto del saldo O es anticipo vs balance,
-   y el desglose de proveedores. Los montos se quedan con el ORDER REPORT. */
+/* ---------- Emparejar los bloques del detailed con los pedidos del ORDER REPORT ----------
+   El ORDER REPORT manda: cada pedido suyo busca su bloque. Un PO puede aparecer varias veces
+   en el Summary (una fila agregada vieja + las filas por pedido): se escoge la que cuadra en
+   monto; la otra se reporta como fila agregada y no se usa. Un bloque que agrupa varios
+   pedidos consecutivos (7-5 con 7-6…7-9) se reparte entre ellos. */
+function emparejarDetailed(equipos, det){
+  const porKey={}; equipos.forEach(e=>{const k=_bKey(e.mfg,_poKey(e.derrame));(porKey[k]=porKey[k]||[]).push(e);});
+  /* un bloque sin fila de fabricante (solo otros componentes) se cuelga del pedido con esa misma
+     llave, sea del fabricante que sea */
+  const libres={};
+  det.orden.forEach(k=>{
+    let dest=k;
+    if(k.indexOf('?|')===0){ const kk=k.slice(2); const alt=Object.keys(porKey).find(x=>x.slice(x.indexOf('|')+1)===kk); if(alt)dest=alt; }
+    (libres[dest]=libres[dest]||[]).push(...det.bloques[k]);
+  });
+  const usados=new Set(), grupos=[], agregados=[], huerfanos=[];
+  const cerca=(a,bb,tol)=>bb>0&&Math.abs(a-bb)<=Math.max(2,bb*(tol||0.01));
+  /* 1) match exacto de monto pedido a pedido */
+  Object.keys(porKey).forEach(k=>{
+    (porKey[k]||[]).forEach(e=>{
+      const cands=libres[k]||[];
+      const i=cands.findIndex(bl=>cerca(+e.cupoMonto||0, bl.fab.monto, 0.01));
+      if(i>=0){ grupos.push({b:cands[i],eqs:[e]}); usados.add(e); cands.splice(i,1); }
+    });
+  });
+  /* 2) lo que queda: un bloque por los pedidos sueltos de esa llave, agrupando hermanos si el
+        bloque vale bastante más que un pedido solo */
+  Object.keys(libres).forEach(k=>{
+    const cands=libres[k];
+    while(cands.length){
+      const bl=cands.shift();
+      let grupo=(porKey[k]||[]).filter(e=>!usados.has(e));
+      if(!grupo.length){ (bl.fab.monto>0.5?agregados:huerfanos).push(bl); continue; }
+      grupo=[grupo[0]];
+      const sum=()=>grupo.reduce((s,e)=>s+(+e.cupoMonto||0),0);
+      const m=k.match(/^(.+\|)(CFM)?(\d+)-(\d+)$/);
+      if(m && bl.fab.monto>0 && sum()<bl.fab.monto*0.97){
+        let n=+m[4]+1;
+        for(let t=0;t<20 && sum()<bl.fab.monto*0.97;t++,n++){
+          const kk=m[1]+(m[2]||'')+m[3]+'-'+n;
+          const sib=(porKey[kk]||[]).filter(e=>!usados.has(e));
+          if(!sib.length) break;
+          grupo=grupo.concat(sib);
+        }
+      }
+      grupo.forEach(e=>usados.add(e));
+      grupos.push({b:bl,eqs:grupo,aprox:true});
+    }
+  });
+  return {grupos,agregados,huerfanos,sinBloque:equipos.filter(e=>!usados.has(e))};
+}
+
+/* ---------- Casar la hoja Sinosure con los pedidos del ORDER REPORT ----------
+   Andrés a veces mete varios pedidos en un renglón ("Pedido 7.5" = 7-5 … 7-9). Se busca
+   primero el pedido con esa misma llave y, si el renglón vale bastante más, se le suman los
+   hermanos consecutivos hasta que cuadre contra el monto (M) o contra el saldo (O). */
+function casarSinosure(equipos, sino){
+  const mapa={}, sueltos=[];
+  if(!sino) return {mapa,sueltos};
+  ['Singsun','Eaglerise'].forEach(mfg=>{
+    const tabla=mfg==='Singsun'?sino.singsun:sino.eagle;
+    const porKey={}; equipos.filter(e=>e.mfg===mfg).forEach(e=>{const k=_poKey(e.derrame);(porKey[k]=porKey[k]||[]).push(e);});
+    const tomados=new Set();
+    Object.keys(tabla).sort().forEach(k=>{
+      const ref=tabla[k].monto;
+      let grupo=(porKey[k]||[]).filter(e=>!tomados.has(e));
+      if(!grupo.length){ sueltos.push({mfg,key:k,filas:tabla[k].filas.join(' / '),monto:ref}); return; }
+      const cerca=(a)=>Math.abs(a-ref)<=Math.max(2,Math.abs(ref)*0.005);
+      const sM=()=>grupo.reduce((s,e)=>s+(+e.cupoMonto||0),0), sO=()=>grupo.reduce((s,e)=>s+(+e.cupoSaldo||0),0);
+      const m=k.match(/^(CFM)?(\d+)-(\d+)$/);
+      if(m && !cerca(sM()) && !cerca(sO()) && ref>Math.max(sM(),sO())*1.2){
+        let n=+m[3]+1;
+        for(let t=0;t<20;t++,n++){
+          const kk=(m[1]||'')+m[2]+'-'+n;
+          if(tabla[kk]) break;                                  /* ese hermano tiene su propio renglón */
+          const sib=(porKey[kk]||[]).filter(e=>!tomados.has(e));
+          if(!sib.length) break;
+          grupo=grupo.concat(sib);
+          if(cerca(sM())||cerca(sO())) break;
+        }
+      }
+      grupo.forEach(e=>tomados.add(e));
+      const totM=sM();
+      grupo.forEach(e=>{ mapa[e.derrame]={sino:totM?ref*((+e.cupoMonto||0)/totM):ref/grupo.length,
+        grupoSino:ref, filas:tabla[k].filas.join(' / '), conjunto:grupo.map(x=>x.derrame), key:k}; });
+    });
+  });
+  return {mapa,sueltos};
+}
+
+/* ---------- Aplicar el detailed sobre lo leído del ORDER REPORT ----------
+   El detailed SOLO decide: si el anticipo está pagado, cuánto del saldo es anticipo y cuánto
+   balance, y el desglose por proveedor. Ningún monto del ORDER REPORT se toca. */
 function aplicarDetailed(equipos, det, sino){
   const emp=emparejarDetailed(equipos, det);
+  const cas=casarSinosure(equipos, sino);
   const tol=v=>Math.max(2,Math.abs(v)*0.005);
   const chk=(rep,d)=>d==null?null:(Math.abs(rep-d)<=tol(rep)?'ok':'dif');
   const filas=[];
-  emp.grupos.forEach(({b,eqs})=>{
+  emp.grupos.forEach(({b,eqs,aprox})=>{
     const sum=f=>eqs.reduce((s,e)=>s+(+e[f]||0),0);
     const M=sum('cupoMonto'),N=sum('cupoPagado'),O=sum('cupoSaldo'),P=sum('otrosMonto'),Q=sum('otrosPagado'),R=sum('otrosSaldo'),U=sum('totalSaldo');
-    /* Reparto al interior del grupo por el peso de M (y de P para proveedores) */
     eqs.forEach(e=>{
       const w=M?(+e.cupoMonto||0)/M:1/eqs.length, wP=P?(+e.otrosMonto||0)/P:w;
-      e.antStatus=b.antStatus; e.antFuente='detailed';
+      e.antStatus=b.antStatus; e.antFuente='detailed'; e.bloqueDet=b.poRaw+(eqs.length>1?' (agrupa '+eqs.map(x=>x.derrame).join(', ')+')':'');
       if(b.antStatus!=='unknown') e.antPaid=(b.antStatus==='paid');
-      /* anticipo pendiente según el bloque, acotado al saldo O leído del ORDER REPORT */
       const antPendDet=b.fab.antPend*w;
       e.antPend=e.antPaid?0:Math.min(+e.cupoSaldo||0, antPendDet>0.5?antPendDet:(+e.antTot||0));
-      e.pagosChina=b.lineas.filter(l=>l.esFab).flatMap(l=>l.pagos).map(p=>({slot:p.slot,tipo:p.tipo,monto:Math.round((p.monto||0)*w),estado:p.estado||'—',implicito:!!p.implicito}));
-      e.bloqueDet=b.key+(eqs.length>1?' (agrupa '+eqs.map(x=>x.derrame).join(', ')+')':'');
+      e.pagosChina=b.lineas.filter(l=>l.esFab).flatMap(l=>l.pagos).map(p=>({slot:p.slot,tipo:p.tipo,monto:Math.round((p.monto||0)*w),estado:p.estado||'—',implicito:!!p.implicito,fecha:p.fecha||null}));
       if(b.otros.proveedores.length) e.otrosDesglose=b.otros.proveedores.map(p=>({nombre:p.nombre,monto:p.monto*wP,pagado:p.pagado*wP,saldo:p.saldo*wP}));
     });
-    const sinoRef=sino?(eqs[0].mfg==='Eaglerise'?sino.eagle[b.key]:sino.singsun[b.key]):null;
+    /* hoja Sinosure: lo que le toca a este grupo según el casado global */
+    let sinoRef=null, sinoFilas=null;
+    const cs=eqs.map(e=>cas.mapa[e.derrame]).filter(Boolean);
+    if(cs.length){ sinoRef=cs.reduce((s,x)=>s+x.sino,0); sinoFilas=[...new Set(cs.map(x=>x.filas))].join(' + '); }
     const c={
       M:chk(M,b.fab.monto), N:chk(N,b.fab.pagado), O:chk(O,b.fab.pendiente),
-      P:(P>0.5||b.otros.monto>0.5)?chk(P,b.otros.monto):null, Q:(P>0.5||b.otros.monto>0.5)?chk(Q,b.otros.pagado):null, R:(P>0.5||b.otros.monto>0.5)?chk(R,b.otros.pendiente):null,
-      U:sinoRef==null?null:(chk(U,sinoRef)==='ok'||chk(O,sinoRef)==='ok'?'ok':'dif')
+      P:(P>0.5||b.otros.monto>0.5)?chk(P,b.otros.monto):null,
+      Q:(P>0.5||b.otros.monto>0.5)?chk(Q,b.otros.pagado):null,
+      R:(P>0.5||b.otros.monto>0.5)?chk(R,b.otros.pendiente):null,
+      U:sinoRef==null?null:((chk(M,sinoRef)==='ok'||chk(O,sinoRef)==='ok'||chk(U,sinoRef)==='ok')?'ok':'dif')
     };
     const nDif=Object.values(c).filter(v=>v==='dif').length;
-    filas.push({key:b.key,poRaw:b.poRaw,fila:b.fila,derrames:eqs.map(e=>e.derrame),mfg:eqs[0].mfg,
+    filas.push({key:b.key,poRaw:b.poRaw,fila:b.fila,derrames:eqs.map(e=>e.derrame),mfg:eqs[0].mfg,aprox:!!aprox,
       rep:{M,N,O,P,Q,R,U}, det:{M:b.fab.monto,N:b.fab.pagado,O:b.fab.pendiente,P:b.otros.monto,Q:b.otros.pagado,R:b.otros.pendiente,U:sinoRef},
-      chk:c,nDif,antStatus:b.antStatus,ultimoPago:b.ultimoPago,bloque:b,sinEstado:b.fab.sinEstado});
+      sinoFilas, chk:c,nDif,antStatus:b.antStatus,ultimoPago:b.ultimoPago,bloque:b,sinEstado:b.fab.sinEstado});
   });
-  /* pedidos del ORDER REPORT sin bloque en el detailed: se quedan con el cálculo por % */
   emp.sinBloque.forEach(e=>{e.antFuente='porcentaje';});
   filas.sort((a,b)=>b.nDif-a.nDif||(''+a.key).localeCompare(''+b.key,undefined,{numeric:true}));
-  return {filas,huerfanos:emp.huerfanos.map(b=>({key:b.key,poRaw:b.poRaw,fila:b.fila,monto:b.fab.monto})),
-    sinBloque:emp.sinBloque.map(e=>e.derrame),
-    totSino:sino?{Singsun:sino.totalSingsun,Eaglerise:sino.totalEagle}:null,
+  const sinoSueltos=cas.sueltos;
+  const sinoPorDerrame={}; Object.keys(cas.mapa).forEach(d=>{sinoPorDerrame[d]=cas.mapa[d].sino;});
+  return {filas,
+    agregados:emp.agregados.map(b=>({key:b.key,poRaw:b.poRaw,fila:b.fila,mfg:b.mfg,monto:b.fab.monto})),
+    huerfanos:emp.huerfanos.map(b=>({key:b.key,poRaw:b.poRaw,fila:b.fila,mfg:b.mfg,monto:b.fab.monto})),
+    sinBloque:emp.sinBloque.map(e=>e.derrame), sinoSueltos, sinoPorDerrame, sino:sino||null,
     ranuras:det.ranuras,posicional:det.posicional};
 }
 
@@ -2627,13 +3070,13 @@ function parseReportV2(wb){
   const _n=v=>{const x=_numC(v);return x==null?0:x;};
   const _has=v=>_numC(v)!=null;
 
-  const equipos=[]; const ordSet={}; let idx=0; const avisos=[];
+  const equipos=[]; const ordSet={}; let idx=0; const avisos=[]; let finTabla=rows.length;
   for(let i=hr+1;i<rows.length;i++){
     const r=rows[i]||[];
     const po=r[C.po];
     if(!po) continue;
     const poStr=(''+po).replace(/[\r\n]+/g,' ').trim();
-    if(/pagos priorit|id_pedido|^total/i.test(poStr)) break;
+    if(/pagos priorit|id_pedido|^total/i.test(poStr)){finTabla=i;break;}
     const key=_poKey(poStr);
     const mc=key.match(/^CFM(\d+)(?:-(\d+))?/);
     let ordenId, derrame;
@@ -2690,9 +3133,23 @@ function parseReportV2(wb){
       integ, nota:'', pctOverride:null, lector:'v2',
     });
   }
-  const totals={Singsun:0, Eaglerise:0}, totalsU={Singsun:0, Eaglerise:0};
-  equipos.forEach(function(e){if(totals[e.mfg]!=null){totals[e.mfg]+=(+e.cupoSaldo||0);totalsU[e.mfg]+=(+e.totalSaldo||0);}});
-  return {equipos, ordenes:Object.keys(ordSet), totals, totalsU, avisos, sourceHoja:'ORDER REPORT'};
+  /* ---- Tabla "PAGOS PRIORITARIOS": las fechas límite que pone Andrés, por pedido ---- */
+  const prioridad=[];
+  for(let i=finTabla;i<rows.length;i++){
+    const r=rows[i]||[];
+    const id=r[0]==null?'':(''+r[0]).replace(/[\r\n]+/g,' ').trim();
+    if(!id||/^id_ped/i.test(id)) continue;
+    const saldo=_numC(r[3]); if(saldo==null) continue;
+    const lim=_toDate(r[4]);
+    prioridad.push({key:_poKey(id), idRaw:id, equipo:(''+(r[1]||'')).trim(), proj:(''+(r[2]||'')).trim(), saldo, limite:lim});
+  }
+  /* la fecha límite de Andrés manda sobre la estimación BL + plazo */
+  const porPri={}; prioridad.forEach(x=>{ if(x.limite) porPri[x.key]=porPri[x.key]||x; });
+  equipos.forEach(e=>{ const x=porPri[_poKey(e.derrame)];
+    if(x){ e.limitePago=x.limite; e.limiteFuente='order report'; e.saldoPrioridad=x.saldo; } });
+  const totals={Singsun:0, Eaglerise:0}, totalsU={Singsun:0, Eaglerise:0}, totalsM={Singsun:0, Eaglerise:0};
+  equipos.forEach(function(e){if(totals[e.mfg]!=null){totals[e.mfg]+=(+e.cupoSaldo||0);totalsU[e.mfg]+=(+e.totalSaldo||0);totalsM[e.mfg]+=(+e.cupoMonto||0);}});
+  return {equipos, ordenes:Object.keys(ordSet), totals, totalsU, totalsM, prioridad, avisos, sourceHoja:'ORDER REPORT'};
 }
 
 let WIZ={step:1,work:null,prev:null,err:0,filter:'todos',loaded:false,totals:{}};
@@ -2761,7 +3218,7 @@ function kOf(x){return x.mfg+'|'+_poKey(x.derrame);}
 function prevDe(){const m={};EQ.forEach(e=>{const k=kOf(e);const p=m[k]||(m[k]={exists:true,st:e.st,cupoMonto:0,cupoSaldo:0,totalSaldo:0,mfg:e.mfg,cliente:e.cliente,proj:e.proj,legacy:false});
   p.cupoMonto+=(+(e.cupoMonto!=null?e.cupoMonto:e.mfgAmt)||0);p.cupoSaldo+=consumoEq(e,e.mfg);p.totalSaldo+=(+e.totalSaldo||0);if(e.lector!=='v2')p.legacy=true;});return m;}
 function onReportParsed(p,nombre){
-  WIZ.work=p.work=p.equipos; WIZ.totals=p.totals; WIZ.totalsU=p.totalsU; WIZ.avisos=p.avisos||[]; WIZ.orNombre=nombre||'';
+  WIZ.work=p.work=p.equipos; WIZ.totals=p.totals; WIZ.totalsU=p.totalsU; WIZ.totalsM=p.totalsM; WIZ.prioridad=p.prioridad||[]; WIZ.avisos=p.avisos||[]; WIZ.orNombre=nombre||'';
   WIZ.concilia=null;
   WIZ.prev=prevDe();
   WIZ.loaded=true; validateWiz(); renderWiz();
@@ -2889,7 +3346,7 @@ function renderConcilia(c){
 /* Paso 2 */
 function setWizFilter(f,btn){WIZ.filter=f;document.querySelectorAll('#wizFilters .chip').forEach(c=>c.classList.remove('on'));btn.classList.add('on');renderWizEditBody();}
 function renderWizEdit(){document.getElementById('reconBody').innerHTML=`
-    <div class="wizhint">Edita cualquier dato a mano. <b>Proyecto</b>: no vacío. <b>Estado</b>: de la lista. <b>Monto y saldo del cupo</b>: USD positivos (vienen de las columnas M y O del ORDER REPORT; cámbialos solo si Andrés se equivocó). Lo que no venga en el report, complétalo aquí.</div>
+    <div class="wizhint">Corrige a mano lo que Andrés haya escrito distinto. <b>Proyecto</b>: no puede quedar vacío. <b>Estado</b>: de la lista. <b>Monto y saldo del cupo</b>: USD positivos (vienen de las columnas M y O del ORDER REPORT; cámbialos solo si Andrés se equivocó). Lo que no venga en el report, complétalo aquí.</div>
     <div class="filters" id="wizFilters">
       <button class="chip on" onclick="setWizFilter('todos',this)">Todos</button>
       <button class="chip" onclick="setWizFilter('duda',this)">Por revisar</button>
@@ -2923,7 +3380,7 @@ function renderWizEditBody(){
         <td><input class="we sm" type="date" value="${w.bl?isoW(w.bl):(w.etd?isoW(w.etd):'')}" onchange="setW(${w._i},'${w.bl?'bl':'etd'}',this.value)"></td>
         <td><input class="we" value="${(w.nota||'').replace(/"/g,'&quot;')}" oninput="setW(${w._i},'nota',this.value)" placeholder="nota…"></td>
         <td class="acts">${w._splitGroup?`<button class="act unsplit" title="Unir las partes al original" onclick="unSplit('${w._splitGroup}')">↶</button>`:`<button class="act split" title="Partir en varios equipos" onclick="splitRow(${w._i})">⇔</button>`}<button class="act del" title="Eliminar fila" onclick="deleteRow(${w._i})">×</button></td></tr>`;});});
-  _wb.innerHTML=`<div class="vscroll"><table class="vtable edit"><thead><tr><th></th><th>Derrame</th><th title="Cantidad de equipos según Andrés">Qty</th><th>Proyecto</th><th>Cliente</th><th>Estado</th><th class="r" title="Columna M">Monto cupo</th><th class="r" title="Columna O">Saldo cupo</th><th class="r" title="Columna U">Saldo China</th><th>Anticipo pagado</th><th>Zarpe/BL</th><th>Nota</th><th></th></tr></thead><tbody>${html||'<tr><td colspan="13" style="color:var(--ink3);padding:14px">Nada en este filtro</td></tr>'}</tbody></table></div>`;
+  _wb.innerHTML=`<div class="vscroll"><table class="vtable edit"><thead><tr><th></th><th title="El ID_Pedido tal como viene en el ORDER REPORT">ID_Pedido</th><th title="Cantidad de equipos según Andrés">Qty</th><th>Proyecto</th><th>Cliente</th><th>Estado</th><th class="r" title="Columna M">Monto cupo</th><th class="r" title="Columna O">Saldo cupo</th><th class="r" title="Columna U">Saldo China</th><th>Anticipo pagado</th><th>Zarpe/BL</th><th>Nota</th><th></th></tr></thead><tbody>${html||'<tr><td colspan="13" style="color:var(--ink3);padding:14px">Nada en este filtro</td></tr>'}</tbody></table></div>`;
   // restaurar scroll
   const _sc=_wb.querySelector('.vscroll');if(_sc&&_prevScroll)_sc.scrollTop=_prevScroll;
 }
@@ -2990,7 +3447,8 @@ function wizApprove(){
       totalChina:+w.totalChina||0,totalPagado:+w.totalPagado||0,totalSaldo:(w.totalSaldo!=null&&w.totalSaldo!=='')?+w.totalSaldo:O+(+w.otrosSaldo||0),
       antFuente:w.antFuente||'porcentaje',antStatus:w.antStatus||null,pagosChina:w.pagosChina||null,bloqueDet:w.bloqueDet||null,integ:w.integ||[],
       derrame:w.derrame,bl:w.bl,etd:w.etd,eta:w.eta||null,prodFin:w.prodFin||null,nota:w.nota,pctOverride:null,
-      blNo:w.blNo||null,telex:w.telex||null,qty:w.qty||1,lector:'v2',corte:(WIZ.corte||new Date())};
+      blNo:w.blNo||null,telex:w.telex||null,qty:w.qty||1,lector:'v2',corte:(WIZ.corte||new Date()),
+      limitePago:w.limitePago||null,limiteFuente:w.limiteFuente||null,saldoPrioridad:w.saldoPrioridad||null};
     heredar(e);
     if(isShipped(e)&&e.bl)e.vence=addD(e.bl,CONFIG[e.mfg].dias);if(!isShipped(e)&&e.etd&&!e.eta)e.eta=addD(e.etd,35);return e;})}));
   EQ=ORD.flatMap(o=>o.equipos);EQ.forEach((e,i)=>e._i=i);
@@ -3003,6 +3461,22 @@ function wizApprove(){
   pushHistoria(nEqPrev);
   HIST[HIST.length-1].snapPrev=_prevSnap||null;
   HIST[HIST.length-1].fuente=(WIZ.orNombre||'ORDER REPORT')+(WIZ.concilia?' + '+(WIZ.detNombre||'detailed'):'');
+  /* resumen del cruce, para el tablero y las alertas de datos */
+  CONCILIA = WIZ.concilia ? {
+    ts:new Date(), or:WIZ.orNombre||'', det:WIZ.detNombre||'',
+    sino:WIZ.concilia.sino?{cupos:WIZ.concilia.sino.cupos, cuposPorEntidad:WIZ.concilia.sino.cuposPorEntidad,
+      totalSingsun:WIZ.concilia.sino.totalSingsun, totalEagle:WIZ.concilia.sino.totalEagle,
+      dispSingsun:WIZ.concilia.sino.dispSingsun, dispEagle:WIZ.concilia.sino.dispEagle}:null,
+    sinoPorDerrame:WIZ.concilia.sinoPorDerrame||{},
+    dif:WIZ.concilia.filas.filter(f=>f.nDif).map(f=>({po:f.poRaw,derrames:f.derrames,mfg:f.mfg,
+      cols:Object.keys(f.chk).filter(k=>f.chk[k]==='dif'), rep:f.rep, det:f.det, sinoFilas:f.sinoFilas})),
+    nOk:WIZ.concilia.filas.filter(f=>!f.nDif).length,
+    agregados:WIZ.concilia.agregados, huerfanos:WIZ.concilia.huerfanos,
+    sinBloque:WIZ.concilia.sinBloque, sinoSueltos:WIZ.concilia.sinoSueltos,
+    ranuras:WIZ.concilia.ranuras, posicional:WIZ.concilia.posicional
+  } : (CONCILIA?{...CONCILIA, viejo:true}:null);
+  WIZ.avisosOR=WIZ.avisos||[];
+  if(CONCILIA) CONCILIA.avisosOR=WIZ.avisos||[];
   closeRecon();toast('ORDER REPORT cargado'+(WIZ.concilia?' y cruzado con el detailed':'')+' · facturas, pagos y precios conservados');
   refreshAll();renderLedger();renderHistCargas();
   if(typeof saveToServer==='function')saveToServer();
@@ -3018,6 +3492,7 @@ function stageOpts(sel){return ['confirm','prod','finished','booked','shipping']
 function setCfg(mfg,f,v){CONFIG[mfg][f]=(f==='antPct')?Math.max(0,Math.min(1,parseFloat(v)||0)):(f==='dias'?(+v||0):v);if(f==='dias')recalcVenceChina();refreshCupo();}
 function setCupo(mfg,v){CUPO[mfg]=Math.max(0,+v||0);refreshCupo();}
 function setOverride(i,v){EQ[i].pctOverride=(v==='auto')?null:parseFloat(v);refreshCupo();}
+function setCupoRegla(v){CONFIG.cupoRegla=v;refreshAll();renderLedger();if(typeof saveToServer==='function')saveToServer();toast('Cupo contado por: <b>'+CUPO_REGLAS[v]+'</b>');}
 function setTrmProy(v){CONFIG.trmProy=+v||4050;if(document.getElementById('v-caja').classList.contains('on'))renderCaja();renderConfig();}
 function setCliTerm(c,v){if(CLI[c]){CLI[c].term=+v||0;recalcVence();}refreshCupo();if(document.getElementById('v-clientes').classList.contains('on'))renderClientes();}
 function setCliFifo(c,v){if(CLI[c])CLI[c].fifo=(v==='fifo');}
@@ -3079,15 +3554,19 @@ function renderConfig(){
   document.getElementById('cfgBody').innerHTML=['Singsun','Eaglerise'].map(mfg=>{
     const cfg=CONFIG[mfg],cover=Math.round((1-cfg.antPct)*100),comp=Math.round(cargaViva(mfg)),disp=Math.round(disponible(mfg)),cupo=CUPO[mfg];
     return `<div class="cfgcard">
-      <h3>${mfg==='Singsun'?'Trackers · Singsun':'Shelters · Eaglerise'}</h3>
-      <div class="cfgrow"><label>Cupo disponible con Sinosure (USD)</label><input class="cfgmini wide" type="number" min="0" value="${cupo}" onchange="setCupo('${mfg}',this.value)"></div>
-      <div class="cfgrow"><label>Empieza a reservar cupo desde</label><select onchange="setCfg('${mfg}','reserveFrom',this.value)">${stageOpts(cfg.reserveFrom)}</select></div>
+      <h3>${mfg==='Singsun'?'Trackers · Singsun (se le paga a Nexus)':'Shelters · Eaglerise (pago directo)'}</h3>
+      <div class="cfgrow"><label>Techo de cupo con Sinosure (USD)</label><input class="cfgmini wide" type="number" min="0" value="${cupo}" onchange="setCupo('${mfg}',this.value)"></div>
+      <div class="cfgrow"><label>Desde qué estado del ORDER REPORT empieza a pesar en el cupo</label><select onchange="setCfg('${mfg}','reserveFrom',this.value)">${stageOpts(cfg.reserveFrom)}</select></div>
       <div class="cfgrow"><label>Anticipo</label><div class="cfgpct"><input type="number" value="${Math.round(cfg.antPct*100)}" min="0" max="100" onchange="setCfg('${mfg}','antPct',this.value/100)">%</div></div>
-      <div class="cfgrow"><label>Plazo a China (días desde BL)</label><input class="cfgmini" type="number" value="${cfg.dias}" min="0" onchange="setCfg('${mfg}','dias',this.value)"></div>
-      <div class="cfgnote">Reserva <b>100%</b> al entrar en ese estado → <b>${cover}%</b> con anticipo pagado → <b>0</b> al pagar el balance. Se paga a <b>${cfg.receptor}</b>.</div>
+      <div class="cfgrow"><label>Días que te da China desde el BL</label><input class="cfgmini" type="number" value="${cfg.dias}" min="0" onchange="setCfg('${mfg}','dias',this.value)"></div>
+      <div class="cfgnote">Con el anticipo pagado queda comprometido el <b>${cover}%</b> del pedido, y el cupo se libera cuando pagas el balance. El giro va a <b>${cfg.receptor}</b>.</div>
       <div class="cfgstate">Ahora: comprometido <b>${fmtUSDs(comp)}</b> · ${disp<0?`<span style="color:var(--danger)">sobregirado ${fmtUSDs(-disp)}</span>`:`disponible ${fmtUSDs(disp)}`}</div>
     </div>`;
   }).join('');
+  const cr=document.getElementById('cfgReglaCupo');
+  if(cr) cr.innerHTML=`<div class="cfgrow" style="max-width:760px"><label>Qué consume cupo Sinosure</label>
+      <select onchange="setCupoRegla(this.value)">${Object.keys(CUPO_REGLAS).map(r=>`<option value="${r}" ${CONFIG.cupoRegla===r?'selected':''}>${CUPO_REGLAS[r]}</option>`).join('')}</select></div>
+    <div class="cfgnote2">Manda en el treemap, en los KPIs del tablero y en el disponible. <b>Como la hoja de Andrés</b> es la que más se acerca a lo que él reporta; <b>saldo por pagar</b> es el 90% del tracker (o el 80% del shelter) una vez pagado el anticipo.</div>`;
   document.getElementById('cfgTrm').innerHTML=`<div class="cfgrow" style="max-width:520px"><label>TRM para embarques de prueba (lo que aún no tiene factura)</label><input class="cfgmini" type="number" value="${CONFIG.trmProy}" onchange="setTrmProy(this.value)"></div><div class="cfgnote2">Lo ya facturado usa la TRM fija de cada factura. Solo lo hipotético (probar embarque) usa esta TRM, salvo que pongas otra en el propio embarque.</div>`;
   document.getElementById('cfgClientes').innerHTML=`<table class="excT"><thead><tr><th>Cliente</th><th class="r">Plazo (días)</th><th>Aplicación de pagos</th></tr></thead><tbody>
     ${CLIENTES.map(c=>`<tr><td><b>${c}</b></td><td class="r"><input class="cfgmini" type="number" value="${CLI[c].term}" min="0" onchange="setCliTerm('${c}',this.value)"></td>
@@ -3411,7 +3890,7 @@ function avisoLectorViejo(){
 }
 function hydrateDates(s){
   (s.ORD||[]).forEach(function(o){ (o.equipos||[]).forEach(function(e){
-    ['bl','etd','eta','vence','prodFin','corte'].forEach(function(k){ if(e[k]) e[k]=_rev(e[k]); });
+    ['bl','etd','eta','vence','prodFin','corte','limitePago'].forEach(function(k){ if(e[k]) e[k]=_rev(e[k]); });
   });});
   (s.FACT||[]).forEach(function(f){
     ['fecha','limite'].forEach(function(k){ if(f[k]) f[k]=_rev(f[k]); });
@@ -3419,9 +3898,10 @@ function hydrateDates(s){
   });
   (s.PAGOS||[]).forEach(function(p){ ['fecha','ts'].forEach(function(k){ if(p[k]) p[k]=_rev(p[k]); }); });
   (s.HIST||[]).forEach(function(h){ if(h.ts) h.ts=_rev(h.ts); });
+  if(s.CONCILIA && s.CONCILIA.ts) s.CONCILIA.ts=_rev(s.CONCILIA.ts);
 }
 function serializeState(){
-  return JSON.stringify({ v:'0.18', ORD:ORD, FACT:FACT, PAGOS:PAGOS, CONFIG:CONFIG, CLI:CLI, HIST:HIST, CUPO:CUPO });
+  return JSON.stringify({ v:'0.19', ORD:ORD, FACT:FACT, PAGOS:PAGOS, CONFIG:CONFIG, CLI:CLI, HIST:HIST, CUPO:CUPO, CONCILIA:CONCILIA });
 }
 function applyState(s){
   if(s.ORD){ ORD.length=0; s.ORD.forEach(function(o){ORD.push(o);}); }
@@ -3429,6 +3909,7 @@ function applyState(s){
   if(s.PAGOS){ PAGOS.length=0; s.PAGOS.forEach(function(p){PAGOS.push(p);}); }
   if(s.CONFIG) Object.assign(CONFIG, s.CONFIG);
   if(s.CUPO) Object.assign(CUPO, s.CUPO);
+  CONCILIA = s.CONCILIA || null;
   if(s.CLI){ Object.keys(CLI).forEach(function(k){delete CLI[k];}); Object.assign(CLI, s.CLI); }
   if(s.HIST){ HIST.length=0; s.HIST.forEach(function(h){HIST.push(h);}); }
   PID = PAGOS.reduce(function(m,p){ return Math.max(m, p.id||0); }, 0) + 1;
@@ -3476,7 +3957,7 @@ const DEMO=false;
 if(!DEMO){ ORD.length=0; EQ.length=0; FACT.length=0; PAGOS.length=0; PRUEBAS.length=0; for(const k in CLI)delete CLI[k]; CLIENTES=Object.keys(CLI); PID=1; }
 /* Arranque único: carga del servidor (o pinta en memoria si no hay backend). NO pintar antes de esto. */
 loadFromServer();
-console.log('%cZentrack Control v0.18','background:#17181A;color:#fff;padding:4px 10px;border-radius:4px;font-weight:700');
+console.log('%cZentrack Control v0.19','background:#17181A;color:#fff;padding:4px 10px;border-radius:4px;font-weight:700');
 document.addEventListener('keydown',e=>{if(e.key==='Escape'){closePanel();closeRecon();}});
 
 </script>
