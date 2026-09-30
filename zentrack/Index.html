@@ -970,6 +970,15 @@ table.stmt td.l{font-variant-numeric:normal}
 .pr-tbl .pr-row{cursor:pointer} .pr-tbl .pr-row:hover td{background:var(--surface)}
 .pr-tbl .pr-row td:first-child small{display:block;color:var(--ink3);font-size:11px;margin-top:1px;padding-left:16px}
 .pr-c{display:inline-block;width:16px;color:var(--ink3)}
+.mod.alarmas{border-left:3px solid var(--dato-vencido);padding-left:18px;background:var(--danger-soft);border-radius:0 8px 8px 0}
+.alr{display:grid;grid-template-columns:200px 1fr auto;gap:12px;padding:9px 0;border-top:1px solid rgba(179,38,30,.18);align-items:baseline;font-size:12.5px}
+.alr:first-of-type{border-top:none}
+.alr b{font-size:13px}
+.alr .alr-q{color:var(--ink2)}
+.alr .alr-q code{font-family:ui-monospace,Menlo,monospace;font-size:11.5px;background:rgba(255,255,255,.7);padding:1px 4px;border-radius:3px}
+.alr .alr-n{font-variant-numeric:tabular-nums;font-weight:700;white-space:nowrap}
+.alr-tit{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--dato-vencido);font-weight:700;margin:12px 0 2px}
+.alr-tit:first-child{margin-top:0}
 .pr-tbl .pr-sub td{background:var(--surface);font-size:11.5px;cursor:pointer;border-bottom:1px solid var(--rule)}
 .pr-tbl .pr-sub:hover td{background:var(--accent-soft)}
 /* alertas de datos */
@@ -1034,6 +1043,9 @@ table.stmt td.l{font-variant-numeric:normal}
       <!-- Lo que manda la caja: lo que le debo a China contra lo que me deben -->
       <div class="hero" id="tbHero"></div>
       <div class="kpis" id="tbKpis"></div>
+
+      <!-- Alarmas del cupo: la hoja Sinosure manda; el ORDER REPORT proyecta -->
+      <div class="mod alarmas" id="modAlarmas" style="display:none"></div>
 
       <!-- Alertas de datos: dónde no cuadran el ORDER REPORT y el detailed -->
       <div class="mod" id="modAlertas" style="display:none"></div>
@@ -1228,7 +1240,7 @@ const isShipped=e=>e.st==='shipping'||e.st==='shipped';
 /* Andrés no siempre llena el proyecto; que nunca se vea un guión suelto */
 const nombreEq=e=>{const p=(''+(e.proj||'')).trim();return (p&&p!=='-'&&!/^Orden\s/.test(p))?p:('Pedido '+(e.derrame||e.ordenId));};
 const term=mfg=>mfg==='Singsun'?90:60;
-let CONFIG={Singsun:{reserveFrom:'confirm',antPct:0.10,dias:90,receptor:'Nexus'},Eaglerise:{reserveFrom:'confirm',antPct:0.20,dias:60,receptor:'Eaglerise'},trmProy:4050,logDias:30,pagoMinDias:15,cupoRegla:'sinosure'};
+let CONFIG={Singsun:{reserveFrom:'confirm',antPct:0.10,dias:90,receptor:'Nexus'},Eaglerise:{reserveFrom:'confirm',antPct:0.20,dias:60,receptor:'Eaglerise'},trmProy:4050,logDias:30,pagoMinDias:15,cupoRegla:'sinosure',contarDupSino:false};
 /* Cómo se cuenta el cupo Sinosure que consume un pedido. Tres reglas, porque los archivos
    no usan una sola:
      'saldo'  → el saldo por pagar al fabricante (columna O). Es el 90% del tracker o el 80%
@@ -1246,8 +1258,25 @@ const CUPO_REGLAS={
 function sinoDeclarado(e){
   const m=(CONCILIA&&CONCILIA.sinoPorDerrame)||null;
   if(!m||m[e.derrame]==null) return null;
+  let base=m[e.derrame];
+  /* si quieres cuadrar exacto con el archivo de Andrés, se vuelven a sumar los
+     renglones que repiten una celda ya contada */
+  if(CONFIG.contarDupSino) base+=(CONCILIA.sinoDupPorDerrame&&CONCILIA.sinoDupPorDerrame[e.derrame])||0;
   const girado=Math.max(0,(+e.cupoSaldo0||0)-(+e.cupoSaldo||0));
-  return Math.max(0,m[e.derrame]-girado);
+  return Math.max(0,base-girado);
+}
+/* ALARMAS DEL CUPO — la hoja Sinosure del detailed es la que manda; el ORDER REPORT proyecta */
+function alarmasCupo(){
+  const C=CONCILIA; if(!C) return null;
+  const sinConfirmar=[];
+  ['Singsun','Eaglerise'].forEach(mfg=>sinCargarAlCupo(mfg).forEach(x=>sinConfirmar.push({...x,mfg})));
+  const dup=(C.sinoDup||[]);
+  const sueltos=(C.sinoSueltosL||[]);
+  /* pedidos donde el ORDER REPORT y el detailed no valen lo mismo */
+  const montoDistinto=(C.dif||[]).filter(d=>d.cols.indexOf('M')>=0)
+    .map(d=>({po:d.po,derrames:d.derrames,mfg:d.mfg,or:d.rep.M,det:d.det.M}));
+  return {sinConfirmar, dup, sueltos, montoDistinto,
+    hay:sinConfirmar.length||dup.length||sueltos.length||montoDistinto.length};
 }
 /* Pedidos vivos que la hoja Sinosure todavía no lista: no cuentan en el consumo declarado,
    pero son plata que va a caer al cupo apenas Andrés los cargue. */
@@ -1437,6 +1466,12 @@ function cupoExplica(mfg){
     const dif=(suyo==null?mio:mio-suyo);
     if(Math.abs(dif)>2) lineas.push({derrame:e.derrame, proj:e.proj, st:e.st, mio, suyo, dif,
       motivo: suyo==null?'la hoja Sinosure no lo lista':(mio>suyo?'cuento más que él':'cuento menos que él')});
+  });
+  /* los renglones repetidos de la hoja: él los suma, la herramienta no */
+  if(!CONFIG.contarDupSino) ((CONCILIA&&CONCILIA.sinoDup)||[]).forEach(dp=>{
+    if(dp.lado!==mfg) return;
+    lineas.push({derrame:dp.etiqueta, proj:'', st:'', mio:0, suyo:dp.valor, dif:-dp.valor,
+      motivo:'renglón repetido: '+dp.celda+' apunta a '+dp.ref+', ya contado en '+dp.yaEn});
   });
   lineas.sort((a,b)=>Math.abs(b.dif)-Math.abs(a.dif));
   return lineas;
@@ -1883,7 +1918,7 @@ function renderProveedoresExt(){
 let TB_VENT=30;   /* ventana del tablero, en días */
 function setVent(d,btn){TB_VENT=d;document.querySelectorAll('#tbVent button').forEach(x=>x.classList.remove('on'));if(btn)btn.classList.add('on');renderHoy();}
 function renderHoy(){
-  renderVenc();renderDesfase();renderProveedoresExt();renderAlertasDatos();renderPuente();renderCupoConc();
+  renderVenc();renderDesfase();renderProveedoresExt();renderAlarmas();renderAlertasDatos();renderPuente();renderCupoConc();
   document.getElementById('hoyDate').textContent = TODAY.toLocaleDateString('es-CO',{weekday:'long',day:'numeric',month:'long',year:'numeric'}).replace(/^\w/,c=>c.toUpperCase());
   const fu=document.getElementById('tbFuente');
   if(fu) fu.innerHTML = !CONCILIA
@@ -1913,7 +1948,7 @@ function renderHoy(){
     return `<div class="kpi"><div class="kl">Cupo ${n==='Singsun'?'Singsun · trackers':'Eaglerise · shelters'} ${disp<0?'<span class="chipst mal">sobregirado</span>':'<span class="chipst ok">con aire</span>'}</div>
       <div class="kv ${disp<0?'alerta':''}">${disp<0?'−':''}US$ ${fmtUSDs(Math.abs(disp))}</div>
       <div class="kd">usado <b>${fmtUSDs(c.usado)}</b> de ${fmtUSDs(c.cupo)}${c.declarado!=null&&Math.abs(c.usado-c.declarado)>2?` · Andrés dice ${fmtUSDs(c.declarado)}`:''}
-      ${sp>0.5?`<br><b style="color:var(--dato-debo)">+${fmtUSDs(sp)} por cargar</b> (${pend.map(x=>x.e.derrame).join(', ')}): cuando Andrés los meta a la hoja, quedas ${c.cupo-c.usado-sp<0?'<b style="color:var(--dato-vencido)">sobregirado '+fmtUSDs(sp+c.usado-c.cupo)+'</b>':'en '+fmtUSDs(c.cupo-c.usado-sp)}`:''}</div></div>`;};
+      ${sp>0.5?`<br><b style="color:var(--dato-debo)">+${fmtUSDs(sp)} sin confirmar</b> (${pend.map(x=>x.e.derrame).join(', ')}): proyectado quedas ${c.cupo-c.usado-sp<0?'<b style="color:var(--dato-vencido)">sobregirado '+fmtUSDs(sp+c.usado-c.cupo)+'</b>':'en '+fmtUSDs(c.cupo-c.usado-sp)}`:''}</div></div>`;};
   const k=document.getElementById('tbKpis');
   if(k) k.innerHTML=`
     <div class="kpi"><div class="kl">Vencido con China ${TT.vencido>0?'<span class="chipst mal">girar ya</span>':'<span class="chipst ok">al día</span>'}</div>
@@ -2067,6 +2102,34 @@ function renderCupoConc(){
     ${!CONCILIA?`<div style="font-size:12.5px;color:var(--dato-vencido);margin:6px 0">Todavía no has cruzado el detailed, así que el cupo sale calculado del ORDER REPORT y no de la hoja Sinosure.</div>`:''}
     <div class="cfgnote2">La hoja de Andrés no usa un solo criterio: en unos pedidos cuenta el monto completo y en otros el saldo después del anticipo. Aquí ves las tres formas de contarlo y cuál se parece más a lo que él reporta. La regla que manda en el tablero y en el treemap se cambia en Ajustes.</div>
     <div class="cc2">${box('Singsun')}${box('Eaglerise')}</div>`;
+}
+
+/* ---------- ALARMAS DEL CUPO ---------- */
+function renderAlarmas(){
+  const el=document.getElementById('modAlarmas'); if(!el) return;
+  const A=alarmasCupo();
+  if(!A||!A.hay){el.style.display='none';el.innerHTML='';return;}
+  el.style.display='';
+  const blo=(tit,filas)=>filas.length?`<div class="alr-tit">${tit}</div>`+filas.join(''):'';
+  const f1=A.sinConfirmar.map(x=>`<div class="alr"><b>${x.e.derrame}</b>
+    <span class="alr-q">${nombreEq(x.e)} · ${x.e.mfg} · ${STAGE[x.e.st]} — está en el ORDER REPORT pero <b>no aparece en la hoja Sinosure</b>, así que todavía no consume cupo. Si ya se confirmó, pídele a Andrés que lo cargue.</span>
+    <span class="alr-n">${fmtUSDs(x.monto)}</span></div>`);
+  const f2=A.dup.map(x=>`<div class="alr"><b>${x.etiqueta}</b>
+    <span class="alr-q">la celda <code>${x.celda}</code> de la hoja Sinosure apunta a <code>${x.ref}</code>, que ya está contada en <code>${x.yaEn}</code>. Esa plata se está sumando dos veces en el total de Andrés.</span>
+    <span class="alr-n">${fmtUSDs(x.valor)}</span></div>`);
+  const f3=A.montoDistinto.map(x=>`<div class="alr"><b>${x.po}</b>
+    <span class="alr-q">el ORDER REPORT dice que el pedido vale <b>${fmtUSDs(x.or)}</b> y el detailed dice <b>${fmtUSDs(x.det)}</b>. El cupo se cuenta con el detailed.</span>
+    <span class="alr-n">${fmtUSDs(Math.abs(x.or-x.det))}</span></div>`);
+  const f4=A.sueltos.map(x=>`<div class="alr"><b>${x.etiqueta}</b>
+    <span class="alr-q">renglón <code>${x.celda}</code> de la hoja Sinosure: no logré ubicarlo en ningún pedido del ORDER REPORT.</span>
+    <span class="alr-n">${fmtUSDs(x.valor)}</span></div>`);
+  el.innerHTML=`<div class="al-h"><h3 style="margin:0">Alarmas del cupo</h3>
+      <span class="chipst mal">${A.sinConfirmar.length+A.dup.length+A.montoDistinto.length+A.sueltos.length} cosa(s) por revisar</span></div>
+    <div class="cfgnote2" style="color:var(--ink2)">El cupo se cuenta con la <b>hoja Sinosure del detailed</b>, que es la que manda. El ORDER REPORT sirve para proyectar lo que todavía no está confirmado.</div>
+    ${blo('Están en el ORDER REPORT pero no en la hoja Sinosure · sin confirmar',f1)}
+    ${blo('Renglones repetidos en la hoja Sinosure · cuentan la misma plata dos veces',f2)}
+    ${blo('El ORDER REPORT y el detailed no valen lo mismo',f3)}
+    ${blo('Renglones de la hoja Sinosure sin pedido',f4)}`;
 }
 
 /* ---------- Alertas de datos: dónde no cuadran tus dos archivos ---------- */
@@ -2915,30 +2978,55 @@ function parseDetailed(wb){
   return {bloques,orden,ranuras:ranuras.map(s=>s.lbl),posicional,cols:{po:colPO,comp:iComp,amt:iAmt,tot:iTot}};
 }
 
-/* ---------- Hoja Sinosure del detailed: consumo declarado por pedido, cupos y sobregiro ---------- */
+/* ---------- Hoja Sinosure del detailed: EL ORQUESTADOR DEL CUPO ----------
+   Cada renglón de "Consumo" es una fórmula que apunta a una celda del Summary
+   (=Summary!AA102, =Summary!S104, =Summary!Q45…). Se leen las fórmulas y no las
+   etiquetas: la etiqueta la escribe Andrés a mano y se repite o se equivoca, la
+   fórmula dice exactamente de qué pedido y de qué pago sale cada dólar.
+   La columna referenciada dice qué está contando:
+     S / W  → anticipo (down payment) pendiente
+     AA / AE → balance del pedido
+     Q      → el monto completo del fabricante
+     O      → el costo total del pedido  */
+const _SINO_QUE={S:'anticipo (DP1)',W:'anticipo (DP2)',AA:'balance',AE:'balance',Q:'monto del fabricante',O:'costo total del pedido'};
 function parseSinosureViejo(wb){
   const ws=_sheet(wb,'Sinosure'); if(!ws) return null;
   const rows=XLSX.utils.sheet_to_json(ws,{header:1,raw:true,defval:null});
-  const singsun={}, eagle={};
-  let totalSingsun=null, totalEagle=null, dispSingsun=null, dispEagle=null;
   const cupos={Singsun:0, Eaglerise:0}, cuposPorEntidad={Singsun:{}, Eaglerise:{}};
-  let zona='cupos';
-  for(const r of rows){
-    const label=_txt(r[0]);
-    if(label.indexOf('consumo total')>=0){ totalSingsun=_numC(r[1]); totalEagle=_numC(r[4]); continue; }
-    if(label.indexOf('cupo disponible')>=0){ dispSingsun=_numC(r[1]); dispEagle=_numC(r[4]); continue; }
+  let totalSingsun=null,totalEagle=null,dispSingsun=null,dispEagle=null,zona='cupos';
+  const entradas=[];
+  const cel=(r,c)=>ws[XLSX.utils.encode_cell({r:r,c:c})]||null;
+  const refDe=(r,c)=>{const k=cel(r,c); if(!k||!k.f) return null;
+    const m=(''+k.f).match(/^\s*=?\s*'?([^'!]+)'?!\$?([A-Z]{1,3})\$?(\d+)\s*$/);
+    return m?{hoja:m[1],col:m[2],fila:+m[3],addr:m[2]+m[3]}:null;};
+  for(let r=0;r<rows.length;r++){
+    const fila=rows[r]||[], label=_txt(fila[0]);
+    if(label.indexOf('consumo total')>=0){ totalSingsun=_numC(fila[1]); totalEagle=_numC(fila[4]); continue; }
+    if(label.indexOf('cupo disponible')>=0){ dispSingsun=_numC(fila[1]); dispEagle=_numC(fila[4]); continue; }
     if(label==='consumo'){ zona='consumo'; continue; }
     if(zona==='cupos'){
       if(/solenium|zentrack/.test(label)){
-        if(_numC(r[1])!=null){cupos.Singsun+=_numC(r[1]);cuposPorEntidad.Singsun[(''+r[0]).trim()]=_numC(r[1]);}
-        if(_numC(r[4])!=null){cupos.Eaglerise+=_numC(r[4]);cuposPorEntidad.Eaglerise[(''+(r[3]||r[0])).trim()]=_numC(r[4]);}
+        if(_numC(fila[1])!=null){cupos.Singsun+=_numC(fila[1]);cuposPorEntidad.Singsun[(''+fila[0]).trim()]=_numC(fila[1]);}
+        if(_numC(fila[4])!=null){cupos.Eaglerise+=_numC(fila[4]);cuposPorEntidad.Eaglerise[(''+(fila[3]||fila[0])).trim()]=_numC(fila[4]);}
       }
       continue;
     }
-    if(r[0]!=null && _numC(r[1])!=null){ const k=_poKey(r[0]); (singsun[k]=singsun[k]||{monto:0,filas:[]}); singsun[k].monto+=_numC(r[1]); singsun[k].filas.push((''+r[0]).trim()); }
-    if(r[3]!=null && _numC(r[4])!=null){ const k=_poKey(r[3]); (eagle[k]=eagle[k]||{monto:0,filas:[]}); eagle[k].monto+=_numC(r[4]); eagle[k].filas.push((''+r[3]).trim()); }
+    [[0,1,'Singsun'],[3,4,'Eaglerise']].forEach(([cl,cv,lado])=>{
+      const etq=fila[cl], val=_numC(fila[cv]);
+      if(etq==null||(''+etq).trim()===''||val==null) return;
+      entradas.push({lado, etiqueta:(''+etq).replace(/[\r\n]+/g,' ').trim(), valor:val,
+        celda:XLSX.utils.encode_cell({r:r,c:cv}), ref:refDe(r,cv)});
+    });
   }
-  return {singsun, eagle, cupos, cuposPorEntidad, totalSingsun, totalEagle, dispSingsun, dispEagle};
+  /* dos renglones que apuntan a la MISMA celda del Summary cuentan la misma plata dos veces */
+  const vistos={};
+  entradas.forEach(e=>{
+    if(!e.ref) return;
+    const k=e.lado+'|'+e.ref.hoja+'!'+e.ref.addr;
+    if(vistos[k]){ e.duplicado=vistos[k]; } else vistos[k]=e.celda;
+  });
+  return {entradas, cupos, cuposPorEntidad, totalSingsun, totalEagle, dispSingsun, dispEagle,
+    conFormula:entradas.filter(e=>e.ref).length, sinFormula:entradas.filter(e=>!e.ref).length};
 }
 
 /* ---------- Emparejar los bloques del detailed con los pedidos del ORDER REPORT ----------
@@ -2993,42 +3081,70 @@ function emparejarDetailed(equipos, det){
   return {grupos,agregados,huerfanos,sinBloque:equipos.filter(e=>!usados.has(e))};
 }
 
-/* ---------- Casar la hoja Sinosure con los pedidos del ORDER REPORT ----------
-   Andrés a veces mete varios pedidos en un renglón ("Pedido 7.5" = 7-5 … 7-9). Se busca
-   primero el pedido con esa misma llave y, si el renglón vale bastante más, se le suman los
-   hermanos consecutivos hasta que cuadre contra el monto (M) o contra el saldo (O). */
-function casarSinosure(equipos, sino){
-  const mapa={}, sueltos=[];
-  if(!sino) return {mapa,sueltos};
-  ['Singsun','Eaglerise'].forEach(mfg=>{
-    const tabla=mfg==='Singsun'?sino.singsun:sino.eagle;
-    const porKey={}; equipos.filter(e=>e.mfg===mfg).forEach(e=>{const k=_poKey(e.derrame);(porKey[k]=porKey[k]||[]).push(e);});
-    const tomados=new Set();
-    Object.keys(tabla).sort().forEach(k=>{
-      const ref=tabla[k].monto;
-      let grupo=(porKey[k]||[]).filter(e=>!tomados.has(e));
-      if(!grupo.length){ sueltos.push({mfg,key:k,filas:tabla[k].filas.join(' / '),monto:ref}); return; }
-      const cerca=(a)=>Math.abs(a-ref)<=Math.max(2,Math.abs(ref)*0.005);
-      const sM=()=>grupo.reduce((s,e)=>s+(+e.cupoMonto||0),0), sO=()=>grupo.reduce((s,e)=>s+(+e.cupoSaldo||0),0);
-      const m=k.match(/^(CFM)?(\d+)-(\d+)$/);
-      if(m && !cerca(sM()) && !cerca(sO()) && ref>Math.max(sM(),sO())*1.2){
-        let n=+m[3]+1;
-        for(let t=0;t<20;t++,n++){
-          const kk=(m[1]||'')+m[2]+'-'+n;
-          if(tabla[kk]) break;                                  /* ese hermano tiene su propio renglón */
-          const sib=(porKey[kk]||[]).filter(e=>!tomados.has(e));
-          if(!sib.length) break;
-          grupo=grupo.concat(sib);
-          if(cerca(sM())||cerca(sO())) break;
-        }
-      }
-      grupo.forEach(e=>tomados.add(e));
-      const totM=sM();
-      grupo.forEach(e=>{ mapa[e.derrame]={sino:totM?ref*((+e.cupoMonto||0)/totM):ref/grupo.length,
-        grupoSino:ref, filas:tabla[k].filas.join(' / '), conjunto:grupo.map(x=>x.derrame), key:k}; });
+/* ---------- Casar la hoja Sinosure con los pedidos ----------
+   Con la fórmula sabemos la fila exacta del Summary, y por la fila, el pedido.
+   Solo cuando un renglón no trae fórmula se cae a emparejar por la etiqueta. */
+function casarSinosure(equipos, sino, det){
+  const mapa={}, sueltos=[], duplicados=[], detalle={};
+  if(!sino) return {mapa,sueltos,duplicados,detalle};
+  /* fila del Summary → pedido: la fila de cada línea del bloque (fabricante y proveedores) */
+  const filaAClave={}, filaABloque={};
+  if(det) det.orden.forEach(k=>det.bloques[k].forEach(b=>b.lineas.forEach(l=>{filaAClave[l.fila]=_bKey(b.mfg,b.key);filaABloque[l.fila]=b;})));
+  const porClave={}; equipos.forEach(e=>{const k=_bKey(e.mfg,_poKey(e.derrame));(porClave[k]=porClave[k]||[]).push(e);});
+  const porEtiqueta={}; equipos.forEach(e=>{const k=e.mfg+'|'+_poKey(e.derrame);(porEtiqueta[k]=porEtiqueta[k]||[]).push(e);});
+  const tomadosEtq=new Set();
+  const asigna=(grupo,ent)=>{
+    const totM=grupo.reduce((s,e)=>s+(+e.cupoMonto||0),0);
+    grupo.forEach(e=>{
+      const parte=totM?ent.valor*((+e.cupoMonto||0)/totM):ent.valor/grupo.length;
+      const m=mapa[e.derrame]||(mapa[e.derrame]={sino:0,lineas:[]});
+      m.sino+=parte;
+      m.lineas.push({celda:ent.celda, etiqueta:ent.etiqueta, valor:parte, total:ent.valor,
+        ref:ent.ref?ent.ref.hoja+'!'+ent.ref.addr:null,
+        que:ent.ref?(_SINO_QUE[ent.ref.col]||('columna '+ent.ref.col)):'sin fórmula',
+        conjunto:grupo.length>1?grupo.map(x=>x.derrame):null});
     });
+  };
+  const dupPorDerrame={};
+  sino.entradas.forEach(ent=>{
+    if(ent.duplicado){                                        /* la misma celda ya se contó */
+      const k=ent.lado+'|'+_poKey(ent.etiqueta);
+      const g=porEtiqueta[k]||[];
+      ent.derrames=g.map(e=>e.derrame);
+      const tot=g.reduce((s,e)=>s+(+e.cupoMonto||0),0);
+      g.forEach(e=>{dupPorDerrame[e.derrame]=(dupPorDerrame[e.derrame]||0)+(tot?ent.valor*((+e.cupoMonto||0)/tot):ent.valor/g.length);});
+      duplicados.push(ent); return; }
+    let grupo=null, via=null;
+    if(ent.ref && filaAClave[ent.ref.fila]){
+      const clave=filaAClave[ent.ref.fila];
+      grupo=(porClave[clave]||[]).slice(); via='fórmula';
+      /* la fórmula puede apuntar a una fila del Summary que agrupa varios pedidos
+         (el "Pedido 7.5" de Andrés cubre 7-5 … 7-9): se reparte entre los hermanos */
+      const bl=filaABloque[ent.ref.fila];
+      const sum=()=>grupo.reduce((x,e)=>x+(+e.cupoMonto||0),0);
+      const m=clave.match(/^(.+\|)(CFM)?(\d+)-(\d+)$/);
+      if(bl && m && bl.fab.monto>sum()*1.2){
+        let n=+m[4]+1;
+        for(let t=0;t<20 && sum()<bl.fab.monto*0.97;t++,n++){
+          const sib=porClave[m[1]+(m[2]||'')+m[3]+'-'+n];
+          if(!sib||!sib.length) break;
+          grupo=grupo.concat(sib);
+        }
+        ent.agrupa=grupo.length>1;
+      }
+    }
+    if((!grupo||!grupo.length)){
+      const k=ent.lado+'|'+_poKey(ent.etiqueta);
+      grupo=(porEtiqueta[k]||[]).filter(e=>!tomadosEtq.has(e)); via='etiqueta';
+      if(grupo.length) grupo.forEach(e=>tomadosEtq.add(e));
+    }
+    if(!grupo||!grupo.length){ sueltos.push(ent); return; }
+    ent.via=via;
+    asigna(grupo,ent);
   });
-  return {mapa,sueltos};
+  Object.keys(mapa).forEach(d=>{detalle[d]=mapa[d].lineas;});
+  const plano={}; Object.keys(mapa).forEach(d=>{plano[d]=mapa[d].sino;});
+  return {mapa:plano, detalle, sueltos, duplicados, dupPorDerrame};
 }
 
 /* ---------- Aplicar el detailed sobre lo leído del ORDER REPORT ----------
@@ -3036,7 +3152,7 @@ function casarSinosure(equipos, sino){
    balance, y el desglose por proveedor. Ningún monto del ORDER REPORT se toca. */
 function aplicarDetailed(equipos, det, sino){
   const emp=emparejarDetailed(equipos, det);
-  const cas=casarSinosure(equipos, sino);
+  const cas=casarSinosure(equipos, sino, det);
   const tol=v=>Math.max(2,Math.abs(v)*0.005);
   const chk=(rep,d)=>d==null?null:(Math.abs(rep-d)<=tol(rep)?'ok':'dif');
   const filas=[];
@@ -3054,8 +3170,9 @@ function aplicarDetailed(equipos, det, sino){
     });
     /* hoja Sinosure: lo que le toca a este grupo según el casado global */
     let sinoRef=null, sinoFilas=null;
-    const cs=eqs.map(e=>cas.mapa[e.derrame]).filter(Boolean);
-    if(cs.length){ sinoRef=cs.reduce((s,x)=>s+x.sino,0); sinoFilas=[...new Set(cs.map(x=>x.filas))].join(' + '); }
+    const cs=eqs.filter(e=>cas.mapa[e.derrame]!=null);
+    if(cs.length){ sinoRef=cs.reduce((s,e)=>s+cas.mapa[e.derrame],0);
+      sinoFilas=[...new Set(cs.flatMap(e=>(cas.detalle[e.derrame]||[]).map(l=>l.celda+' → '+(l.ref||l.etiqueta))))].join(', '); }
     const c={
       M:chk(M,b.fab.monto), N:chk(N,b.fab.pagado), O:chk(O,b.fab.pendiente),
       P:(P>0.5||b.otros.monto>0.5)?chk(P,b.otros.monto):null,
@@ -3070,12 +3187,12 @@ function aplicarDetailed(equipos, det, sino){
   });
   emp.sinBloque.forEach(e=>{e.antFuente='porcentaje';});
   filas.sort((a,b)=>b.nDif-a.nDif||(''+a.key).localeCompare(''+b.key,undefined,{numeric:true}));
-  const sinoSueltos=cas.sueltos;
-  const sinoPorDerrame={}; Object.keys(cas.mapa).forEach(d=>{sinoPorDerrame[d]=cas.mapa[d].sino;});
+  const sinoSueltos=cas.sueltos, sinoDup=cas.duplicados, sinoDetalle=cas.detalle, sinoDupPorDerrame=cas.dupPorDerrame;
+  const sinoPorDerrame=cas.mapa;
   return {filas,
     agregados:emp.agregados.map(b=>({key:b.key,poRaw:b.poRaw,fila:b.fila,mfg:b.mfg,monto:b.fab.monto})),
     huerfanos:emp.huerfanos.map(b=>({key:b.key,poRaw:b.poRaw,fila:b.fila,mfg:b.mfg,monto:b.fab.monto})),
-    sinBloque:emp.sinBloque.map(e=>e.derrame), sinoSueltos, sinoPorDerrame, sino:sino||null,
+    sinBloque:emp.sinBloque.map(e=>e.derrame), sinoSueltos, sinoDup, sinoDetalle, sinoDupPorDerrame, sinoPorDerrame, sino:sino||null,
     ranuras:det.ranuras,posicional:det.posicional};
 }
 
@@ -3510,7 +3627,10 @@ function wizApprove(){
     sino:WIZ.concilia.sino?{cupos:WIZ.concilia.sino.cupos, cuposPorEntidad:WIZ.concilia.sino.cuposPorEntidad,
       totalSingsun:WIZ.concilia.sino.totalSingsun, totalEagle:WIZ.concilia.sino.totalEagle,
       dispSingsun:WIZ.concilia.sino.dispSingsun, dispEagle:WIZ.concilia.sino.dispEagle}:null,
-    sinoPorDerrame:WIZ.concilia.sinoPorDerrame||{},
+    sinoPorDerrame:WIZ.concilia.sinoPorDerrame||{}, sinoDetalle:WIZ.concilia.sinoDetalle||{},
+    sinoDup:(WIZ.concilia.sinoDup||[]).map(d=>({celda:d.celda,etiqueta:d.etiqueta,valor:d.valor,lado:d.lado,ref:d.ref?d.ref.hoja+'!'+d.ref.addr:null,yaEn:d.duplicado,derrames:d.derrames||null})),
+    sinoDupPorDerrame:WIZ.concilia.sinoDupPorDerrame||{},
+    sinoSueltosL:(WIZ.concilia.sinoSueltos||[]).map(d=>({celda:d.celda,etiqueta:d.etiqueta,valor:d.valor,lado:d.lado})),
     dif:WIZ.concilia.filas.filter(f=>f.nDif).map(f=>({po:f.poRaw,derrames:f.derrames,mfg:f.mfg,
       cols:Object.keys(f.chk).filter(k=>f.chk[k]==='dif'), rep:f.rep, det:f.det, sinoFilas:f.sinoFilas})),
     nOk:WIZ.concilia.filas.filter(f=>!f.nDif).length,
@@ -3535,6 +3655,7 @@ function stageOpts(sel){return ['confirm','prod','finished','booked','shipping']
 function setCfg(mfg,f,v){CONFIG[mfg][f]=(f==='antPct')?Math.max(0,Math.min(1,parseFloat(v)||0)):(f==='dias'?(+v||0):v);if(f==='dias')recalcVenceChina();refreshCupo();}
 function setCupo(mfg,v){CUPO[mfg]=Math.max(0,+v||0);refreshCupo();}
 function setOverride(i,v){EQ[i].pctOverride=(v==='auto')?null:parseFloat(v);refreshCupo();}
+function setDupSino(v){CONFIG.contarDupSino=(v==='si');refreshAll();renderLedger();if(typeof saveToServer==='function')saveToServer();toast(CONFIG.contarDupSino?'Los renglones repetidos vuelven a sumar':'Cada celda de la hoja Sinosure cuenta una sola vez');}
 function setCupoRegla(v){CONFIG.cupoRegla=v;refreshAll();renderLedger();if(typeof saveToServer==='function')saveToServer();toast('Cupo contado por: <b>'+CUPO_REGLAS[v]+'</b>');}
 function setTrmProy(v){CONFIG.trmProy=+v||4050;if(document.getElementById('v-caja').classList.contains('on'))renderCaja();renderConfig();}
 function setCliTerm(c,v){if(CLI[c]){CLI[c].term=+v||0;recalcVence();}refreshCupo();if(document.getElementById('v-clientes').classList.contains('on'))renderClientes();}
@@ -3609,6 +3730,8 @@ function renderConfig(){
   const cr=document.getElementById('cfgReglaCupo');
   if(cr) cr.innerHTML=`<div class="cfgrow" style="max-width:760px"><label>Qué consume cupo Sinosure</label>
       <select onchange="setCupoRegla(this.value)">${Object.keys(CUPO_REGLAS).map(r=>`<option value="${r}" ${CONFIG.cupoRegla===r?'selected':''}>${CUPO_REGLAS[r]}</option>`).join('')}</select></div>
+    <div class="cfgrow" style="max-width:760px"><label>Renglones repetidos de la hoja Sinosure</label>
+      <select onchange="setDupSino(this.value)"><option value="no" ${!CONFIG.contarDupSino?'selected':''}>Contar una sola vez (correcto)</option><option value="si" ${CONFIG.contarDupSino?'selected':''}>Contarlos como los suma Andrés</option></select></div>
     <div class="cfgnote2">Manda en el treemap, en los KPIs del tablero y en el disponible. <b>Como la hoja de Andrés</b> es la que más se acerca a lo que él reporta; <b>saldo por pagar</b> es el 90% del tracker (o el 80% del shelter) una vez pagado el anticipo.</div>`;
   document.getElementById('cfgTrm').innerHTML=`<div class="cfgrow" style="max-width:520px"><label>TRM para embarques de prueba (lo que aún no tiene factura)</label><input class="cfgmini" type="number" value="${CONFIG.trmProy}" onchange="setTrmProy(this.value)"></div><div class="cfgnote2">Lo ya facturado usa la TRM fija de cada factura. Solo lo hipotético (probar embarque) usa esta TRM, salvo que pongas otra en el propio embarque.</div>`;
   document.getElementById('cfgClientes').innerHTML=`<table class="excT"><thead><tr><th>Cliente</th><th class="r">Plazo (días)</th><th>Aplicación de pagos</th></tr></thead><tbody>
