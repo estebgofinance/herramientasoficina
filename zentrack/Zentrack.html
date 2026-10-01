@@ -124,6 +124,39 @@ table.t tbody tr.clk:hover{background:var(--surface2)}
 .empty h3{font-size:16px;font-weight:600;margin-bottom:6px}
 .empty p{font-size:13px;color:var(--ink2);max-width:430px;margin:0 auto 18px}
 
+
+/* ---------- rejilla de captura rápida ---------- */
+.gbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
+.gwrap{background:var(--surface);border:1px solid var(--rule);border-radius:12px;overflow:auto;max-height:70vh;position:relative}
+table.g{border-collapse:separate;border-spacing:0;font-variant-numeric:tabular-nums}
+table.g th{position:sticky;top:0;z-index:3;background:var(--surface2);border-bottom:1px solid var(--rule2);
+  border-right:1px solid var(--rule);font-size:10px;font-weight:700;color:var(--ink2);text-transform:uppercase;
+  letter-spacing:.04em;padding:7px 8px;text-align:left;white-space:nowrap}
+table.g th .gfill{float:right;border:none;background:none;color:var(--ink3);cursor:pointer;font-size:11px;
+  padding:0 2px;border-radius:3px;line-height:1.2}
+table.g th .gfill:hover{background:var(--ink);color:#fff}
+table.g td{border-bottom:1px solid var(--rule);border-right:1px solid var(--rule);padding:0;height:30px}
+table.g td.rn{position:sticky;left:0;z-index:2;background:var(--surface2);text-align:center;font-size:10.5px;
+  color:var(--ink3);width:34px;min-width:34px;cursor:pointer}
+table.g td.rn:hover{background:var(--ink);color:#fff}
+table.g th.rn{left:0;z-index:4;width:34px;min-width:34px}
+table.g tr.par td{background:#FCFCFD}
+table.g tr.par td.rn{background:var(--surface2)}
+.gc{width:100%;height:29px;border:none;background:none;padding:3px 8px;font-size:12.5px;outline:none;
+  font-variant-numeric:tabular-nums}
+.gc:focus{background:#fff;box-shadow:inset 0 0 0 2px var(--ink);border-radius:2px;position:relative;z-index:1}
+.gc.n{text-align:right}
+.gc.sel{appearance:none;cursor:pointer}
+.gc.pegado{animation:flash 1.1s ease-out}
+@keyframes flash{0%{background:#FEF0D8}100%{background:transparent}}
+.gc::placeholder{color:#D6D9DD}
+.gprog{font-size:11.5px;color:var(--ink2);margin-top:10px;font-variant-numeric:tabular-nums}
+.gprog b{color:var(--ink)}
+.ghelp{font-size:11.5px;color:var(--ink2);background:var(--surface);border:1px solid var(--rule);
+  border-radius:10px;padding:11px 14px;margin-bottom:12px;line-height:1.75}
+.ghelp kbd{font-family:inherit;font-size:10.5px;font-weight:600;background:var(--rule);border-radius:4px;
+  padding:1px 6px;color:var(--ink)}
+
 /* ---------- cajón de edición ---------- */
 .scrim{position:fixed;inset:0;background:rgba(23,24,26,.34);opacity:0;pointer-events:none;transition:.18s;z-index:50}
 .scrim.on{opacity:1;pointer-events:auto}
@@ -291,6 +324,11 @@ tr.tot td{background:var(--surface2);font-weight:700;border-top:1px solid var(--
 
     <div class="sec" style="margin-top:34px">
       <h2>Pedidos</h2><div class="sub" id="nPed"></div>
+      <div class="sp"></div>
+      <div class="tmvent">
+        <button id="mv-lista" class="on" onclick="setModo('lista')">Lista</button>
+        <button id="mv-rejilla" onclick="setModo('rejilla')">Rejilla · captura rápida</button>
+      </div>
     </div>
     <div class="filters">
       <button class="chip on" data-f="todos" onclick="setFiltro('todos')">Todos</button>
@@ -302,6 +340,7 @@ tr.tot td{background:var(--surface2);font-weight:700;border-top:1px solid var(--
       <input class="srch" id="q" placeholder="Buscar pedido, proyecto o cliente…" oninput="pintarLista()">
     </div>
     <div id="lista"></div>
+    <div id="rejilla"></div>
   </section>
 
   <!-- ===================== ESTADOS DE CUENTA ===================== -->
@@ -381,6 +420,7 @@ const VACIO=()=>({
   v:1, seq:1,
   cupo:{Singsun:1300000,Eaglerise:3000000},
   trm:4100,
+  fechaOrden:'dmy',
   plazoDef:60,
   clientes:{},          /* nombre -> {plazo} */
   pedidos:[]
@@ -489,14 +529,22 @@ function importar(inp){
 
 /* ---------- navegación y avisos ---------- */
 let VISTA='pedidos';
+let MODO='lista';
 function ir(v){
   VISTA=v;
   document.querySelectorAll('.view').forEach(x=>x.classList.toggle('on',x.id==='v-'+v));
   document.querySelectorAll('.tabs button').forEach(b=>b.classList.toggle('on',b.dataset.v===v));
   if(v==='ec')pintarEC();else pintarPedidos();
 }
-let _tt;function toast(m){const t=document.getElementById('toast');t.innerHTML=m;t.classList.add('on');
-  clearTimeout(_tt);_tt=setTimeout(()=>t.classList.remove('on'),3400);}
+let _tt,_tostadaFija=false;
+function toast(m){
+  const t=document.getElementById('toast');
+  t.innerHTML=m;t.classList.add('on');t.style.pointerEvents='auto';
+  clearTimeout(_tt);
+  /* si el aviso trae un botón, se queda hasta que lo atiendas */
+  if(!_tostadaFija)_tt=setTimeout(()=>{t.classList.remove('on');t.style.pointerEvents='none';},3400);
+  else _tt=setTimeout(()=>{_tostadaFija=false;t.classList.remove('on');t.style.pointerEvents='none';},14000);
+}
 
 /* =========================================================================
    TREEMAP — cuánto del cupo tiene comprometido cada pedido
@@ -625,15 +673,23 @@ function setCupo(mfg,v){S.cupo[mfg]=num(v);marcarSucio();pintarPedidos();}
 /* =========================================================================
    PESTAÑA PEDIDOS — los cuatro números de control y la lista
    ========================================================================= */
+/* Qué se ve y qué no: sin un solo pedido el cupo y los KPIs no dicen nada,
+   y la lista y la rejilla nunca se muestran a la vez. */
+function ajustarVisibilidad(){
+  const hay=S.pedidos.length>0, rejilla=(MODO==='rejilla');
+  const ver=(id,on)=>{const e=typeof id==='string'?document.getElementById(id):id;if(e)e.style.display=on?'':'none';};
+  ver('bloqueCupo',hay);
+  ver('kpis',hay);
+  ver(document.querySelector('#v-pedidos .filters'), hay&&!rejilla);
+  ver(document.querySelector('#v-pedidos .sec .tmvent'), true);
+  ver('lista',!rejilla);
+  ver('rejilla',rejilla);
+}
 function pintarPedidos(){
-  /* sin un solo pedido, el cupo y los KPIs no dicen nada: se guardan y queda la invitación */
   const hay=S.pedidos.length>0;
-  const bc=document.getElementById('bloqueCupo'), kp=document.getElementById('kpis'),
-        fl=document.querySelector('#v-pedidos .filters');
-  if(bc)bc.style.display=hay?'':'none';
-  if(kp)kp.style.display=hay?'':'none';
-  if(fl)fl.style.display=hay?'':'none';
+  ajustarVisibilidad();
   if(hay){pintarKpis();pintarCupoInputs();pintarTreemaps();}
+  if(MODO==='rejilla')pintarRejilla();
   pintarLista();pintarDatalists();
 }
 function pintarCupoInputs(){MFGS.forEach(m=>{const i=document.getElementById('cupo'+m);if(i)i.value=S.cupo[m];});}
@@ -686,6 +742,7 @@ function pedidosFiltrados(){
                 || (a.id||'').localeCompare(b.id||'','es',{numeric:true}));
 }
 function pintarLista(){
+  if(MODO==='rejilla'&&S.pedidos.length)return;   /* la rejilla manda mientras se captura */
   const ps=pedidosFiltrados();
   document.getElementById('nPed').textContent =
     S.pedidos.length ? `${ps.length} de ${S.pedidos.length}` : '';
@@ -737,6 +794,11 @@ let ACT=null;                                   /* pedido abierto */
 const A=()=>S.pedidos.find(p=>p.k===ACT);
 
 function nuevoPedido(){
+  if(MODO==='rejilla'&&VISTA==='pedidos'&&S.pedidos.length){
+    addFilas(1);
+    setTimeout(()=>gIr(S.pedidos.length-1,0),30);
+    return;
+  }
   const p=pedidoNuevo();
   S.pedidos.push(p);marcarSucio();
   abrirPedido(p.k);
@@ -916,6 +978,402 @@ function pintarPie(){
   document.getElementById('dSub').textContent=
     [p.proyecto,p.cliente,p.mfg].filter(Boolean).join(' · ')||'empieza por el ID y el proyecto';
   document.getElementById('dTit').textContent=p.id?('Pedido '+p.id):'Pedido nuevo';
+}
+
+
+/* =========================================================================
+   REJILLA DE CAPTURA RÁPIDA
+   Una hoja de cálculo: se navega con Tab y flechas, se rellena hacia abajo
+   con Ctrl+D y se pega un bloque entero desde Excel con Ctrl+V.
+
+   ►► EL ORDEN Y EL CONTENIDO DE LAS COLUMNAS VIVEN EN "COLS", AQUÍ ABAJO.
+      Para acomodarla a otro formato solo se reordena este array: cada fila
+      dice el campo, el rótulo, el grupo, el ancho y el tipo de celda.
+      Nada más en el archivo depende del orden.
+   ========================================================================= */
+const GRUPOS=[['todo','Todas'],['id','Identidad'],['fe','Fechas'],['ch','China'],['cl','Cliente y precio']];
+const COLS=[
+  {f:'id',        t:'Pedido',      g:'id', w:96,  tipo:'txt', ph:'7-2'},
+  {f:'orden',     t:'Orden',       g:'id', w:74,  tipo:'txt', ph:'7'},
+  {f:'mfg',       t:'Fabricante',  g:'id', w:108, tipo:'sel', opts:()=>MFGS.map(m=>[m,m])},
+  {f:'tipo',      t:'Tipo',        g:'id', w:96,  tipo:'sel', opts:()=>TIPOS.map(t=>[t,t])},
+  {f:'qty',       t:'Cant.',       g:'id', w:58,  tipo:'num'},
+  {f:'proyecto',  t:'Proyecto',    g:'id', w:200, tipo:'txt', list:'dlProy'},
+  {f:'cliente',   t:'Cliente',     g:'id', w:128, tipo:'txt', list:'dlCli'},
+  {f:'estado',    t:'Estado',      g:'id', w:148, tipo:'sel', opts:()=>Object.entries(STAGE)},
+
+  {f:'prodFin',     t:'Fin prod.',  g:'fe', w:124, tipo:'fecha'},
+  {f:'etd',         t:'ETD',        g:'fe', w:124, tipo:'fecha'},
+  {f:'bl',          t:'BL (zarpe)', g:'fe', w:124, tipo:'fecha'},
+  {f:'eta',         t:'ETA',        g:'fe', w:124, tipo:'fecha'},
+  {f:'blNo',        t:'No. BL',     g:'fe', w:112, tipo:'txt'},
+
+  {f:'montoFab',    t:'Monto fáb.',  g:'ch', w:108, tipo:'num'},
+  {f:'pagadoFab',   t:'Pagado fáb.', g:'ch', w:108, tipo:'num'},
+  {f:'antPct',      t:'Ant. %',      g:'ch', w:64,  tipo:'num'},
+  {f:'antPagado',   t:'Ant. pagado', g:'ch', w:96,  tipo:'sel', opts:()=>[[ '','No'],['si','Sí']],
+                    get:p=>p.antPagado?'si':'', set:(p,v)=>{p.antPagado=(v==='si');}},
+  {f:'otrosMonto',  t:'Otros comp.', g:'ch', w:100, tipo:'num'},
+  {f:'otrosPagado', t:'Otros pag.',  g:'ch', w:100, tipo:'num'},
+  {f:'limitePago',  t:'Límite pago', g:'ch', w:124, tipo:'fecha'},
+  {f:'sino',        t:'Cupo cuenta', g:'ch', w:132, tipo:'sel',
+                    opts:()=>[['auto','Según la regla'],['fijo','Monto fijo'],['no','No cuenta']]},
+  {f:'sinoMonto',   t:'Cupo fijo',   g:'ch', w:100, tipo:'num'},
+
+  {f:'precio',      t:'Precio venta',g:'cl', w:112, tipo:'num'},
+  {f:'flete',       t:'Flete',       g:'cl', w:96,  tipo:'num'},
+  {f:'plazo',       t:'Plazo (d)',   g:'cl', w:72,  tipo:'num'},
+  {f:'facturaNum',  t:'Factura',     g:'cl', w:110, tipo:'txt'},
+  {f:'facturaFecha',t:'Fecha fact.', g:'cl', w:124, tipo:'fecha'},
+  /* los dos primeros abonos se capturan aquí mismo; los demás, en el cajón */
+  {f:'ab1f', t:'Abono 1 fecha', g:'cl', w:124, tipo:'fecha',
+             get:p=>(p.abonos[0]||{}).f||'', set:(p,v)=>setAb(p,0,'f',v)},
+  {f:'ab1m', t:'Abono 1',       g:'cl', w:100, tipo:'num',
+             get:p=>(p.abonos[0]||{}).m||'',  set:(p,v)=>setAb(p,0,'m',v)},
+  {f:'ab2f', t:'Abono 2 fecha', g:'cl', w:124, tipo:'fecha',
+             get:p=>(p.abonos[1]||{}).f||'', set:(p,v)=>setAb(p,1,'f',v)},
+  {f:'ab2m', t:'Abono 2',       g:'cl', w:100, tipo:'num',
+             get:p=>(p.abonos[1]||{}).m||'',  set:(p,v)=>setAb(p,1,'m',v)},
+  {f:'nota', t:'Nota',          g:'cl', w:180, tipo:'txt'},
+];
+function setAb(p,i,campo,v){
+  p.abonos=p.abonos||[];
+  while(p.abonos.length<=i)p.abonos.push({f:'',c:'',m:0});
+  p.abonos[i][campo]=(campo==='m')?num(v):v;
+  /* un abono vacío del todo no se guarda */
+  while(p.abonos.length&&!p.abonos[p.abonos.length-1].f&&!num(p.abonos[p.abonos.length-1].m))p.abonos.pop();
+}
+const colGet=(col,p)=>col.get?col.get(p):(p[col.f]===0&&col.tipo==='num'?'':p[col.f]);
+function colSet(col,p,v){
+  if(col.set){col.set(p,v);return;}
+  if(col.tipo==='num')p[col.f]=v===''?0:num(v);
+  else p[col.f]=v;
+  if(col.f==='cliente'){const c=(''+v).trim();if(c&&!S.clientes[c])S.clientes[c]={plazo:S.plazoDef};}
+  if(col.f==='id'&&!p._ordenManual){const m=(''+v).match(/^\s*([A-Za-zÁÉÍÓÚÑ]*\s*\d+)/);
+    p.orden=m?m[1].replace(/\s+/g,' ').trim():'';}
+}
+
+/* --- texto pegado → valor del campo, según el tipo de columna --- */
+function aValor(col,txt,orden){
+  const s=(''+txt).trim();
+  if(!s)return '';
+  if(col.tipo==='num')return ''+numPeg(s);
+  if(col.tipo==='fecha')return aFecha(s,orden);
+  if(col.tipo==='sel'){
+    const o=col.opts();
+    const ex=o.find(x=>(''+x[0]).toLowerCase()===s.toLowerCase());if(ex)return ex[0];
+    const lb=o.find(x=>(''+x[1]).toLowerCase()===s.toLowerCase());if(lb)return lb[0];
+    const m=_mapEstado(s);if(m&&o.some(x=>x[0]===m))return m;
+    const pa=o.find(x=>(''+x[1]).toLowerCase().startsWith(s.toLowerCase()));return pa?pa[0]:'';
+  }
+  return s;
+}
+/* Un número pegado puede venir "1,234.56" (inglés) o "1.234,56" (español).
+   El separador decimal es el último punto o coma que aparezca, si deja 1 o 2 cifras detrás. */
+function numPeg(s){
+  let t=(''+s).replace(/[^\d.,\-]/g,'').trim();
+  if(!t)return 0;
+  const neg=/^-/.test(t); t=t.replace(/-/g,'');
+  const ip=t.lastIndexOf('.'), ic=t.lastIndexOf(',');
+  const iu=Math.max(ip,ic);
+  let ent=t, dec='';
+  if(iu>=0){
+    const cola=t.slice(iu+1);
+    if(cola.length>0&&cola.length<=2&&/^\d+$/.test(cola)){ ent=t.slice(0,iu); dec=cola; }
+  }
+  ent=ent.replace(/[.,]/g,'');
+  const v=parseFloat(ent+(dec?'.'+dec:''))||0;
+  return neg?-v:v;
+}
+/* "Shipped", "In production", "Por confirmar"… → nuestra etapa */
+function _mapEstado(s){
+  const t=s.toLowerCase();
+  if(/^si$|^s[ií]$|^yes$|^paid$|^x$|^true$/.test(t))return 'si';
+  if(/^no$|^false$|^pending$/.test(t))return '';
+  if(/singsun/.test(t))return 'Singsun'; if(/eagle/.test(t))return 'Eaglerise';
+  if(/shipped|embarcad/.test(t))return 'shipped';
+  if(/shipping|embarcando|booking/.test(t))return 'shipping';
+  if(/booked|reservad/.test(t))return 'booked';
+  if(/finished|complet|terminad/.test(t))return 'finished';
+  if(/production|producci/.test(t))return 'prod';
+  if(/confirm/.test(t))return 'confirm';
+  return null;
+}
+/* fechas pegadas en cualquier formato razonable → ISO */
+function aFecha(s,orden){
+  s=(''+s).trim();
+  if(/^\d{4}-\d{2}-\d{2}/.test(s))return s.slice(0,10);
+  let m=s.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})$/);
+  if(m){
+    let[,a,bb,c]=m;a=+a;bb=+bb;c=+c;if(c<100)c+=2000;
+    let dia,mes;
+    if(a>12){dia=a;mes=bb;}            /* el primero no puede ser mes */
+    else if(bb>12){mes=a;dia=bb;}      /* el segundo no puede ser mes */
+    else {const dmy=(orden||S.fechaOrden||'dmy')==='dmy'; dia=dmy?a:bb; mes=dmy?bb:a;}
+    if(mes<1||mes>12||dia<1||dia>31)return '';
+    return `${c}-${String(mes).padStart(2,'0')}-${String(dia).padStart(2,'0')}`;}
+  if(/^\d{5}$/.test(s)){ /* serial de Excel */
+    const d=new Date(Date.UTC(1899,11,30)+(+s)*86400000);return d.toISOString().slice(0,10);}
+  const d=new Date(s);return isNaN(d)?'':isoD(d);
+}
+/* Mirando TODA la columna pegada se sabe el orden: si alguna trae un primer
+   número mayor que 12, la columna es día/mes; si lo trae el segundo, es mes/día.
+   Si ninguna lo aclara, la columna es ambigua y hay que avisarlo. */
+function ordenFechas(vals){
+  let dmy=false, mdy=false;
+  vals.forEach(v=>{
+    const m=(''+v).trim().match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})$/);
+    if(!m)return;
+    if(+m[1]>12)dmy=true;
+    if(+m[2]>12)mdy=true;
+  });
+  if(dmy&&!mdy)return 'dmy';
+  if(mdy&&!dmy)return 'mdy';
+  if(dmy&&mdy)return 'mezcla';
+  return vals.some(v=>/^\d{1,2}[\/\-.]\d{1,2}[\/\-.]\d{2,4}$/.test((''+v).trim()))?'ambiguo':null;
+}
+
+
+/* --- qué columnas se ven ahora --- */
+let GRUPO='todo';
+const colsVis=()=>GRUPO==='todo'?COLS:COLS.filter(c=>c.g===GRUPO);
+function setGrupo(g){GRUPO=g;pintarRejilla();}
+
+function setModo(m){
+  MODO=m;
+  document.getElementById('mv-lista').classList.toggle('on',m==='lista');
+  document.getElementById('mv-rejilla').classList.toggle('on',m==='rejilla');
+  ajustarVisibilidad();
+  if(m==='rejilla')pintarRejilla(); else pintarLista();
+}
+
+/* --- las filas que se muestran: en la rejilla no se filtra, se ve todo --- */
+const filasRejilla=()=>S.pedidos;
+
+function pintarRejilla(){
+  const cont=document.getElementById('rejilla');if(!cont)return;
+  const cs=colsVis(), ps=filasRejilla();
+  const listos=ps.filter(p=>p.cliente&&P.aCobrar(p)>0.5).length;
+  const sinCli=ps.filter(p=>!p.cliente).length, sinPre=ps.filter(p=>P.aCobrar(p)<=0.5).length;
+
+  if(!ps.length){
+    cont.innerHTML=`<div class="empty">
+      <h3>La rejilla está vacía</h3>
+      <p>Estampa de una vez todos los pedidos de una orden y después solo llenas lo que cambia,
+         o abre filas en blanco y pega un bloque desde tu Excel.</p>
+      <button class="btn primary" onclick="plantillaOrden()">Plantilla de orden…</button>
+      <button class="btn" style="margin-left:8px" onclick="addFilas(10)">Abrir 10 filas en blanco</button></div>`;
+    return;
+  }
+  cont.innerHTML=`
+    <div class="ghelp">
+      <kbd>Tab</kbd> siguiente celda · <kbd>↑ ↓</kbd> misma columna · <kbd>Enter</kbd> baja ·
+      <kbd>Ctrl</kbd>+<kbd>D</kbd> copia la celda de arriba · <kbd>Ctrl</kbd>+<kbd>V</kbd> pega un bloque
+      desde Excel a partir de la celda donde estés · el <b>⤓</b> del encabezado rellena toda la columna
+      hacia abajo · clic en el número de fila para abrir el pedido completo.
+    </div>
+    <div class="gbar">
+      <div class="tmvent">${GRUPOS.map(g=>
+        `<button class="${g[0]===GRUPO?'on':''}" onclick="setGrupo('${g[0]}')">${g[1]}</button>`).join('')}</div>
+      <div style="flex:1"></div>
+      <button class="btn" onclick="addFilas(5)">+ 5 filas</button>
+      <button class="btn" onclick="plantillaOrden()">Plantilla de orden…</button>
+    </div>
+    <div class="gwrap" id="gwrap"><table class="g"><thead><tr>
+      <th class="rn"></th>
+      ${cs.map((c,j)=>`<th style="min-width:${c.w}px;width:${c.w}px">${esc(c.t)}
+        <button class="gfill" title="Rellenar esta columna hacia abajo con el valor de la celda donde estés"
+          onclick="rellenarColumna(${j})">⤓</button></th>`).join('')}
+    </tr></thead><tbody>
+      ${ps.map((p,i)=>`<tr class="${i%2?'par':''}">
+        <td class="rn" title="Abrir el pedido completo" onclick="abrirPedido('${p.k}')">${i+1}</td>
+        ${cs.map((c,j)=>`<td>${celda(p,i,j,c)}</td>`).join('')}
+      </tr>`).join('')}
+    </tbody></table></div>
+    <div class="gprog">
+      <b>${ps.length}</b> pedido(s) · <b>${listos}</b> listos para estado de cuenta
+      ${sinCli?` · <b style="color:var(--debo)">${sinCli} sin cliente</b>`:''}
+      ${sinPre?` · <b style="color:var(--debo)">${sinPre} sin precio</b>`:''}
+    </div>`;
+
+  const w=document.getElementById('gwrap');
+  w.addEventListener('keydown',gTecla);
+  w.addEventListener('paste',gPegar);
+}
+
+function celda(p,i,j,c){
+  const v=colGet(c,p);
+  const at=`class="gc${c.tipo==='num'?' n':''}" data-r="${i}" data-c="${j}"`;
+  if(c.tipo==='sel')
+    return `<select ${at.replace('gc','gc sel')} onchange="gEscribir(${i},${j},this.value)">`+
+      c.opts().map(o=>`<option value="${esc(o[0])}" ${o[0]===v?'selected':''}>${esc(o[1])}</option>`).join('')+`</select>`;
+  if(c.tipo==='fecha')
+    return `<input ${at} type="date" value="${esc(v||'')}" onchange="gEscribir(${i},${j},this.value)">`;
+  return `<input ${at} ${c.list?`list="${c.list}"`:''} ${c.tipo==='num'?'type="number" step="any"':''}
+    value="${esc(v===0?'':(v==null?'':v))}" placeholder="${c.ph||''}"
+    oninput="gEscribir(${i},${j},this.value,true)" onchange="gEscribir(${i},${j},this.value)">`;
+}
+
+/* --- escribir una celda --- */
+let _gt=null;
+function gEscribir(i,j,v,liviano){
+  const p=filasRejilla()[i], c=colsVis()[j];
+  if(!p||!c)return;
+  colSet(c,p,v);
+  marcarSucio();
+  clearTimeout(_gt);_gt=setTimeout(()=>{pintarKpis();pintarTreemaps();pintarDatalists();gProgreso();},liviano?350:0);
+}
+function gProgreso(){
+  const el=document.querySelector('.gprog');if(!el)return;
+  const ps=filasRejilla();
+  const listos=ps.filter(p=>p.cliente&&P.aCobrar(p)>0.5).length;
+  const sinCli=ps.filter(p=>!p.cliente).length, sinPre=ps.filter(p=>P.aCobrar(p)<=0.5).length;
+  el.innerHTML=`<b>${ps.length}</b> pedido(s) · <b>${listos}</b> listos para estado de cuenta`+
+    (sinCli?` · <b style="color:var(--debo)">${sinCli} sin cliente</b>`:'')+
+    (sinPre?` · <b style="color:var(--debo)">${sinPre} sin precio</b>`:'');
+}
+const gCelda=(i,j)=>document.querySelector(`#gwrap [data-r="${i}"][data-c="${j}"]`);
+function gIr(i,j){const e=gCelda(i,j);if(e){e.focus();if(e.select)try{e.select();}catch(x){}}return !!e;}
+
+/* --- teclado --- */
+function gTecla(e){
+  const t=e.target;if(!t.classList||!t.classList.contains('gc'))return;
+  const i=+t.dataset.r, j=+t.dataset.c, n=filasRejilla().length;
+  if(e.key==='Enter'&&!e.shiftKey){
+    e.preventDefault();
+    if(i+1>=n){addFilas(1);setTimeout(()=>gIr(i+1,j),0);} else gIr(i+1,j);
+    return;
+  }
+  if(e.key==='ArrowDown'&&t.type!=='number'||e.key==='ArrowDown'&&e.ctrlKey){e.preventDefault();gIr(i+1,j);return;}
+  if(e.key==='ArrowUp'&&t.type!=='number'||e.key==='ArrowUp'&&e.ctrlKey){e.preventDefault();gIr(i-1,j);return;}
+  if((e.ctrlKey||e.metaKey)&&(e.key==='d'||e.key==='D')){
+    e.preventDefault();
+    if(i===0){toast('No hay fila encima de la cual copiar');return;}
+    const c=colsVis()[j], arriba=colGet(c,filasRejilla()[i-1]);
+    colSet(c,filasRejilla()[i],arriba===''?'':arriba);
+    marcarSucio();pintarRejilla();setTimeout(()=>gIr(i,j),0);
+    return;
+  }
+}
+
+/* --- rellenar toda una columna hacia abajo desde donde esté el cursor --- */
+function rellenarColumna(j){
+  const act=document.activeElement;
+  const desde=(act&&act.classList&&act.classList.contains('gc')&&+act.dataset.c===j)?+act.dataset.r:0;
+  const ps=filasRejilla(), c=colsVis()[j];
+  if(!ps.length)return;
+  const v=colGet(c,ps[desde]);
+  if(v===''||v==null){toast('Escribe primero el valor en una celda de <b>'+esc(c.t)+'</b> y vuelve a darle ⤓');return;}
+  let n=0;
+  for(let i=desde+1;i<ps.length;i++){colSet(c,ps[i],v);n++;}
+  marcarSucio();pintarRejilla();pintarKpis();pintarTreemaps();
+  toast(`<b>${esc(c.t)}</b> rellenada hacia abajo en ${n} fila(s)`);
+}
+
+/* --- pegar un bloque desde Excel --- */
+function gPegar(e){
+  const t=e.target;
+  if(!t.classList||!t.classList.contains('gc'))return;
+  const txt=(e.clipboardData||window.clipboardData).getData('text');
+  if(!txt||txt.indexOf('\t')<0&&txt.indexOf('\n')<0)return;      /* una sola celda: pegado normal */
+  e.preventDefault();
+  const r0=+t.dataset.r, c0=+t.dataset.c;
+  const bloque=txt.replace(/\r/g,'').replace(/\n+$/,'').split('\n').map(l=>l.split('\t'));
+  const cs=colsVis();
+  const faltan=(r0+bloque.length)-filasRejilla().length;
+  if(faltan>0)addFilas(faltan,true);
+  const ps=filasRejilla();
+  let celdas=0, fuera=0;
+  /* antes de escribir nada: decidir el orden de cada columna de fechas mirándola entera */
+  const ordenCol={}, ambiguas=[], mezcladas=[];
+  bloque[0].forEach((_,dj)=>{
+    const c=cs[c0+dj]; if(!c||c.tipo!=='fecha')return;
+    const o=ordenFechas(bloque.map(l=>l[dj]));
+    if(o==='mezcla'){mezcladas.push(c.t);ordenCol[dj]=S.fechaOrden||'dmy';}
+    else if(o==='ambiguo'){ambiguas.push(c.t);ordenCol[dj]=S.fechaOrden||'dmy';}
+    else if(o){ordenCol[dj]=o;S.fechaOrden=o;}   /* lo aprendido vale para el próximo pegado */
+  });
+  bloque.forEach((lin,di)=>{
+    const p=ps[r0+di]; if(!p)return;
+    lin.forEach((val,dj)=>{
+      const c=cs[c0+dj]; if(!c){fuera++;return;}
+      colSet(c,p,aValor(c,val,ordenCol[dj])); celdas++;
+    });
+  });
+  /* para poder darle la vuelta si lo leí al revés */
+  _ultimoPegado={r0,c0,bloque,cols:cs.slice(),ordenCol,ambiguas};
+  pintarRejilla();pintarKpis();pintarTreemaps();pintarDatalists();marcarSucio();
+  /* marcar en amarillo lo que acaba de caer, para que se vea dónde quedó */
+  setTimeout(()=>{
+    bloque.forEach((lin,di)=>lin.forEach((_,dj)=>{
+      const el=gCelda(r0+di,c0+dj); if(el)el.classList.add('pegado');}));
+    gIr(r0,c0);
+  },0);
+  let msg=`Pegadas <b>${bloque.length}</b> fila(s) × <b>${bloque[0].length}</b> columna(s)`+
+    (fuera?` · <b style="color:#ffcf8f">${fuera} celda(s) se salían de la tabla y no entraron</b>`:'');
+  if(mezcladas.length)
+    msg+=` · <b style="color:#ff9a92">${mezcladas.join(', ')} trae fechas en dos formatos distintos: revísalas una por una</b>`;
+  else if(ambiguas.length){
+    const dmy=(S.fechaOrden||'dmy')==='dmy';
+    msg+=` · <b style="color:#ffcf8f">${ambiguas.join(', ')}: no se puede saber si es día/mes o mes/día,`+
+         ` las leí como ${dmy?'día/mes':'mes/día'}</b>`+
+         ` <button class="btn" style="margin-left:8px;padding:3px 9px;font-size:11.5px" onclick="voltearFechas()">`+
+         `Están al revés</button>`;
+    _tostadaFija=true;
+  }
+  toast(msg);
+}
+/* Dar la vuelta a las fechas del último pegado, cuando la columna era ambigua */
+let _ultimoPegado=null;
+function voltearFechas(){
+  const u=_ultimoPegado; if(!u){toast('Ya no hay un pegado reciente que voltear');return;}
+  const nuevo=(S.fechaOrden||'dmy')==='dmy'?'mdy':'dmy';
+  S.fechaOrden=nuevo;
+  const ps=filasRejilla(); let n=0;
+  u.bloque.forEach((lin,di)=>{
+    const p=ps[u.r0+di]; if(!p)return;
+    lin.forEach((val,dj)=>{
+      const c=u.cols[u.c0+dj];
+      if(!c||c.tipo!=='fecha'||!u.ambiguas.includes(c.t))return;
+      colSet(c,p,aFecha(val,nuevo)); n++;
+    });
+  });
+  _tostadaFija=false;
+  marcarSucio();pintarRejilla();pintarKpis();pintarTreemaps();
+  toast(`${n} fecha(s) releídas como <b>${nuevo==='dmy'?'día/mes':'mes/día'}</b>`);
+}
+
+/* --- filas nuevas --- */
+function addFilas(n,calladito){
+  const primera=!S.pedidos.length;
+  for(let i=0;i<n;i++)S.pedidos.push(pedidoNuevo());
+  marcarSucio();
+  if(!calladito){
+    if(primera){pintarKpis();pintarCupoInputs();pintarTreemaps();ajustarVisibilidad();}
+    pintarRejilla();
+  }
+}
+/* --- plantilla: estampa de una vez todos los derrames de una orden --- */
+function plantillaOrden(){
+  const orden=prompt('Orden madre (ej. 7, 11, CFM 3):','');
+  if(orden===null)return;
+  const o=(orden||'').trim(); if(!o)return;
+  const nStr=prompt('¿Cuántos pedidos tiene esa orden?','4'); if(nStr===null)return;
+  const n=Math.max(1,Math.min(40,parseInt(nStr)||1));
+  const mfg=(prompt('Fabricante: Singsun o Eaglerise','Singsun')||'Singsun').trim();
+  const mf=/eagle/i.test(mfg)?'Eaglerise':'Singsun';
+  const cli=(prompt('Cliente para todos (puedes dejarlo vacío):','')||'').trim();
+  const desde=Math.max(1,parseInt(prompt('¿Desde qué número? (1 crea '+o+'-1, '+o+'-2…)','1'))||1);
+  for(let i=0;i<n;i++){
+    const p=pedidoNuevo();
+    p.id=o+'-'+(desde+i); p.orden=o; p.mfg=mf; p.tipo=TIPO_DEF[mf];
+    p.antPct=mf==='Eaglerise'?20:10;
+    if(cli){p.cliente=cli;if(!S.clientes[cli])S.clientes[cli]={plazo:S.plazoDef};p.plazo=plazoDe(cli);}
+    S.pedidos.push(p);
+  }
+  marcarSucio();ajustarVisibilidad();pintarRejilla();pintarKpis();pintarCupoInputs();
+  pintarTreemaps();pintarDatalists();
+  toast(`Creados <b>${n}</b> pedidos de la orden ${esc(o)} · ahora solo llena lo que cambia`);
 }
 
 /* =========================================================================
