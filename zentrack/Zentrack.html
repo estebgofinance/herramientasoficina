@@ -150,12 +150,35 @@ table.g tr.par td.rn{background:var(--surface2)}
 .gc.pegado{animation:flash 1.1s ease-out}
 @keyframes flash{0%{background:#FEF0D8}100%{background:transparent}}
 .gc::placeholder{color:#D6D9DD}
+.gcalc{height:29px;padding:5px 8px;font-size:12.5px;text-align:right;color:var(--ink2);
+  background:repeating-linear-gradient(135deg,transparent,transparent 5px,rgba(0,0,0,.018) 5px,rgba(0,0,0,.018) 10px);
+  font-variant-numeric:tabular-nums;cursor:default}
+table.g th.calc{color:var(--ink3);font-style:italic}
 .gprog{font-size:11.5px;color:var(--ink2);margin-top:10px;font-variant-numeric:tabular-nums}
 .gprog b{color:var(--ink)}
 .ghelp{font-size:11.5px;color:var(--ink2);background:var(--surface);border:1px solid var(--rule);
   border-radius:10px;padding:11px 14px;margin-bottom:12px;line-height:1.75}
 .ghelp kbd{font-family:inherit;font-size:10.5px;font-weight:600;background:var(--rule);border-radius:4px;
   padding:1px 6px;color:var(--ink)}
+
+
+/* ---------- panel de celdas combinadas ---------- */
+.fusbox{background:var(--accent-soft);border:1px solid #F2D9A8;border-radius:12px;padding:16px 18px;margin-bottom:14px}
+.fush b{font-size:13.5px}
+.fush span{display:block;font-size:12px;color:#7A5A1E;margin-top:3px;max-width:820px;line-height:1.6}
+.fusg{background:var(--surface);border:1px solid var(--rule);border-radius:9px;padding:12px 14px;margin-top:12px}
+.fusgh{display:flex;align-items:center;gap:7px;flex-wrap:wrap;font-size:12.5px;color:var(--ink2);margin-bottom:9px}
+.fusgh b{color:var(--ink);font-size:13px} .fusgh i{color:var(--ink);font-style:normal;font-weight:600}
+.fusgh .sp{flex:1} .fusgh select{border:1px solid var(--rule2);border-radius:6px;padding:3px 7px;font-size:12px;background:var(--surface)}
+table.fust{width:100%;border-collapse:collapse}
+table.fust th{font-size:10px;font-weight:700;color:var(--ink2);text-transform:uppercase;letter-spacing:.04em;
+  text-align:left;padding:5px 9px;border-bottom:1px solid var(--rule)}
+table.fust th.r,table.fust td.r{text-align:right;font-variant-numeric:tabular-nums}
+table.fust td{padding:7px 9px;border-bottom:1px solid var(--rule);font-size:12.5px}
+table.fust tr.tot td{background:var(--surface2);font-weight:600;border-bottom:none;color:var(--ink2)}
+.fusav{font-size:11.5px;color:#8a5300;margin-top:8px;background:var(--accent-soft);padding:7px 10px;border-radius:7px}
+.fusacts{display:flex;gap:8px;margin-top:14px}
+table.g tr.grp td.rn{background:var(--accent-soft);color:#8a5300;font-weight:700}
 
 /* ---------- cajón de edición ---------- */
 .scrim{position:fixed;inset:0;background:rgba(23,24,26,.34);opacity:0;pointer-events:none;transition:.18s;z-index:50}
@@ -236,7 +259,10 @@ table.g tr.par td.rn{background:var(--surface2)}
 .ecsum .mn{font-size:11px;color:var(--ink3);margin-top:2px;font-variant-numeric:tabular-nums}
 .ecsec{font-size:10.5px;font-weight:700;color:var(--ink2);text-transform:uppercase;letter-spacing:.07em;
   padding:16px 26px 9px;background:var(--surface2);border-bottom:1px solid var(--rule)}
-.ec table.t th:first-child,.ec table.t td:first-child{padding-left:26px}
+.ec table.t th:first-child,.ec table.t td:first-child{padding-left:26px;min-width:215px}
+.ec table.t td{white-space:nowrap}
+.ec table.t td:first-child{white-space:normal}
+.ec table.t td .psub{white-space:normal}
 .ec table.t th:last-child,.ec table.t td:last-child{padding-right:26px}
 tr.tot td{background:var(--surface2);font-weight:700;border-top:1px solid var(--rule2)}
 .pbar{height:5px;background:var(--rule);border-radius:3px;overflow:hidden;margin-top:5px;width:92px;margin-left:auto}
@@ -294,7 +320,7 @@ tr.tot td{background:var(--surface2);font-weight:700;border-top:1px solid var(--
       <div class="tmvent">
         <button id="tmv-cliente" class="on" onclick="setTmMode('cliente')">Por cliente</button>
         <button id="tmv-proyecto" onclick="setTmMode('proyecto')">Por proyecto</button>
-        <button id="tmv-orden" onclick="setTmMode('orden')">Por orden</button>
+        <button id="tmv-orden" onclick="setTmMode('orden')">Por pedido</button>
       </div>
     </div>
     <div class="tmrow">
@@ -312,12 +338,14 @@ tr.tot td{background:var(--surface2);font-weight:700;border-top:1px solid var(--
       </div>
     </div>
     <div class="tmleg">
-      <span class="lg"><i style="background:#B9BEC4"></i>Por confirmar</span>
-      <span class="lg"><i style="background:#8A9099"></i>En producción</span>
-      <span class="lg"><i style="background:#5E646C"></i>Prod. terminada</span>
-      <span class="lg"><i style="background:#23272C"></i>Embarcando / embarcado</span>
+      <span class="lg"><i style="background:#C3C7CC"></i>En revisión</span>
+      <span class="lg"><i style="background:#AEB3B9"></i>En producción</span>
+      <span class="lg"><i style="background:#979DA4"></i>Prod. finalizada</span>
+      <span class="lg"><i style="background:#7D838B"></i>Testeo</span>
+      <span class="lg"><i style="background:#4A5059"></i>Programado / por despachar</span>
+      <span class="lg"><i style="background:#23272C"></i>Enviado</span>
       <span class="lg"><i style="background:#B3261E"></i>Cobro al cliente vencido</span>
-      <span class="lg"><i style="background:#FD9C10;height:4px;border-radius:1px"></i>Falta el anticipo</span>
+      <span class="lg"><i style="background:#FD9C10;height:4px;border-radius:1px"></i>Sin girar nada a China</span>
       <span class="lg"><i style="background:#E7F1EC;border:1px solid #B7D4C9"></i>Cupo disponible</span>
     </div>
     </div>
@@ -334,12 +362,13 @@ tr.tot td{background:var(--surface2);font-weight:700;border-top:1px solid var(--
       <button class="chip on" data-f="todos" onclick="setFiltro('todos')">Todos</button>
       <button class="chip" data-f="Singsun" onclick="setFiltro('Singsun')">Trackers</button>
       <button class="chip" data-f="Eaglerise" onclick="setFiltro('Eaglerise')">Shelters</button>
-      <button class="chip" data-f="debe" onclick="setFiltro('debe')">Con saldo a China</button>
+      <button class="chip" data-f="debe" onclick="setFiltro('debe')">Con saldo de costo</button>
       <button class="chip" data-f="cobrar" onclick="setFiltro('cobrar')">Por cobrar</button>
       <button class="chip" data-f="mora" onclick="setFiltro('mora')">En mora</button>
       <input class="srch" id="q" placeholder="Buscar pedido, proyecto o cliente…" oninput="pintarLista()">
     </div>
     <div id="lista"></div>
+    <div id="fusiones" style="display:none"></div>
     <div id="rejilla"></div>
   </section>
 
@@ -391,14 +420,29 @@ tr.tot td{background:var(--surface2);font-weight:700;border-top:1px solid var(--
    (localStorage) y, si está desplegado en Apps Script, también en la hoja.
    ========================================================================= */
 
-/* ---------- vocabulario ---------- */
+/* ---------- vocabulario: el del archivo de Esteban ---------- */
+const EQUIPOS=['Tracker','Shelter','Estaciones','Otro'];
+/* el cupo Sinosure va por fabricante, y el fabricante sale del tipo de equipo */
+const FAB={Tracker:'Singsun',Shelter:'Eaglerise',Estaciones:null,Otro:null};
 const MFGS=['Singsun','Eaglerise'];
-const TIPO_DEF={Singsun:'Tracker',Eaglerise:'Shelter'};
-const TIPOS=['Tracker','Shelter','Repuestos','Otro'];
-const STAGE={confirm:'Por confirmar',prod:'En producción',finished:'Producción terminada',
-             booked:'Reservado',shipping:'Embarcando',shipped:'Embarcado'};
-const RANK={confirm:0,prod:1,finished:2,booked:3,shipping:4,shipped:5};
-const RAMP={confirm:'#B9BEC4',prod:'#8A9099',finished:'#5E646C',booked:'#474D55',shipping:'#333940',shipped:'#23272C'};
+const MFG_EQ={Singsun:'Tracker',Eaglerise:'Shelter'};
+/* los estados tal como los escribes, en orden de avance */
+const ESTADOS=[
+  ['revision',  'En revisión'],
+  ['produccion','En producción'],
+  ['finalizada','Producción finalizada'],
+  ['testeo',    'Testeo de shelters'],
+  ['programado','Envío programado'],
+  ['despacho',  'Pendiente por despacho'],
+  ['enviado',   'Enviado'],
+];
+const STAGE=Object.fromEntries(ESTADOS);
+const RANK=Object.fromEntries(ESTADOS.map((e,i)=>[e[0],i]));
+/* rampa secuencial de un solo tono: a más avanzado, más oscuro */
+const RAMP={revision:'#C3C7CC',produccion:'#AEB3B9',finalizada:'#979DA4',testeo:'#7D838B',
+            programado:'#636971',despacho:'#4A5059',enviado:'#23272C'};
+/* columna M del archivo */
+const PAGOEST=[['nada','Nada'],['anticipo','Anticipo inicial'],['otro','Otro %'],['total','Totalmente']];
 const SINO={auto:'Según la regla',fijo:'Monto fijo que yo escribo',no:'No consume cupo'};
 
 /* ---------- formatos ---------- */
@@ -427,46 +471,58 @@ const VACIO=()=>({
 });
 let S=VACIO();
 
-/* Un pedido nuevo, con los valores por defecto que casi nunca cambian */
+/* Un pedido nuevo. Los nombres siguen las columnas de tu archivo:
+   A Equipo · B Cliente · C # de Pedido · D # Equipos · E Nomenclatura China
+   F Nomenclatura Cliente · G Estado · H ETD · I ETA · J Facturas Zentrack
+   K Precio · L Costo · M Costo a china pagado? · N Pagado a China
+   O Saldo costo (=L−N) · P Costo logística · Q Costo electrónica
+   R Deuda a Zentrack (=K−N) · S Precio total (=K+P)
+   O, R y S no se guardan: son fórmulas y se recalculan siempre. */
 function pedidoNuevo(base){
   const k='p'+(S.seq++);
   const p={ k,
-    id:'', orden:'', mfg:'Singsun', tipo:'Tracker', qty:1, proyecto:'', cliente:'',
-    estado:'confirm',
-    prodFin:'', etd:'', bl:'', eta:'', blNo:'',
-    montoFab:0, pagadoFab:0, antPct:10, antPagado:false,
-    otrosMonto:0, otrosPagado:0, limitePago:'',
+    equipo:'Tracker', cliente:'', id:'', qty:1, nomChina:'', proyecto:'',
+    estado:'revision', etd:'', eta:'', facturas:'',
+    precio:0, costo:0, pagoEst:'nada', pagado:0, logistica:0, electronica:0,
+    /* lo que tu archivo todavía no trae */
+    abonos:[], plazo:S.plazoDef, facturaFecha:'', nota:'',
     sino:'auto', sinoMonto:0,
-    precio:0, flete:0, plazo:S.plazoDef, facturaNum:'', facturaFecha:'',
-    abonos:[], nota:'' };
+    /* filas que en tu Excel comparten una celda combinada */
+    grupo:null };
   if(base){ Object.keys(p).forEach(f=>{ if(f!=='k') p[f]=base[f]; });
-            p.k=k; p.abonos=(base.abonos||[]).map(a=>({...a})); }
+            p.k=k; p.abonos=(base.abonos||[]).map(a=>({...a})); p.grupo=null; }
   return p;
 }
 
 /* ---------- derivados de un pedido ---------- */
 const P={
-  saldoFab:  p=>Math.max(0,num(p.montoFab)-num(p.pagadoFab)),
-  otrosSaldo:p=>Math.max(0,num(p.otrosMonto)-num(p.otrosPagado)),
-  totalChina:p=>P.saldoFab(p)+P.otrosSaldo(p),
-  embarcado: p=>RANK[p.estado]>=RANK.shipping,
-  antMonto:  p=>Math.round(num(p.montoFab)*num(p.antPct)/100),
-  /* lo que este pedido le come al cupo Sinosure */
+  mfg:       p=>FAB[p.equipo]||null,
+  /* --- China --- */
+  saldoCosto:p=>Math.max(0,num(p.costo)-num(p.pagado)),          /* O = L − N */
+  embarcado: p=>RANK[p.estado]>=RANK.enviado,
+  /* lo que este pedido le come al cupo Sinosure:
+     el costo completo mientras está en fábrica, el saldo una vez enviado */
   consumo:   p=>{
+    if(!P.mfg(p)) return 0;
     if(p.sino==='no') return 0;
     if(p.sino==='fijo') return Math.max(0,num(p.sinoMonto));
-    if(P.saldoFab(p)<=0.5) return 0;              /* pagado del todo: libera el cupo */
-    return P.embarcado(p) ? P.saldoFab(p) : num(p.montoFab);
+    if(P.saldoCosto(p)<=0.5) return 0;
+    return P.embarcado(p) ? P.saldoCosto(p) : num(p.costo);
   },
-  /* lado cliente */
-  aCobrar:   p=>num(p.precio)+num(p.flete),
-  abonado:   p=>(p.abonos||[]).reduce((s,a)=>s+num(a.m),0),
-  saldoCli:  p=>P.aCobrar(p)-P.abonado(p),
-  /* el plazo cuenta desde el BL; sin BL todavía no hay fecha de cobro */
-  vence:     p=>{const d=dOf(p.bl);return d?addD(d,parseInt(p.plazo)||0):null;},
-  mora:      p=>{const v=P.vence(p);return (P.saldoCli(p)>0.5&&v&&v<hoy())?diasEntre(v,hoy()):0;},
-  facturado: p=>P.aCobrar(p)>0.5,
+  /* --- cliente --- */
+  precioTotal:p=>num(p.precio)+num(p.logistica),                 /* S = K + P */
+  deudaZ:     p=>num(p.precio)-num(p.pagado),                    /* R = K − N */
+  aCobrar:    p=>P.precioTotal(p),
+  abonado:    p=>(p.abonos||[]).reduce((s,a)=>s+num(a.m),0),
+  saldoCli:   p=>P.aCobrar(p)-P.abonado(p),
+  margen:     p=>P.precioTotal(p)-num(p.costo)-num(p.logistica)-num(p.electronica),
+  /* la fecha de cobro corre desde el ETA; sin ETA todavía no hay vencimiento */
+  vence:      p=>{const d=dOf(aFecha(p.eta));return d?addD(d,parseInt(p.plazo)||0):null;},
+  mora:       p=>{const v=P.vence(p);return (P.saldoCli(p)>0.5&&v&&v<hoy())?diasEntre(v,hoy()):0;},
 };
+/* un grupo son las filas que en tu Excel comparten una celda combinada */
+const delGrupo=g=>g?S.pedidos.filter(x=>x.grupo===g):[];
+
 const clientesUsados=()=>[...new Set(S.pedidos.map(p=>(p.cliente||'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'es'));
 const plazoDe=c=>(S.clientes[c]&&S.clientes[c].plazo!=null)?S.clientes[c].plazo:S.plazoDef;
 
@@ -587,14 +643,14 @@ function setTmMode(m){TM=m;['cliente','proyecto','orden'].forEach(x=>
   document.getElementById('tmv-'+x).classList.toggle('on',x===m));pintarTreemaps();}
 const grupoDe=p=> TM==='cliente' ? (p.cliente||'Sin cliente')
                : TM==='proyecto' ? (p.proyecto||'Sin proyecto')
-               : ('Orden '+(p.orden||p.id||'—'));
+               : (p.id||'Sin pedido');
 const enMora=p=>P.mora(p)>0;
 
 function pintarTreemaps(){MFGS.forEach(dibujarTreemap);}
 function dibujarTreemap(mfg){
   const svg=document.getElementById('tm'+mfg); if(!svg) return;
   svg.innerHTML='';
-  const ps=S.pedidos.filter(p=>p.mfg===mfg&&P.consumo(p)>0.5);
+  const ps=S.pedidos.filter(p=>P.mfg(p)===mfg&&P.consumo(p)>0.5);
   const cupo=num(S.cupo[mfg])||1;
 
   if(!ps.length){
@@ -640,8 +696,8 @@ function dibujarTreemap(mfg){
       const over=enMora(p), cel=mk('g',{});
       cel.appendChild(mk('rect',{x,y,width:w,height:h,fill:over?'#B3261E':RAMP[p.estado],rx:1.5}));
       /* franja naranja = todavía le falta el anticipo */
-      if(!p.antPagado&&w>10) cel.appendChild(mk('rect',{x,y,width:w,height:Math.min(3,h),fill:'#FD9C10'}));
-      const oscuro=!over&&(p.estado==='confirm'||p.estado==='prod');
+      if(p.pagoEst==='nada'&&w>10) cel.appendChild(mk('rect',{x,y,width:w,height:Math.min(3,h),fill:'#FD9C10'}));
+      const oscuro=!over&&RANK[p.estado]<=1;
       const tc=oscuro?'#17181A':'#fff';
       /* solo se escribe lo que cabe de verdad dentro de la celda */
       if(w>48){
@@ -656,7 +712,7 @@ function dibujarTreemap(mfg){
       tip(cel,`<b>${esc(p.proyecto||p.id||'Pedido sin nombre')}</b><br>`+
         `${esc(p.id||'')}${p.cliente?' · '+esc(p.cliente):''} · ${STAGE[p.estado]}<br>`+
         `Consume <span class="num">${usd(u.value)}</span>`+
-        (p.antPagado?'':'<br><span style="color:#ffcf8f">falta el anticipo</span>')+
+        (p.pagoEst==='nada'?'<br><span style="color:#ffcf8f">no se ha girado nada a China</span>':'')+
         (over?'<br><span style="color:#ff9a92">cobro vencido hace '+P.mora(p)+' días</span>':''));
       svg.appendChild(cel);
     });
@@ -702,13 +758,13 @@ function pintarDatalists(){
 }
 function pintarKpis(){
   const ps=S.pedidos;
-  const china=ps.reduce((s,p)=>s+P.totalChina(p),0);
-  const vencChina=ps.filter(p=>{const d=dOf(p.limitePago);return d&&d<hoy()&&P.saldoFab(p)>0.5;})
-                    .reduce((s,p)=>s+P.saldoFab(p),0);
+  const china=ps.reduce((s,p)=>s+P.saldoCosto(p),0);
+  const sinGirar=ps.filter(p=>p.pagoEst==='nada'&&P.saldoCosto(p)>0.5).reduce((s,p)=>s+P.saldoCosto(p),0);
   const cobrar=ps.reduce((s,p)=>s+Math.max(0,P.saldoCli(p)),0);
   const mora=ps.filter(enMora).reduce((s,p)=>s+Math.max(0,P.saldoCli(p)),0);
+  const hayAbonos=ps.some(p=>P.abonado(p)>0.5);
   const kcupo=mfg=>{
-    const usado=ps.filter(p=>p.mfg===mfg).reduce((s,p)=>s+P.consumo(p),0);
+    const usado=ps.filter(p=>P.mfg(p)===mfg).reduce((s,p)=>s+P.consumo(p),0);
     const cupo=num(S.cupo[mfg]), disp=cupo-usado;
     return `<div class="kpi"><div class="kl">Cupo ${mfg==='Singsun'?'Singsun · trackers':'Eaglerise · shelters'}
       ${disp<0?'<span class="chipst mal">sobregirado</span>':'<span class="chipst ok">con aire</span>'}</div>
@@ -716,13 +772,14 @@ function pintarKpis(){
       <div class="kd">usado <b>${usds(usado)}</b> de ${usds(cupo)}</div></div>`;
   };
   document.getElementById('kpis').innerHTML=`
-    <div class="kpi"><div class="kl">Le debo a China
-      ${vencChina>0?'<span class="chipst mal">girar ya</span>':'<span class="chipst ok">al día</span>'}</div>
-      <div class="kv ${vencChina>0?'alerta':''}">US$ ${usds(china)}</div>
-      <div class="kd">${vencChina>0?`<b style="color:var(--danger)">${usds(vencChina)} con fecha vencida</b>`:'ninguna fecha vencida'}</div></div>
-    <div class="kpi"><div class="kl">Me deben mis clientes</div>
-      <div class="kv ${mora>0?'alerta':''}">US$ ${usds(cobrar)}</div>
-      <div class="kd">${mora>0?`<b style="color:var(--danger)">${usds(mora)} en mora</b>`:'nada en mora'}</div></div>
+    <div class="kpi"><div class="kl">Saldo de costo con China</div>
+      <div class="kv">US$ ${usds(china)}</div>
+      <div class="kd">${sinGirar>0?`<b style="color:var(--debo)">${usds(sinGirar)} sin girar nada todavía</b>`
+        :'todos con algo girado'}</div></div>
+    <div class="kpi"><div class="kl">Por cobrar a clientes</div>
+      <div class="kv ${mora>0&&hayAbonos?'alerta':''}">US$ ${usds(cobrar)}</div>
+      <div class="kd">${!hayAbonos?'<b>sin abonos registrados todavía</b>'
+        :mora>0?`<b style="color:var(--danger)">${usds(mora)} en mora</b>`:'nada en mora'}</div></div>
     ${kcupo('Singsun')}${kcupo('Eaglerise')}`;
 }
 
@@ -731,15 +788,14 @@ function setFiltro(f){FILTRO=f;document.querySelectorAll('.chip').forEach(c=>c.c
 function pedidosFiltrados(){
   const q=(document.getElementById('q').value||'').toLowerCase().trim();
   return S.pedidos.filter(p=>{
-    if(FILTRO==='Singsun'||FILTRO==='Eaglerise'){if(p.mfg!==FILTRO)return false;}
-    else if(FILTRO==='debe'&&P.totalChina(p)<=0.5)return false;
+    if(FILTRO==='Singsun'||FILTRO==='Eaglerise'){if(P.mfg(p)!==FILTRO)return false;}
+    else if(FILTRO==='debe'&&P.saldoCosto(p)<=0.5)return false;
     else if(FILTRO==='cobrar'&&P.saldoCli(p)<=0.5)return false;
     else if(FILTRO==='mora'&&!enMora(p))return false;
-    if(q){const h=[p.id,p.orden,p.proyecto,p.cliente,p.blNo,p.facturaNum,p.nota].join(' ').toLowerCase();
+    if(q){const h=[p.id,p.proyecto,p.nomChina,p.cliente,p.facturas,p.nota].join(' ').toLowerCase();
       if(h.indexOf(q)<0)return false;}
     return true;
-  }).sort((a,b)=>(a.orden||'').localeCompare(b.orden||'','es',{numeric:true})
-                || (a.id||'').localeCompare(b.id||'','es',{numeric:true}));
+  }).slice();
 }
 function pintarLista(){
   if(MODO==='rejilla'&&S.pedidos.length)return;   /* la rejilla manda mientras se captura */
@@ -762,17 +818,19 @@ function pintarLista(){
   const fila=p=>{
     const sc=P.saldoCli(p), m=P.mora(p), v=P.vence(p);
     const pagoPct=P.aCobrar(p)>0.5?Math.min(100,P.abonado(p)/P.aCobrar(p)*100):0;
+    const mfg=P.mfg(p);
     return `<tr class="clk" onclick="abrirPedido('${p.k}')">
-      <td><div class="pid"><span class="mfgdot ${p.mfg}"></span>${esc(p.id||'(sin ID)')}</div>
-          <div class="psub">${esc(p.proyecto||'sin proyecto')}${p.qty>1?' · '+p.qty+' equipos':''}</div></td>
+      <td><div class="pid"><span class="mfgdot ${mfg||'Otro'}"></span>${esc(p.id||'(sin pedido)')}
+          ${p.grupo?'<span class="badge" title="Prorrateado desde una celda combinada de tu Excel">grupo</span>':''}</div>
+          <div class="psub">${esc((p.proyecto||'sin proyecto').replace(/\n/g,' · '))}${p.qty>1?' · '+p.qty+' equipos':''}</div></td>
       <td>${p.cliente?esc(p.cliente):'<span class="muted">sin asignar</span>'}</td>
-      <td><span class="badge ${P.embarcado(p)?'sh':''}">${STAGE[p.estado]}</span>
-          ${p.antPagado?'':'<div class="psub warn">falta anticipo</div>'}</td>
-      <td class="r">${num(p.montoFab)?usds(p.montoFab):'<span class="muted">—</span>'}</td>
-      <td class="r">${P.totalChina(p)>0.5?usds(P.totalChina(p)):'<span class="badge ok">pagado</span>'}</td>
+      <td><span class="badge ${P.embarcado(p)?'sh':''}">${STAGE[p.estado]||'—'}</span>
+          ${p.pagoEst==='nada'&&num(p.costo)>0?'<div class="psub warn">sin girar a China</div>':''}</td>
+      <td class="r">${num(p.costo)?usds(p.costo):'<span class="muted">—</span>'}</td>
+      <td class="r">${P.saldoCosto(p)>0.5?usds(P.saldoCosto(p)):'<span class="badge ok">pagado</span>'}</td>
       <td class="r">${P.consumo(p)>0.5?usds(P.consumo(p)):'<span class="muted">—</span>'}
           ${p.sino==='no'?'<div class="psub">fuera del cupo</div>':p.sino==='fijo'?'<div class="psub">monto fijo</div>':''}</td>
-      <td class="r">${P.aCobrar(p)>0.5?usds(P.aCobrar(p)):'<span class="muted">sin precio</span>'}</td>
+      <td class="r">${P.precioTotal(p)>0.5?usds(P.precioTotal(p)):'<span class="muted">sin precio</span>'}</td>
       <td class="r">${sc>0.5?`<b>${usds(sc)}</b>`:(P.aCobrar(p)>0.5?'<span class="badge ok">cobrado</span>':'<span class="muted">—</span>')}
           ${P.aCobrar(p)>0.5?`<div class="pbar"><i style="width:${pagoPct}%"></i></div>`:''}</td>
       <td class="r">${m>0?`<span class="badge over">${m} d en mora</span>`
@@ -782,8 +840,8 @@ function pintarLista(){
   document.getElementById('lista').innerHTML=`<div class="tblwrap"><table class="t">
     <thead><tr>
       <th>Pedido</th><th>Cliente</th><th>Estado</th>
-      <th class="r">Monto fáb.</th><th class="r">Saldo China</th><th class="r">Cupo</th>
-      <th class="r">Precio venta</th><th class="r">Saldo cliente</th><th class="r">Vence</th>
+      <th class="r">Costo</th><th class="r">Saldo costo</th><th class="r">Cupo</th>
+      <th class="r">Precio total</th><th class="r">Saldo cliente</th><th class="r">Vence</th>
     </tr></thead><tbody>${ps.map(fila).join('')}</tbody></table></div>`;
 }
 
@@ -807,7 +865,7 @@ function nuevoPedido(){
 function duplicarPedido(){
   const p=A();if(!p)return;
   const c=pedidoNuevo(p);
-  c.abonos=[];c.pagadoFab=p.pagadoFab;c.facturaNum='';
+  c.abonos=[];c.facturas='';c.grupo=null;
   const m=(p.id||'').match(/^(.*?)(\d+)$/);
   c.id = m ? m[1]+(parseInt(m[2])+1) : (p.id?p.id+' bis':'');
   S.pedidos.splice(S.pedidos.indexOf(p)+1,0,c);
@@ -834,17 +892,14 @@ function cerrarCajon(){
 }
 
 /* --- escribir un campo --- */
+const _NUM=['precio','costo','pagado','logistica','electronica','sinoMonto','qty','plazo'];
 function sv(f,v,recargar){
   const p=A();if(!p)return;
-  if(['montoFab','pagadoFab','otrosMonto','otrosPagado','precio','flete','sinoMonto','antPct','qty','plazo'].includes(f))
-    p[f]=v===''?0:num(v);
-  else if(f==='antPagado') p.antPagado=(v===true||v==='si');
+  if(_NUM.includes(f)) p[f]=v===''?0:num(v);
   else p[f]=v;
-  if(f==='id'&&!p._ordenManual){const m=(''+v).match(/^\s*([A-Za-zÁÉÍÓÚÑ]*\s*\d+)/);
-    p.orden=m?m[1].replace(/\s+/g,' ').trim():'';}
-  if(f==='orden')p._ordenManual=true;
-  if(f==='cliente'){const c=(''+v).trim();if(c&&!S.clientes[c])S.clientes[c]={plazo:S.plazoDef};}
-  if(f==='mfg'){ if(p.tipo===TIPO_DEF[v==='Singsun'?'Eaglerise':'Singsun'])p.tipo=TIPO_DEF[v]; }
+  if(f==='cliente'){const c=(''+v).trim();
+    if(c&&!S.clientes[c])S.clientes[c]={plazo:S.plazoDef};
+    if(c)p.plazo=plazoDe(c);}
   marcarSucio();
   if(recargar)pintarCajon(); else {pintarPie();pintarTreemaps();pintarKpis();}
 }
@@ -855,6 +910,8 @@ const campo=(lbl,html,hint,wide)=>
   `<div class="field${wide?' wide':''}"><label>${lbl}</label>${html}${hint!=null?`<div class="hint">${hint}</div>`:''}</div>`;
 const inpT=(f,v,ph,list)=>`<input value="${esc(v)}" placeholder="${ph||''}" ${list?`list="${list}"`:''}
   oninput="sv('${f}',this.value)" onchange="pintarLista();pintarDatalists()">`;
+const inpA=(f,v,ph)=>`<textarea rows="2" placeholder="${ph||''}" style="resize:vertical"
+  oninput="sv('${f}',this.value)" onchange="pintarLista();pintarDatalists()">${esc(v)}</textarea>`;
 const inpN=(f,v,ph)=>`<input class="n" type="number" step="any" value="${v||v===0?v:''}" placeholder="${ph||'0'}"
   oninput="sv('${f}',this.value)" onchange="pintarLista()">`;
 const inpF=(f,v)=>`<input type="date" value="${esc(v)}" onchange="svFull('${f}',this.value);pintarLista()">`;
@@ -862,74 +919,72 @@ const sel=(f,v,opts)=>`<select onchange="svFull('${f}',this.value);pintarLista()
   opts.map(o=>`<option value="${o[0]}" ${o[0]===v?'selected':''}>${o[1]}</option>`).join('')+`</select>`;
 const swt=(f,v,opts,cls)=>`<div class="swt ${cls||''}">`+
   opts.map(o=>`<button class="${o[0]===v?'on':''}" onclick="svFull('${f}','${o[0]}');pintarLista()">${o[1]}</button>`).join('')+`</div>`;
+const calc=(v,nota)=>`<div style="font-size:18px;font-weight:700;padding:5px 0" class="num">${usd(v)}</div>`;
 
 function pintarCajon(){
   const p=A();if(!p)return;
-  document.getElementById('dTit').textContent=p.id?('Pedido '+p.id):'Pedido nuevo';
+  const mfg=P.mfg(p), v=P.vence(p), herm=delGrupo(p.grupo).filter(x=>x!==p);
+  document.getElementById('dTit').textContent=p.id||'Pedido nuevo';
   document.getElementById('dSub').textContent=
-    [p.proyecto,p.cliente,p.mfg].filter(Boolean).join(' · ')||'empieza por el ID y el proyecto';
+    [p.proyecto&&p.proyecto.split('\n')[0],p.cliente,p.equipo].filter(Boolean).join(' · ')||'empieza por el pedido y el cliente';
 
-  const sf=P.saldoFab(p), os=P.otrosSaldo(p), ant=P.antMonto(p), v=P.vence(p);
   document.getElementById('dBody').innerHTML=`
+  ${herm.length?`<div class="fusav" style="margin-top:14px">Esta fila <b>comparte valores</b> con
+     ${herm.map(x=>esc(x.id||'otra')).join(', ')} porque en tu Excel venían en una celda combinada.
+     Lo que ves aquí ya está prorrateado.</div>`:''}
 
-  <div class="fsec"><h4>Identidad</h4><div class="fcard"><div class="fgrid c3">
-    ${campo('ID del pedido',inpT('id',p.id,'7-2 · CFM 3-2 · 16'),'como lo nombras tú')}
-    ${campo('Orden madre',inpT('orden',p.orden,'7'),p._ordenManual?'escrito a mano':'sale del ID')}
-    ${campo('Cantidad de equipos',inpN('qty',p.qty,'1'),p.qty>1?'<b>'+p.qty+'</b> en esta línea':'uno solo')}
-    ${campo('Fabricante',swt('mfg',p.mfg,[['Singsun','Singsun'],['Eaglerise','Eaglerise']]),
-            p.mfg==='Singsun'?'consume el cupo de trackers':'consume el cupo de shelters')}
-    ${campo('Tipo',sel('tipo',p.tipo,TIPOS.map(t=>[t,t])),'')}
-    ${campo('Cliente',inpT('cliente',p.cliente,'Solenium','dlCli'),
+  <div class="fsec"><h4>A–G · Identidad y estado</h4><div class="fcard"><div class="fgrid c3">
+    ${campo('A · Equipo',sel('equipo',p.equipo,EQUIPOS.map(e=>[e,e])),
+            mfg?`consume el cupo de ${mfg}`:'no consume cupo Sinosure')}
+    ${campo('B · Cliente',inpT('cliente',p.cliente,'Solenium','dlCli'),
             p.cliente?`plazo ${plazoDe(p.cliente)} días`:'sin cliente no sale en el estado de cuenta')}
-    ${campo('Proyecto',inpT('proyecto',p.proyecto,'Santo Tomás Sur 1/2','dlProy'),'',true)}
+    ${campo('C · # de Pedido',inpT('id',p.id,'Pedido 11-4'),'')}
+    ${campo('D · # Equipos',inpN('qty',p.qty,'1'),p.qty>1?`<b>${p.qty}</b> en esta fila`:'uno solo')}
+    ${campo('G · Estado',sel('estado',p.estado,ESTADOS),
+            P.embarcado(p)?'enviado: el cupo cuenta por el saldo':'en fábrica: el cupo cuenta por el costo completo')}
+    ${campo('J · Facturas Zentrack',inpT('facturas',p.facturas,'—'),'')}
+    ${campo('E · Nomenclatura China',inpA('nomChina',p.nomChina,'una por línea'),'',true)}
+    ${campo('F · Nomenclatura Cliente',inpA('proyecto',p.proyecto,'una por línea'),
+            'si la fila trae varios equipos, van uno por línea',true)}
   </div></div></div>
 
-  <div class="fsec"><h4>Estado y fechas</h4><div class="fcard"><div class="fgrid c3">
-    ${campo('Estado',sel('estado',p.estado,Object.entries(STAGE)),
-            P.embarcado(p)?'ya embarcado: el cupo cuenta por el saldo':'en fábrica: el cupo cuenta por el monto completo',true)}
-    ${campo('Fin de producción',inpF('prodFin',p.prodFin),'')}
-    ${campo('ETD China',inpF('etd',p.etd),'')}
-    ${campo('Fecha del BL (zarpe)',inpF('bl',p.bl),p.bl?'desde aquí corre el plazo del cliente':'sin BL no hay fecha de cobro')}
-    ${campo('ETA destino',inpF('eta',p.eta),'')}
-    ${campo('No. de BL',inpT('blNo',p.blNo,'—'),'')}
+  <div class="fsec"><h4>H–I · Fechas</h4><div class="fcard"><div class="fgrid c3">
+    ${campo('H · ETD',inpT('etd',p.etd,'pendiente'),(()=>{const d=dOf(aFecha(p.etd));return d?fmtD(isoD(d)):'texto libre';})())}
+    ${campo('I · ETA',inpT('eta',p.eta,'pendiente'),(()=>{const d=dOf(aFecha(p.eta));
+            return d?`desde aquí corre el plazo del cliente · ${fmtD(isoD(d))}`:'sin ETA no hay fecha de cobro';})())}
+    ${campo('Fecha de factura',inpF('facturaFecha',p.facturaFecha),'')}
   </div></div></div>
 
-  <div class="fsec"><h4>Lo que le debes a China</h4><div class="fcard"><div class="fgrid c2">
-    ${campo('Monto del fabricante (USD)',inpN('montoFab',p.montoFab),'el que consume cupo Sinosure')}
-    ${campo('Ya pagado al fabricante',inpN('pagadoFab',p.pagadoFab),
-            `saldo <b>${usds(sf)}</b>${num(p.montoFab)>0?' · '+(num(p.pagadoFab)/num(p.montoFab)*100).toFixed(0)+'% pagado':''}`)}
-    ${campo('Anticipo (%)',inpN('antPct',p.antPct),`son <b>${usds(ant)}</b>`)}
-    ${campo('¿Anticipo pagado?',swt('antPagado',p.antPagado?'si':'no',[['si','Sí'],['no','No']],p.antPagado?'verde':''),
-            p.antPagado?'al día':'aparece con franja naranja en el gráfico')}
-    ${campo('Otros componentes (USD)',inpN('otrosMonto',p.otrosMonto),'Jingwei, Wenzhong, Restar…')}
-    ${campo('Ya pagado de otros',inpN('otrosPagado',p.otrosPagado),`saldo <b>${usds(os)}</b> · no consume cupo`)}
-    ${campo('Fecha límite de pago',inpF('limitePago',p.limitePago),
-            (()=>{const d=dOf(p.limitePago);if(!d)return 'cuándo hay que girar el saldo';
-              const dd=diasEntre(hoy(),d);
-              return sf<=0.5?'ya está pagado':dd<0?`<b style="color:var(--danger)">vencida hace ${-dd} días</b>`
-                   :dd===0?'<b style="color:var(--danger)">es hoy</b>':`faltan ${dd} días`;})())}
+  <div class="fsec"><h4>K–S · Plata</h4><div class="fcard"><div class="fgrid c2">
+    ${campo('K · Precio',inpN('precio',p.precio),'lo que le cobras al cliente por el equipo')}
+    ${campo('L · Costo',inpN('costo',p.costo),'lo que te cuesta en China · es lo que consume cupo')}
+    ${campo('M · Costo a china pagado?',sel('pagoEst',p.pagoEst,PAGOEST),'')}
+    ${campo('N · Pagado a China',inpN('pagado',p.pagado),
+            num(p.costo)>0?`<b>${(num(p.pagado)/num(p.costo)*100).toFixed(0)}%</b> del costo`:'')}
+    ${campo('O · Saldo costo',calc(P.saldoCosto(p)),'Costo − Pagado a China · calculado')}
+    ${campo('P · Costo logística',inpN('logistica',p.logistica),'')}
+    ${campo('Q · Costo electrónica',inpN('electronica',p.electronica),'')}
+    ${campo('R · Deuda a Zentrack',calc(P.deudaZ(p)),'Precio − Pagado a China · calculado')}
+    ${campo('S · Precio total',calc(P.precioTotal(p)),'Precio + Costo logística · calculado')}
+    ${campo('Margen',calc(P.margen(p)),'Precio total − costo − logística − electrónica')}
   </div></div></div>
 
   <div class="fsec"><h4>Cupo Sinosure</h4><div class="fcard"><div class="fgrid c2">
     ${campo('¿Cómo cuenta este pedido?',
             swt('sino',p.sino,[['auto','Según la regla'],['fijo','Monto fijo'],['no','No cuenta']],p.sino==='no'?'roja':''),
-            p.sino==='auto'?'monto completo en fábrica, saldo una vez embarcado'
+            !mfg?'las estaciones no consumen cupo'
+            :p.sino==='auto'?'costo completo en fábrica, saldo una vez enviado'
             :p.sino==='fijo'?'lo que diga la hoja de Sinosure'
-            :'queda fuera del cupo (p. ej. un pedido que todavía no se carga)',true)}
+            :'queda fuera del cupo',true)}
     ${p.sino==='fijo'?campo('Monto declarado (USD)',inpN('sinoMonto',p.sinoMonto),'tal cual la hoja de Sinosure'):''}
-    ${campo('Consume hoy','<div style="font-size:19px;font-weight:700;padding:5px 0" class="num">'+usd(P.consumo(p))+'</div>',
-            'esto es lo que se dibuja en el treemap')}
+    ${campo('Consume hoy',calc(P.consumo(p)),'esto es lo que se dibuja en el treemap')}
   </div></div></div>
 
-  <div class="fsec"><h4>Precio y cobro al cliente</h4><div class="fcard"><div class="fgrid c2">
-    ${campo('Precio de venta (USD)',inpN('precio',p.precio),'lo que le cobras al cliente por el equipo')}
-    ${campo('Flete y logística (USD)',inpN('flete',p.flete),'lo que le trasladas aparte')}
-    ${campo('Plazo (días desde el BL)',inpN('plazo',p.plazo),
-            v?`vence el <b>${fmtD(isoD(v))}</b>`:'se calcula cuando pongas el BL')}
-    ${campo('Total a cobrar','<div style="font-size:19px;font-weight:700;padding:5px 0" class="num">'+usd(P.aCobrar(p))+'</div>',
-            S.trm?`≈ ${cop(P.aCobrar(p)*S.trm)} a TRM ${n0(S.trm)}`:'')}
-    ${campo('No. de factura',inpT('facturaNum',p.facturaNum,'ZEFV—'),'')}
-    ${campo('Fecha de factura',inpF('facturaFecha',p.facturaFecha),'')}
+  <div class="fsec"><h4>Cobro al cliente <small style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--ink3)">
+    — esto no viene en tu Excel</small></h4><div class="fcard"><div class="fgrid c2">
+    ${campo('Plazo (días desde el ETA)',inpN('plazo',p.plazo),
+            v?`vence el <b>${fmtD(isoD(v))}</b>`:'se calcula cuando el ETA sea una fecha')}
+    ${campo('Saldo del cliente',calc(P.saldoCli(p)),`de ${usd(P.aCobrar(p))} a cobrar`)}
   </div></div></div>
 
   <div class="fsec"><h4>Abonos del cliente</h4><div class="fcard"><div id="abs"></div>
@@ -968,18 +1023,17 @@ function pintarPie(){
   const p=A();if(!p)return;
   const sc=P.saldoCli(p), m=P.mora(p);
   document.getElementById('dFoot').innerHTML=`
-    <div class="m"><div class="ml">Saldo a China</div>
-      <div class="mv ${P.totalChina(p)>0.5?'debo':'bien'}">${usd(P.totalChina(p))}</div></div>
+    <div class="m"><div class="ml">Saldo costo con China</div>
+      <div class="mv ${P.saldoCosto(p)>0.5?'debo':'bien'}">${usd(P.saldoCosto(p))}</div></div>
     <div class="m"><div class="ml">Consume del cupo</div><div class="mv">${usd(P.consumo(p))}</div></div>
-    <div class="m"><div class="ml">Total a cobrar</div><div class="mv">${usd(P.aCobrar(p))}</div></div>
+    <div class="m"><div class="ml">Precio total</div><div class="mv">${usd(P.precioTotal(p))}</div></div>
     <div class="m"><div class="ml">Saldo del cliente</div>
       <div class="mv ${m>0?'alerta':(sc<=0.5&&P.aCobrar(p)>0.5?'bien':'')}">${usd(sc)}</div>
       ${m>0?`<div class="ml" style="color:var(--danger);font-weight:600">${m} días en mora</div>`:''}</div>`;
   document.getElementById('dSub').textContent=
-    [p.proyecto,p.cliente,p.mfg].filter(Boolean).join(' · ')||'empieza por el ID y el proyecto';
-  document.getElementById('dTit').textContent=p.id?('Pedido '+p.id):'Pedido nuevo';
+    [p.proyecto&&p.proyecto.split('\n')[0],p.cliente,p.equipo].filter(Boolean).join(' · ')||'empieza por el pedido y el cliente';
+  document.getElementById('dTit').textContent=p.id||'Pedido nuevo';
 }
-
 
 /* =========================================================================
    REJILLA DE CAPTURA RÁPIDA
@@ -991,51 +1045,54 @@ function pintarPie(){
       dice el campo, el rótulo, el grupo, el ancho y el tipo de celda.
       Nada más en el archivo depende del orden.
    ========================================================================= */
-const GRUPOS=[['todo','Todas'],['id','Identidad'],['fe','Fechas'],['ch','China'],['cl','Cliente y precio']];
+const GRUPOS=[['todo','Todas'],['tuyas','Las de tu Excel (A–S)'],['mias','Lo que tu Excel no trae']];
+/* ►► LAS 19 PRIMERAS COLUMNAS SON LAS DE TU ARCHIVO, EN SU MISMO ORDEN (A…S).
+      Así puedes copiar A2:S50 en tu Excel y pegarlo sobre la primera celda.
+      Las que van después no están en tu archivo; quedan a la derecha y el
+      pegado nunca las toca. O, R y S son fórmulas: se muestran calculadas. */
 const COLS=[
-  {f:'id',        t:'Pedido',      g:'id', w:96,  tipo:'txt', ph:'7-2'},
-  {f:'orden',     t:'Orden',       g:'id', w:74,  tipo:'txt', ph:'7'},
-  {f:'mfg',       t:'Fabricante',  g:'id', w:108, tipo:'sel', opts:()=>MFGS.map(m=>[m,m])},
-  {f:'tipo',      t:'Tipo',        g:'id', w:96,  tipo:'sel', opts:()=>TIPOS.map(t=>[t,t])},
-  {f:'qty',       t:'Cant.',       g:'id', w:58,  tipo:'num'},
-  {f:'proyecto',  t:'Proyecto',    g:'id', w:200, tipo:'txt', list:'dlProy'},
-  {f:'cliente',   t:'Cliente',     g:'id', w:128, tipo:'txt', list:'dlCli'},
-  {f:'estado',    t:'Estado',      g:'id', w:148, tipo:'sel', opts:()=>Object.entries(STAGE)},
+  /* A */ {f:'equipo',   t:'Equipo',    g:'tuyas', w:104, tipo:'sel', opts:()=>EQUIPOS.map(e=>[e,e])},
+  /* B */ {f:'cliente',  t:'Cliente',   g:'tuyas', w:120, tipo:'txt', list:'dlCli'},
+  /* C */ {f:'id',       t:'# de Pedido',g:'tuyas',w:132, tipo:'txt', ph:'Pedido 11-4'},
+  /* D */ {f:'qty',      t:'# Equipos', g:'tuyas', w:70,  tipo:'num'},
+  /* E */ {f:'nomChina', t:'Nomenclatura China',  g:'tuyas', w:170, tipo:'txt'},
+  /* F */ {f:'proyecto', t:'Nomenclatura Cliente',g:'tuyas', w:200, tipo:'txt', list:'dlProy'},
+  /* G */ {f:'estado',   t:'Estado',    g:'tuyas', w:168, tipo:'sel', opts:()=>ESTADOS},
+  /* H */ {f:'etd',      t:'ETD',       g:'tuyas', w:116, tipo:'txt'},
+  /* I */ {f:'eta',      t:'ETA',       g:'tuyas', w:116, tipo:'txt'},
+  /* J */ {f:'facturas', t:'Facturas Zentrack',   g:'tuyas', w:140, tipo:'txt'},
+  /* K */ {f:'precio',   t:'Precio',    g:'tuyas', w:112, tipo:'num'},
+  /* L */ {f:'costo',    t:'Costo',     g:'tuyas', w:112, tipo:'num'},
+  /* M */ {f:'pagoEst',  t:'Costo a china pagado?',g:'tuyas',w:150,tipo:'sel', opts:()=>PAGOEST},
+  /* N */ {f:'pagado',   t:'Pagado a China',      g:'tuyas', w:120, tipo:'num'},
+  /* O */ {f:'_saldo',   t:'Saldo costo',         g:'tuyas', w:112, tipo:'calc', calc:P.saldoCosto,
+           nota:'Costo − Pagado a China'},
+  /* P */ {f:'logistica',t:'Costo logística',     g:'tuyas', w:118, tipo:'num'},
+  /* Q */ {f:'electronica',t:'Costo electrónica', g:'tuyas', w:118, tipo:'num'},
+  /* R */ {f:'_deuda',   t:'Deuda a Zentrack',    g:'tuyas', w:128, tipo:'calc', calc:P.deudaZ,
+           nota:'Precio − Pagado a China'},
+  /* S */ {f:'_total',   t:'Precio total',        g:'tuyas', w:118, tipo:'calc', calc:P.precioTotal,
+           nota:'Precio + Costo logística'},
 
-  {f:'prodFin',     t:'Fin prod.',  g:'fe', w:124, tipo:'fecha'},
-  {f:'etd',         t:'ETD',        g:'fe', w:124, tipo:'fecha'},
-  {f:'bl',          t:'BL (zarpe)', g:'fe', w:124, tipo:'fecha'},
-  {f:'eta',         t:'ETA',        g:'fe', w:124, tipo:'fecha'},
-  {f:'blNo',        t:'No. BL',     g:'fe', w:112, tipo:'txt'},
-
-  {f:'montoFab',    t:'Monto fáb.',  g:'ch', w:108, tipo:'num'},
-  {f:'pagadoFab',   t:'Pagado fáb.', g:'ch', w:108, tipo:'num'},
-  {f:'antPct',      t:'Ant. %',      g:'ch', w:64,  tipo:'num'},
-  {f:'antPagado',   t:'Ant. pagado', g:'ch', w:96,  tipo:'sel', opts:()=>[[ '','No'],['si','Sí']],
-                    get:p=>p.antPagado?'si':'', set:(p,v)=>{p.antPagado=(v==='si');}},
-  {f:'otrosMonto',  t:'Otros comp.', g:'ch', w:100, tipo:'num'},
-  {f:'otrosPagado', t:'Otros pag.',  g:'ch', w:100, tipo:'num'},
-  {f:'limitePago',  t:'Límite pago', g:'ch', w:124, tipo:'fecha'},
-  {f:'sino',        t:'Cupo cuenta', g:'ch', w:132, tipo:'sel',
-                    opts:()=>[['auto','Según la regla'],['fijo','Monto fijo'],['no','No cuenta']]},
-  {f:'sinoMonto',   t:'Cupo fijo',   g:'ch', w:100, tipo:'num'},
-
-  {f:'precio',      t:'Precio venta',g:'cl', w:112, tipo:'num'},
-  {f:'flete',       t:'Flete',       g:'cl', w:96,  tipo:'num'},
-  {f:'plazo',       t:'Plazo (d)',   g:'cl', w:72,  tipo:'num'},
-  {f:'facturaNum',  t:'Factura',     g:'cl', w:110, tipo:'txt'},
-  {f:'facturaFecha',t:'Fecha fact.', g:'cl', w:124, tipo:'fecha'},
-  /* los dos primeros abonos se capturan aquí mismo; los demás, en el cajón */
-  {f:'ab1f', t:'Abono 1 fecha', g:'cl', w:124, tipo:'fecha',
-             get:p=>(p.abonos[0]||{}).f||'', set:(p,v)=>setAb(p,0,'f',v)},
-  {f:'ab1m', t:'Abono 1',       g:'cl', w:100, tipo:'num',
-             get:p=>(p.abonos[0]||{}).m||'',  set:(p,v)=>setAb(p,0,'m',v)},
-  {f:'ab2f', t:'Abono 2 fecha', g:'cl', w:124, tipo:'fecha',
-             get:p=>(p.abonos[1]||{}).f||'', set:(p,v)=>setAb(p,1,'f',v)},
-  {f:'ab2m', t:'Abono 2',       g:'cl', w:100, tipo:'num',
-             get:p=>(p.abonos[1]||{}).m||'',  set:(p,v)=>setAb(p,1,'m',v)},
-  {f:'nota', t:'Nota',          g:'cl', w:180, tipo:'txt'},
+  /* ---- de aquí en adelante, lo que tu Excel no trae ---- */
+  {f:'plazo', t:'Plazo (d)', g:'mias', w:76,  tipo:'num', nota:'días desde el ETA para cobrar'},
+  {f:'ab1f',  t:'Abono 1 fecha', g:'mias', w:124, tipo:'fecha',
+              get:p=>(p.abonos[0]||{}).f||'', set:(p,v)=>setAb(p,0,'f',v)},
+  {f:'ab1m',  t:'Abono 1',       g:'mias', w:108, tipo:'num',
+              get:p=>(p.abonos[0]||{}).m||'',  set:(p,v)=>setAb(p,0,'m',v)},
+  {f:'ab2f',  t:'Abono 2 fecha', g:'mias', w:124, tipo:'fecha',
+              get:p=>(p.abonos[1]||{}).f||'', set:(p,v)=>setAb(p,1,'f',v)},
+  {f:'ab2m',  t:'Abono 2',       g:'mias', w:108, tipo:'num',
+              get:p=>(p.abonos[1]||{}).m||'',  set:(p,v)=>setAb(p,1,'m',v)},
+  {f:'sino',  t:'Cupo Sinosure', g:'mias', w:150, tipo:'sel',
+              opts:()=>[['auto','Según la regla'],['fijo','Monto fijo'],['no','No consume']]},
+  {f:'sinoMonto', t:'Cupo fijo', g:'mias', w:108, tipo:'num'},
+  {f:'nota',  t:'Nota',          g:'mias', w:190, tipo:'txt'},
 ];
+/* las columnas O, R y S se calculan: no se escriben, pero al pegar hay que
+   dejarlas pasar para que el bloque no se desalinee */
+const esCalc=c=>c.tipo==='calc';
+
 function setAb(p,i,campo,v){
   p.abonos=p.abonos||[];
   while(p.abonos.length<=i)p.abonos.push({f:'',c:'',m:0});
@@ -1043,14 +1100,17 @@ function setAb(p,i,campo,v){
   /* un abono vacío del todo no se guarda */
   while(p.abonos.length&&!p.abonos[p.abonos.length-1].f&&!num(p.abonos[p.abonos.length-1].m))p.abonos.pop();
 }
-const colGet=(col,p)=>col.get?col.get(p):(p[col.f]===0&&col.tipo==='num'?'':p[col.f]);
+const colGet=(col,p)=>esCalc(col)?col.calc(p)
+  :(col.get?col.get(p):(p[col.f]===0&&col.tipo==='num'?'':p[col.f]));
 function colSet(col,p,v){
+  if(esCalc(col))return;                       /* O, R y S son fórmulas */
   if(col.set){col.set(p,v);return;}
   if(col.tipo==='num')p[col.f]=v===''?0:num(v);
   else p[col.f]=v;
-  if(col.f==='cliente'){const c=(''+v).trim();if(c&&!S.clientes[c])S.clientes[c]={plazo:S.plazoDef};}
-  if(col.f==='id'&&!p._ordenManual){const m=(''+v).match(/^\s*([A-Za-zÁÉÍÓÚÑ]*\s*\d+)/);
-    p.orden=m?m[1].replace(/\s+/g,' ').trim():'';}
+  if(col.f==='cliente'){const c=(''+v).trim();
+    if(c&&!S.clientes[c])S.clientes[c]={plazo:S.plazoDef};
+    if(c)p.plazo=plazoDe(c);}
+  if(col.f==='equipo'&&!EQUIPOS.includes(p.equipo))p.equipo='Otro';
 }
 
 /* --- texto pegado → valor del campo, según el tipo de columna --- */
@@ -1074,29 +1134,42 @@ function numPeg(s){
   let t=(''+s).replace(/[^\d.,\-]/g,'').trim();
   if(!t)return 0;
   const neg=/^-/.test(t); t=t.replace(/-/g,'');
-  const ip=t.lastIndexOf('.'), ic=t.lastIndexOf(',');
-  const iu=Math.max(ip,ic);
+  if(!t)return 0;
+  /* Solo separadores de miles: 1.234 · 1,234,567 · 142.801 — grupos exactos de tres,
+     todos con el mismo signo. Cualquier otra cosa detrás del último separador es
+     la parte decimal, tenga los dígitos que tenga (tus precios traen quince). */
+  if(/^\d{1,3}(\.\d{3})+$/.test(t)||/^\d{1,3}(,\d{3})+$/.test(t))
+    return (neg?-1:1)*parseFloat(t.replace(/[.,]/g,''));
+  const iu=Math.max(t.lastIndexOf('.'),t.lastIndexOf(','));
   let ent=t, dec='';
-  if(iu>=0){
-    const cola=t.slice(iu+1);
-    if(cola.length>0&&cola.length<=2&&/^\d+$/.test(cola)){ ent=t.slice(0,iu); dec=cola; }
-  }
+  if(iu>=0){ ent=t.slice(0,iu); dec=t.slice(iu+1); }
   ent=ent.replace(/[.,]/g,'');
-  const v=parseFloat(ent+(dec?'.'+dec:''))||0;
+  const v=parseFloat((ent||'0')+(dec?'.'+dec:''))||0;
   return neg?-v:v;
 }
-/* "Shipped", "In production", "Por confirmar"… → nuestra etapa */
+/* El texto de tu Excel → el valor interno. Sin acentos y sin mayúsculas,
+   para que "Envio programado" y "Envío programado" entren igual. */
+const sinTildes=s=>(''+s).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
 function _mapEstado(s){
-  const t=s.toLowerCase();
-  if(/^si$|^s[ií]$|^yes$|^paid$|^x$|^true$/.test(t))return 'si';
-  if(/^no$|^false$|^pending$/.test(t))return '';
-  if(/singsun/.test(t))return 'Singsun'; if(/eagle/.test(t))return 'Eaglerise';
-  if(/shipped|embarcad/.test(t))return 'shipped';
-  if(/shipping|embarcando|booking/.test(t))return 'shipping';
-  if(/booked|reservad/.test(t))return 'booked';
-  if(/finished|complet|terminad/.test(t))return 'finished';
-  if(/production|producci/.test(t))return 'prod';
-  if(/confirm/.test(t))return 'confirm';
+  const t=sinTildes(s);
+  if(!t||t==='-')return null;
+  /* equipo */
+  if(/^tracker/.test(t))return 'Tracker';
+  if(/^shelter/.test(t))return 'Shelter';
+  if(/^estacion/.test(t))return 'Estaciones';
+  /* columna M */
+  if(/^nada$/.test(t))return 'nada';
+  if(/anticipo/.test(t))return 'anticipo';
+  if(/^otro/.test(t))return 'otro';
+  if(/totalmente|^total$/.test(t))return 'total';
+  /* columna G */
+  if(/^enviado/.test(t))return 'enviado';
+  if(/pendiente por despacho|por despachar/.test(t))return 'despacho';
+  if(/envio programado|despacho programado/.test(t))return 'programado';
+  if(/testeo|pruebas/.test(t))return 'testeo';
+  if(/produccion finalizada|finalizada|terminada/.test(t))return 'finalizada';
+  if(/en produccion|produccion/.test(t))return 'produccion';
+  if(/revision|por confirmar|confirmacion/.test(t))return 'revision';
   return null;
 }
 /* fechas pegadas en cualquier formato razonable → ISO */
@@ -1185,7 +1258,7 @@ function pintarRejilla(){
         <button class="gfill" title="Rellenar esta columna hacia abajo con el valor de la celda donde estés"
           onclick="rellenarColumna(${j})">⤓</button></th>`).join('')}
     </tr></thead><tbody>
-      ${ps.map((p,i)=>`<tr class="${i%2?'par':''}">
+      ${ps.map((p,i)=>`<tr class="${i%2?'par':''}${p.grupo?' grp':''}" ${p.grupo?`title="Prorrateado: comparte valores con otras filas de tu Excel"`:''}>
         <td class="rn" title="Abrir el pedido completo" onclick="abrirPedido('${p.k}')">${i+1}</td>
         ${cs.map((c,j)=>`<td>${celda(p,i,j,c)}</td>`).join('')}
       </tr>`).join('')}
@@ -1203,6 +1276,8 @@ function pintarRejilla(){
 
 function celda(p,i,j,c){
   const v=colGet(c,p);
+  if(esCalc(c))
+    return `<div class="gcalc" data-r="${i}" data-c="${j}" title="${esc(c.nota||'')}">${usds(v)}</div>`;
   const at=`class="gc${c.tipo==='num'?' n':''}" data-r="${i}" data-c="${j}"`;
   if(c.tipo==='sel')
     return `<select ${at.replace('gc','gc sel')} onchange="gEscribir(${i},${j},this.value)">`+
@@ -1286,6 +1361,13 @@ function gPegar(e){
   let celdas=0, fuera=0;
   /* antes de escribir nada: decidir el orden de cada columna de fechas mirándola entera */
   const ordenCol={}, ambiguas=[], mezcladas=[];
+  /* ETD y ETA son texto libre ("pendiente", "22-sept"), pero cuando traen una fecha
+     mandan sobre el vencimiento: su columna también enseña el orden día/mes */
+  bloque[0].forEach((_,dj)=>{
+    const c=cs[c0+dj]; if(!c||(c.f!=='etd'&&c.f!=='eta'))return;
+    const o=ordenFechas(bloque.map(l=>l[dj]));
+    if(o==='dmy'||o==='mdy')S.fechaOrden=o;
+  });
   bloque[0].forEach((_,dj)=>{
     const c=cs[c0+dj]; if(!c||c.tipo!=='fecha')return;
     const o=ordenFechas(bloque.map(l=>l[dj]));
@@ -1302,7 +1384,10 @@ function gPegar(e){
   });
   /* para poder darle la vuelta si lo leí al revés */
   _ultimoPegado={r0,c0,bloque,cols:cs.slice(),ordenCol,ambiguas};
-  pintarRejilla();pintarKpis();pintarTreemaps();pintarDatalists();marcarSucio();
+  /* filas que vienen de una celda combinada del Excel */
+  FUS=detectarFusiones(r0,c0,bloque,cs);
+  if(!FUS.length)FUS=null;
+  pintarRejilla();panelFusiones();pintarKpis();pintarTreemaps();pintarDatalists();marcarSucio();
   /* marcar en amarillo lo que acaba de caer, para que se vea dónde quedó */
   setTimeout(()=>{
     bloque.forEach((lin,di)=>lin.forEach((_,dj)=>{
@@ -1311,6 +1396,8 @@ function gPegar(e){
   },0);
   let msg=`Pegadas <b>${bloque.length}</b> fila(s) × <b>${bloque[0].length}</b> columna(s)`+
     (fuera?` · <b style="color:#ffcf8f">${fuera} celda(s) se salían de la tabla y no entraron</b>`:'');
+  if(FUS&&FUS.length)
+    msg+=` · <b style="color:#ffcf8f">${FUS.length} grupo(s) de filas comparten un valor: míralos arriba</b>`;
   if(mezcladas.length)
     msg+=` · <b style="color:#ff9a92">${mezcladas.join(', ')} trae fechas en dos formatos distintos: revísalas una por una</b>`;
   else if(ambiguas.length){
@@ -1353,27 +1440,194 @@ function addFilas(n,calladito){
     pintarRejilla();
   }
 }
-/* --- plantilla: estampa de una vez todos los derrames de una orden --- */
+/* --- plantilla: estampa de una vez todos los pedidos de una orden --- */
 function plantillaOrden(){
-  const orden=prompt('Orden madre (ej. 7, 11, CFM 3):','');
+  const orden=prompt('Orden madre (ej. "Pedido 7", "PO CFM 3"):','Pedido ');
   if(orden===null)return;
   const o=(orden||'').trim(); if(!o)return;
   const nStr=prompt('¿Cuántos pedidos tiene esa orden?','4'); if(nStr===null)return;
   const n=Math.max(1,Math.min(40,parseInt(nStr)||1));
-  const mfg=(prompt('Fabricante: Singsun o Eaglerise','Singsun')||'Singsun').trim();
-  const mf=/eagle/i.test(mfg)?'Eaglerise':'Singsun';
+  const eq=(prompt('Equipo: Tracker, Shelter o Estaciones','Tracker')||'Tracker').trim();
+  const equipo=_mapEstado(eq)||'Tracker';
   const cli=(prompt('Cliente para todos (puedes dejarlo vacío):','')||'').trim();
   const desde=Math.max(1,parseInt(prompt('¿Desde qué número? (1 crea '+o+'-1, '+o+'-2…)','1'))||1);
   for(let i=0;i<n;i++){
     const p=pedidoNuevo();
-    p.id=o+'-'+(desde+i); p.orden=o; p.mfg=mf; p.tipo=TIPO_DEF[mf];
-    p.antPct=mf==='Eaglerise'?20:10;
+    p.id=o+'-'+(desde+i); p.equipo=EQUIPOS.includes(equipo)?equipo:'Tracker';
     if(cli){p.cliente=cli;if(!S.clientes[cli])S.clientes[cli]={plazo:S.plazoDef};p.plazo=plazoDe(cli);}
     S.pedidos.push(p);
   }
   marcarSucio();ajustarVisibilidad();pintarRejilla();pintarKpis();pintarCupoInputs();
   pintarTreemaps();pintarDatalists();
-  toast(`Creados <b>${n}</b> pedidos de la orden ${esc(o)} · ahora solo llena lo que cambia`);
+  toast(`Creados <b>${n}</b> pedidos de ${esc(o)} · ahora solo llena lo que cambia`);
+}
+
+/* =========================================================================
+   CELDAS COMBINADAS DEL EXCEL
+   En tu archivo hay filas que comparten un valor: el pedido 7-6 y el 7-5
+   comparten "Pagado a China", y el 6-2 con el 6-1 comparten hasta el costo.
+   Al copiar, Excel pone el valor en la primera fila y deja las demás EN
+   BLANCO. Eso se detecta, pero no se adivina: se muestra lo encontrado,
+   tú eliges sobre qué prorratear y ves el resultado antes de aplicarlo.
+   ========================================================================= */
+const FUSIONABLES=['precio','costo','pagado','logistica','electronica'];
+const BASES=[['costo','Costo'],['precio','Precio'],['qty','# Equipos'],['iguales','Partes iguales']];
+let FUS=null;         /* lo detectado en el último pegado */
+
+/* ¿Qué filas del bloque pegado vienen de una celda combinada?
+
+   Una celda en blanco NO basta: un "Costo electrónica" vacío es simplemente
+   un costo que no existe. Lo que sí lo prueba son TUS PROPIAS FÓRMULAS.
+   En una fila normal se cumple que
+       O = Costo − Pagado      R = Precio − Pagado      S = Precio + Logística
+   En la primera fila de una combinada esas tres fallan, porque el valor
+   cubre también las filas de abajo — y vuelven a cuadrar al sumar el grupo.
+   Así que se propone un grupo solo cuando la aritmética lo confirma. */
+function detectarFusiones(r0,c0,bloque,cs){
+  const dj={};
+  bloque[0].forEach((_,j)=>{const c=cs[c0+j];if(c)dj[c.f]=j;});
+  const FORM=['_saldo','_deuda','_total'];
+  if(!FORM.some(f=>dj[f]!=null))return [];      /* sin O, R ni S no hay con qué confirmar */
+
+  const crudo=(li,f)=>dj[f]==null?'':(''+(bloque[li][dj[f]]==null?'':bloque[li][dj[f]])).trim();
+  const vacio=(li,f)=>{const s=crudo(li,f);return s===''||s==='-';};
+  const val  =(li,f)=>vacio(li,f)?0:numPeg(crudo(li,f));
+  const conId=li=>dj.id==null||crudo(li,'id')!=='';
+
+  /* ¿las fórmulas de la fila jefe cuadran con la suma de todo el grupo? */
+  const suma=(filas,f)=>filas.reduce((s,x)=>s+val(x,f),0);
+  const cerca=(a,b)=>Math.abs(a-b)<0.05;
+  function identidades(j,filas){
+    const r=[];
+    if(dj._saldo!=null&&!vacio(j,'_saldo')) r.push(['O',val(j,'_saldo'), suma(filas,'costo')-suma(filas,'pagado')]);
+    if(dj._deuda!=null&&!vacio(j,'_deuda')) r.push(['R',val(j,'_deuda'), suma(filas,'precio')-suma(filas,'pagado')]);
+    if(dj._total!=null&&!vacio(j,'_total')) r.push(['S',val(j,'_total'), suma(filas,'precio')+suma(filas,'logistica')]);
+    return r;
+  }
+
+  const grupos=[]; let i=0;
+  while(i<bloque.length){
+    if(!conId(i)||FORM.every(f=>vacio(i,f))){i++;continue;}
+    /* las filas de abajo que traen identificación propia pero alguna fórmula en blanco */
+    let k=i+1;
+    while(k<bloque.length&&conId(k)&&FORM.some(f=>vacio(k,f))) k++;
+    const filas=[]; for(let x=i;x<k;x++)filas.push(x);
+    if(filas.length>1){
+      const solo=identidades(i,[i]);                       /* ¿cuadra cada fórmula sola? */
+      const juntas=identidades(i,filas);                   /* ¿y sumando el grupo? */
+      /* En tu archivo no todas las fórmulas están combinadas a la vez: en 7-6/7-5
+         lo están O y R, pero la S es propia de cada fila. Así que se mira una por una:
+         cada fórmula tiene que cuadrar sola (no estaba combinada) o cuadrar con el
+         grupo (sí lo estaba), y al menos una tiene que pasar de fallar a cuadrar. */
+      const cuadraSola =k2=>cerca(solo[k2][1],solo[k2][2]);
+      const cuadraJunta=k2=>cerca(juntas[k2][1],juntas[k2][2]);
+      const coherente=juntas.length&&juntas.every((_,k2)=>cuadraJunta(k2)||cuadraSola(k2));
+      const mejora   =juntas.some((_,k2)=>cuadraJunta(k2)&&!cuadraSola(k2));
+      if(coherente&&mejora){
+        /* lo compartido: columnas de entrada que el jefe trae y las de abajo no */
+        const compartidas=FUSIONABLES.filter(f=>
+          dj[f]!=null && !vacio(i,f) && filas.slice(1).every(x=>vacio(x,f)));
+        if(compartidas.length)
+          grupos.push({r0, jefe:i, filas, compartidas, base:'costo',
+                       prueba:juntas.filter((_,k2)=>cuadraJunta(k2)&&!cuadraSola(k2))
+                                    .map(x=>x[0]).join(' y ')});
+        i=k; continue;
+      }
+    }
+    i++;
+  }
+  return grupos;
+}
+
+/* --- el panel que muestra lo detectado --- */
+function panelFusiones(){
+  const box=document.getElementById('fusiones');if(!box)return;
+  if(!FUS||!FUS.length){box.innerHTML='';box.style.display='none';return;}
+  box.style.display='';
+  const ps=filasRejilla();
+  box.innerHTML=`<div class="fusbox">
+    <div class="fush"><b>${FUS.length} grupo(s) de filas comparten un valor</b>
+      <span>en tu Excel son celdas combinadas: el valor llegó en la primera fila y las demás vinieron en blanco.
+      Elige sobre qué repartirlo, mira el resultado y aplícalo. Si no es eso, descártalo y queda como está.</span></div>
+    ${FUS.map((g,gi)=>{
+      const filas=g.filas.map(di=>ps[g.r0+di]).filter(Boolean);
+      if(filas.length<2)return '';
+      const rep=repartir(g,filas);
+      return `<div class="fusg">
+        <div class="fusgh">
+          <b>${filas.map(p=>esc(p.id||'(sin id)')).join('  +  ')}</b>
+          comparten ${g.compartidas.map(f=>'<i>'+esc(etiquetaDe(f))+'</i>').join(', ')}
+          <span class="sp"></span>
+          repartir por
+          <select onchange="FUS[${gi}].base=this.value;panelFusiones()">
+            ${BASES.map(bo=>`<option value="${bo[0]}" ${bo[0]===g.base?'selected':''}>${bo[1]}</option>`).join('')}
+          </select>
+        </div>
+        <table class="fust"><thead><tr><th>Pedido</th>
+          ${g.compartidas.map(f=>`<th class="r">${esc(etiquetaDe(f))}</th>`).join('')}
+          <th class="r">peso</th></tr></thead><tbody>
+          ${filas.map((p,i)=>`<tr><td>${esc(p.id||'(sin id)')}<div class="psub">${esc(p.proyecto||'').slice(0,40)}</div></td>
+            ${g.compartidas.map(f=>`<td class="r"><b>${usds(rep.vals[i][f])}</b></td>`).join('')}
+            <td class="r muted">${(rep.pesos[i]*100).toFixed(1)}%</td></tr>`).join('')}
+          <tr class="tot"><td>Total (lo que traía tu Excel)</td>
+            ${g.compartidas.map(f=>`<td class="r">${usds(rep.totales[f])}</td>`).join('')}<td></td></tr>
+        </tbody></table>
+        ${rep.aviso?`<div class="fusav">${rep.aviso}</div>`:''}
+      </div>`;}).join('')}
+    <div class="fusacts">
+      <button class="btn primary" onclick="aplicarFusiones()">Repartir todo</button>
+      <button class="btn" onclick="FUS=null;panelFusiones();toast('Se dejó el valor completo en la primera fila')">
+        Dejarlo como está</button>
+    </div></div>`;
+}
+const etiquetaDe=f=>{const c=COLS.find(x=>x.f===f);return c?c.t:f;};
+
+/* --- repartir: el total del grupo se divide según la base elegida --- */
+function repartir(g,filas){
+  let pesos=filas.map(p=>{
+    if(g.base==='qty')    return Math.max(1,num(p.qty)||1);
+    if(g.base==='precio') return num(p.precio);
+    if(g.base==='iguales')return 1;
+    return num(p.costo);
+  });
+  let aviso='';
+  const suma=pesos.reduce((s,x)=>s+x,0);
+  if(suma<=0){
+    pesos=filas.map(()=>1);
+    aviso=`No hay valores de <b>${BASES.find(x=>x[0]===g.base)[1]}</b> para repartir, así que se reparte en partes iguales.`;
+  }
+  const tot=pesos.reduce((s,x)=>s+x,0);
+  pesos=pesos.map(x=>x/tot);
+  /* si el costo también vino combinado, no sirve de base para repartirse a sí mismo */
+  if(g.base==='costo'&&g.compartidas.includes('costo')&&!aviso)
+    aviso='El <b>Costo</b> también viene combinado, así que no puede repartirse sobre sí mismo: escoge <b># Equipos</b> o <b>Precio</b>.';
+  const totales={}, vals=filas.map(()=>({}));
+  g.compartidas.forEach(f=>{
+    const T=num(filas[0][f]);          /* el valor llegó entero en la primera fila */
+    totales[f]=T;
+    let acum=0;
+    filas.forEach((p,i)=>{
+      const v=(i===filas.length-1)?Math.round((T-acum)*100)/100:Math.round(T*pesos[i]*100)/100;
+      vals[i][f]=v; acum+=v;
+    });
+  });
+  return {pesos,vals,totales,aviso};
+}
+
+function aplicarFusiones(){
+  if(!FUS||!FUS.length)return;
+  const ps=filasRejilla();
+  let n=0, gid=0;
+  FUS.forEach(g=>{
+    const filas=g.filas.map(di=>ps[g.r0+di]).filter(Boolean);
+    if(filas.length<2)return;
+    const rep=repartir(g,filas);
+    const marca='g'+(Date.now()%100000)+'-'+(gid++);
+    filas.forEach((p,i)=>{g.compartidas.forEach(f=>{p[f]=rep.vals[i][f];});p.grupo=marca;n++;});
+  });
+  FUS=null;
+  marcarSucio();panelFusiones();pintarRejilla();pintarKpis();pintarTreemaps();
+  toast(`Repartido en <b>${n}</b> fila(s) · quedan marcadas como grupo, por si quieres revisarlas`);
 }
 
 /* =========================================================================
@@ -1396,9 +1650,10 @@ function pintarEC(){
     const ps=S.pedidos.filter(p=>p.cliente===c);
     const saldo=ps.reduce((s,p)=>s+Math.max(0,P.saldoCli(p)),0);
     const mora=ps.filter(enMora).reduce((s,p)=>s+Math.max(0,P.saldoCli(p)),0);
+    const conAbonos=ps.some(x=>P.abonado(x)>0.5);
     return `<div class="cli ${c===CLI?'on':''}" onclick="selCli('${esc(c).replace(/'/g,"&#39;")}')">
       <div><div class="cn">${esc(c)}</div><div class="cm">${ps.length} pedido(s)</div></div>
-      <div class="cb">${usds(saldo)}${mora>0?`<small>${usds(mora)} en mora</small>`:''}</div></div>`;
+      <div class="cb">${usds(saldo)}${mora>0&&conAbonos?`<small>${usds(mora)} en mora</small>`:''}</div></div>`;
   }).join('');
   pintarECCuerpo();
 }
@@ -1421,11 +1676,11 @@ function pintarECCuerpo(){
       if(va&&vb)return va-vb; if(va)return -1; if(vb)return 1;
       return (a.id||'').localeCompare(b.id||'','es',{numeric:true});});
 
-  const tot=ps.reduce((s,p)=>s+P.aCobrar(p),0);
+  const tot=ps.reduce((s,p)=>s+P.precioTotal(p),0);
   const ab =ps.reduce((s,p)=>s+P.abonado(p),0);
   const sal=ps.reduce((s,p)=>s+Math.max(0,P.saldoCli(p)),0);
   const mor=ps.filter(enMora).reduce((s,p)=>s+Math.max(0,P.saldoCli(p)),0);
-  const sinPrecio=ps.filter(p=>P.aCobrar(p)<=0.5).length;
+  const sinPrecio=ps.filter(p=>P.precioTotal(p)<=0.5).length;
 
   /* edades de la cartera vencida */
   const bal={corr:0,d30:0,d60:0,d90:0,mas:0};
@@ -1438,19 +1693,20 @@ function pintarECCuerpo(){
     const s=Math.max(0,P.saldoCli(p)), m=P.mora(p), v=P.vence(p);
     const pct=P.aCobrar(p)>0.5?Math.min(100,P.abonado(p)/P.aCobrar(p)*100):0;
     return `<tr>
-      <td><div class="pid">${esc(p.proyecto||p.id||'—')}</div>
-          <div class="psub">${esc(p.id||'')}${p.qty>1?' · '+p.qty+' equipos':''}${p.facturaNum?' · fact. '+esc(p.facturaNum):''}</div></td>
-      <td><span class="badge ${P.embarcado(p)?'sh':''}">${STAGE[p.estado]}</span></td>
-      <td class="muted">${p.bl?fmtD(p.bl):'<span class="muted">sin BL</span>'}</td>
+      <td><div class="pid">${esc((p.proyecto||p.id||'—').replace(/\n/g,' · '))}</div>
+          <div class="psub">${esc(p.id||'')}${p.qty>1?' · '+p.qty+' equipos':''}${p.facturas&&p.facturas!=='-'?' · '+esc(p.facturas):''}</div></td>
+      <td><span class="badge ${P.embarcado(p)?'sh':''}">${STAGE[p.estado]||'—'}</span></td>
+      <td class="muted">${esc(p.eta||'—')}</td>
       <td>${v?`${fmtD(isoD(v))}${m>0?`<div class="psub" style="color:var(--danger);font-weight:600">${m} días de mora</div>`:''}`
              :'<span class="muted">—</span>'}</td>
       <td class="r">${num(p.precio)?usds(p.precio):'<span class="muted">—</span>'}</td>
-      <td class="r">${num(p.flete)?usds(p.flete):'<span class="muted">—</span>'}</td>
-      <td class="r"><b>${P.aCobrar(p)>0.5?usds(P.aCobrar(p)):'<span class="muted" style="font-weight:400">sin precio</span>'}</b></td>
+      <td class="r">${num(p.logistica)?usds(p.logistica):'<span class="muted">—</span>'}</td>
+      <td class="r"><b>${P.precioTotal(p)>0.5?usds(P.precioTotal(p)):'<span class="muted" style="font-weight:400">sin precio</span>'}</b></td>
       <td class="r">${P.abonado(p)>0.5?usds(P.abonado(p)):'<span class="muted">—</span>'}
           ${P.aCobrar(p)>0.5?`<div class="pbar"><i style="width:${pct}%"></i></div>`:''}</td>
       <td class="r">${s>0.5?`<b${m>0?' style="color:var(--danger)"':''}>${usds(s)}</b>`
              :(P.aCobrar(p)>0.5?'<span class="badge ok">cobrado</span>':'<span class="muted">—</span>')}</td>
+      <td class="r muted">${usds(P.deudaZ(p))}</td>
     </tr>`;
   };
 
@@ -1460,29 +1716,34 @@ function pintarECCuerpo(){
       <div class="s">Estado de cuenta al ${hoy().toLocaleDateString('es-CO',{day:'numeric',month:'long',year:'numeric'})}
         · ${ps.length} pedido(s)
         · plazo <input type="number" value="${plazoDe(c)}" onchange="setPlazoCli(this.value)"
-            title="Días desde el BL para cobrar. Al cambiarlo se aplica a todos los pedidos de este cliente."
-            style="width:52px;border:1px solid var(--rule);border-radius:5px;padding:1px 5px;text-align:right;font-size:12px"> días desde el BL</div>
+            title="Días desde el ETA para cobrar. Al cambiarlo se aplica a todos los pedidos de este cliente."
+            style="width:52px;border:1px solid var(--rule);border-radius:5px;padding:1px 5px;text-align:right;font-size:12px"> días desde el ETA</div>
       <div class="ecsum">
-        <div class="m"><div class="ml">Total facturado</div><div class="mv">${usd(tot)}</div>
+        <div class="m"><div class="ml">Precio total facturable</div><div class="mv">${usd(tot)}</div>
           ${S.trm?`<div class="mn">≈ ${cop(tot*S.trm)}</div>`:''}</div>
         <div class="m"><div class="ml">Abonado</div><div class="mv bien">${usd(ab)}</div>
           <div class="mn">${tot>0.5?(ab/tot*100).toFixed(0)+'% del total':'—'}</div></div>
         <div class="m"><div class="ml">Saldo a favor tuyo</div><div class="mv ${mor>0?'alerta':''}">${usd(sal)}</div>
           ${S.trm?`<div class="mn">≈ ${cop(sal*S.trm)}</div>`:''}</div>
-        <div class="m"><div class="ml">En mora</div><div class="mv ${mor>0?'alerta':'bien'}">${usd(mor)}</div>
-          <div class="mn">${mor>0?'cóbralo ya':'nada vencido'}</div></div>
+        <div class="m"><div class="ml">${ab>0.5?'En mora':'Pasado de fecha'}</div>
+          <div class="mv ${mor>0&&ab>0.5?'alerta':''}">${usd(mor)}</div>
+          <div class="mn">${ab<=0.5
+            ? 'sin abonos registrados: aquí todo sale como pendiente'
+            : (mor>0?'cóbralo ya':'nada vencido')}</div></div>
       </div>
     </div>
 
     <div class="ecsec">Pedidos de ${esc(c)}</div>
     <table class="t"><thead><tr>
-      <th>Proyecto</th><th>Estado</th><th>BL</th><th>Vence</th>
-      <th class="r">Precio</th><th class="r">Flete</th><th class="r">Total</th>
+      <th>Proyecto</th><th>Estado</th><th>ETA</th><th>Vence</th>
+      <th class="r">Precio</th><th class="r">Logística</th><th class="r">Precio total</th>
       <th class="r">Abonado</th><th class="r">Saldo</th>
+      <th class="r" title="Precio − Pagado a China, como lo calcula tu archivo">Deuda a Zentrack</th>
     </tr></thead><tbody>
       ${ps.map(fila).join('')}
       <tr class="tot"><td colspan="6">Totales</td>
-        <td class="r">${usds(tot)}</td><td class="r">${usds(ab)}</td><td class="r">${usds(sal)}</td></tr>
+        <td class="r">${usds(tot)}</td><td class="r">${usds(ab)}</td><td class="r">${usds(sal)}</td>
+        <td class="r">${usds(ps.reduce((s,p)=>s+P.deudaZ(p),0))}</td></tr>
     </tbody></table>
 
     <div class="ecsec">Antigüedad del saldo</div>
@@ -1507,8 +1768,12 @@ function pintarECCuerpo(){
         <tr class="tot"><td colspan="3">Total abonado</td><td class="r">${usds(ab)}</td></tr></tbody></table>`;
     })()}
 
-    ${sinPrecio?`<div class="ecnote"><b>${sinPrecio} pedido(s) sin precio de venta.</b>
-      No suman al estado de cuenta hasta que les pongas el precio en la pestaña Pedidos.</div>`:''}
+    ${ab<=0.5?`<div class="ecnote"><b>No hay abonos registrados para ${esc(c)}.</b>
+      Tu archivo de Excel no trae una columna con lo que el cliente ya te pagó, así que
+      todos los pedidos aparecen pendientes. Ábrelos y registra los abonos, o agrega esa
+      columna a tu archivo y la mapeo.</div>`:''}
+    ${sinPrecio?`<div class="ecnote"><b>${sinPrecio} pedido(s) sin precio.</b>
+      No suman al estado de cuenta hasta que les pongas el precio.</div>`:''}
   </div>`;
 }
 
