@@ -1,0 +1,567 @@
+<style>
+/* ===== v0.22 · Precios por grupo y pestaña Sinosure ===== */
+.g4wrap{display:grid;grid-template-columns:270px 1fr;gap:24px;align-items:start}
+@media(max-width:980px){.g4wrap{grid-template-columns:1fr}}
+.g4list{background:var(--surface);border:1px solid var(--rule);border-radius:12px;overflow:hidden}
+.g4item{padding:12px 14px;border-bottom:1px solid var(--rule);cursor:pointer}
+.g4item:last-child{border-bottom:none}
+.g4item:hover{background:#FBFBFC}
+.g4item.on{background:var(--ink);color:#fff}
+.g4item .n{font-size:13px;font-weight:600}
+.g4item .m{font-size:11px;color:var(--ink3);margin-top:1px}
+.g4item.on .m{color:rgba(255,255,255,.62)}
+.g4item .v{font-size:12.5px;font-weight:600;font-variant-numeric:tabular-nums;float:right}
+.g4card{background:var(--surface);border:1px solid var(--rule);border-radius:12px;overflow:hidden}
+.g4h{padding:18px 22px;border-bottom:1px solid var(--rule)}
+.g4h .t{font-size:18px;font-weight:700;letter-spacing:-.02em}
+.g4sec{font-size:10.5px;font-weight:700;color:var(--ink2);text-transform:uppercase;letter-spacing:.07em;
+  padding:14px 22px 8px;background:#FBFBFC;border-bottom:1px solid var(--rule);border-top:1px solid var(--rule)}
+.g4b{padding:16px 22px}
+.g4grid{display:grid;gap:12px 14px;grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
+.g4f{display:flex;flex-direction:column;gap:4px;min-width:0}
+.g4f label{font-size:11px;color:var(--ink2);font-weight:500}
+.g4f input,.g4f select{border:1px solid var(--rule2);background:var(--surface);border-radius:7px;padding:7px 9px;font-size:13px;width:100%}
+.g4f input:focus,.g4f select:focus{outline:none;border-color:var(--ink);box-shadow:0 0 0 3px rgba(23,24,26,.07)}
+.g4f input.n{text-align:right;font-variant-numeric:tabular-nums}
+.g4f .h{font-size:10.5px;color:var(--ink3);min-height:13px;font-variant-numeric:tabular-nums}
+table.g4t{width:100%;border-collapse:collapse}
+table.g4t th{font-size:10px;font-weight:700;color:var(--ink2);text-transform:uppercase;letter-spacing:.04em;
+  text-align:left;padding:8px 10px;border-bottom:1px solid var(--rule);white-space:nowrap}
+table.g4t th.r,table.g4t td.r{text-align:right;font-variant-numeric:tabular-nums}
+table.g4t td{padding:9px 10px;border-bottom:1px solid var(--rule);font-size:12.5px;vertical-align:middle}
+table.g4t tr:last-child td{border-bottom:none}
+table.g4t tr.tt td{background:#FBFBFC;font-weight:700;border-top:1px solid var(--rule2)}
+table.g4t input.n{width:104px;border:1px solid var(--rule2);border-radius:6px;padding:4px 7px;font-size:12.5px;
+  text-align:right;font-variant-numeric:tabular-nums}
+.g4chk{width:15px;height:15px;cursor:pointer;accent-color:#17181A}
+.g4tag{display:inline-block;font-size:10px;font-weight:700;padding:2px 7px;border-radius:5px;background:var(--rule);color:var(--ink2)}
+.g4tag.ok{background:#E7F1EC;color:#2E6E5A} .g4tag.mal{background:var(--danger-soft);color:var(--danger)}
+.g4tag.avi{background:var(--accent-soft);color:#8a5300}
+.g4em{background:var(--surface);border:1px dashed var(--rule2);border-radius:12px;padding:44px 28px;text-align:center}
+.g4em h3{font-size:16px;font-weight:600;margin-bottom:5px}
+.g4em p{font-size:13px;color:var(--ink2);max-width:460px;margin:0 auto 16px}
+.g4av{font-size:12px;color:#8a5300;background:var(--accent-soft);border:1px solid #F2D9A8;border-radius:9px;
+  padding:11px 14px;margin:14px 22px;line-height:1.65}
+.g4av b{color:#6b4612}
+.g4cmp{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:10px}
+.g4cmp>div{border:1px solid var(--rule);border-radius:9px;padding:11px 13px;background:var(--surface)}
+.g4cmp .l{font-size:10.5px;color:var(--ink2);text-transform:uppercase;letter-spacing:.04em;font-weight:700}
+.g4cmp .v{font-size:19px;font-weight:700;font-variant-numeric:tabular-nums;margin-top:3px}
+.g4acts{display:flex;gap:8px;flex-wrap:wrap;padding:14px 22px;border-top:1px solid var(--rule);background:#FBFBFC}
+/* --- sinosure --- */
+.snkpis{display:flex;border-top:1px solid var(--rule);border-bottom:1px solid var(--rule);margin-bottom:24px;flex-wrap:wrap}
+.snk{flex:1 1 180px;padding:15px 22px 15px 0;border-right:1px solid var(--rule)}
+.snk:last-child{border-right:none} .snk:not(:first-child){padding-left:22px}
+.snk .l{font-size:11.5px;color:var(--ink2)}
+.snk .v{font-size:24px;font-weight:700;font-variant-numeric:tabular-nums;margin-top:3px;letter-spacing:-.02em}
+.snk .v.mal{color:var(--danger)} .snk .v.ok{color:var(--ok)}
+.snk .d{font-size:11.5px;color:var(--ink2);margin-top:3px;font-variant-numeric:tabular-nums}
+.sndif{font-variant-numeric:tabular-nums;font-weight:600}
+.sndif.mas{color:var(--danger)} .sndif.menos{color:var(--ok)}
+.snsel{border:1px solid var(--rule2);border-radius:6px;padding:3px 6px;font-size:11.5px;background:var(--surface)}
+.snsel.si{border-color:#B7D4C9;background:#E7F1EC} .snsel.no{border-color:#f0c4c0;background:#fdeceb}
+.snfil{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;align-items:center}
+</style>
+<script>
+/* =========================================================================
+   MOTOR 4 · v0.22
+   Todo lo nuevo vive aquí para no tener que volver a pegar Motor1/2/3.
+   Se engancha reemplazando funciones que ya existen (precioVenta,
+   serializeState, applyState, refreshAll), nunca editándolas.
+   ========================================================================= */
+
+/* =============== GRUPOS DE PRECIO ===============
+   Un grupo es una factura (o una futura factura): varios pedidos bajo UN
+   precio total escrito a mano, que se reparte entre ellos. Si un pedido no
+   está en ningún grupo, todo sigue exactamente como antes. */
+let GPRE=[];
+let GSEL=null;
+let GQ='';
+
+function gpNuevo(){
+  const g={id:'gp'+Date.now().toString(36)+Math.floor(Math.random()*1000),
+    nombre:'', cliente:(CLIENTES[0]||''), total:0, base:'costo',
+    eqRefs:[], partes:{}, fecha:'', nota:'',
+    facNum:null, facTotal:null, facFecha:null};
+  GPRE.push(g); GSEL=g.id; pintarPrecios(); guardar4();
+  toast('Grupo nuevo · ponle el cliente, el total y marca los pedidos que cubre');
+}
+const gpDe=id=>GPRE.find(g=>g.id===id);
+/* el grupo que cubre a un pedido (un pedido no puede estar en dos) */
+const gpDeEq=e=>GPRE.find(g=>(g.eqRefs||[]).indexOf(e.derrame)>=0);
+const gpEquipos=g=>EQ.filter(e=>(g.eqRefs||[]).indexOf(e.derrame)>=0);
+
+/* --- el reparto del total entre los pedidos del grupo --- */
+function gpPesos(g){
+  const eqs=gpEquipos(g);
+  if(!eqs.length) return {eqs,pesos:[],aviso:''};
+  let pesos, aviso='';
+  if(g.base==='equipos') pesos=eqs.map(e=>Math.max(1,+e.qty||1));
+  else if(g.base==='manual') pesos=eqs.map(e=>+((g.partes||{})[e.derrame])||0);
+  else pesos=eqs.map(e=>+e.cupoMonto||+e.mfgAmt||0);
+  const suma=pesos.reduce((s,x)=>s+x,0);
+  if(suma<=0){
+    pesos=eqs.map(()=>1);
+    aviso=g.base==='manual'
+      ? 'Todavía no has repartido nada a mano: por ahora se divide en partes iguales.'
+      : 'No hay valores para repartir con esa base, así que se divide en partes iguales.';
+  }
+  const t=pesos.reduce((s,x)=>s+x,0);
+  return {eqs, pesos:pesos.map(x=>x/t), aviso};
+}
+/* cuánto le toca a un pedido del total del grupo */
+function gpParte(g,e){
+  if(g.base==='manual') return +((g.partes||{})[e.derrame])||0;
+  const {eqs,pesos}=gpPesos(g);
+  const i=eqs.indexOf(e); if(i<0) return 0;
+  const T=+g.total||0;
+  /* la última parte absorbe el redondeo para que las partes sumen el total exacto */
+  if(i===eqs.length-1){
+    let acum=0; for(let k=0;k<eqs.length-1;k++) acum+=Math.round(T*pesos[k]*100)/100;
+    return Math.round((T-acum)*100)/100;
+  }
+  return Math.round(T*pesos[i]*100)/100;
+}
+const gpRepartido=g=>g.base==='manual'
+  ? Object.values(g.partes||{}).reduce((s,x)=>s+(+x||0),0)
+  : gpEquipos(g).reduce((s,e)=>s+gpParte(g,e),0);
+
+/* ---- EL ENGANCHE: el precio de venta de un pedido ----
+   Si está en un grupo, manda el grupo. Si no, lo de siempre. */
+const _precioVentaOrig=precioVenta;
+precioVenta=function(e){
+  const g=gpDeEq(e);
+  if(g) return gpParte(g,e);
+  return _precioVentaOrig(e);
+};
+
+/* ---- EL ENGANCHE: guardar y recuperar ---- */
+const _serOrig=serializeState;
+serializeState=function(){
+  const o=JSON.parse(_serOrig());
+  o.GPRE=GPRE;
+  return JSON.stringify(o);
+};
+const _appOrig=applyState;
+applyState=function(s){
+  _appOrig(s);
+  GPRE=Array.isArray(s.GPRE)?s.GPRE:[];
+  GPRE.forEach(g=>{g.eqRefs=g.eqRefs||[];g.partes=g.partes||{};});
+  if(GSEL&&!gpDe(GSEL))GSEL=null;
+};
+function guardar4(){ if(typeof saveToServer==='function') saveToServer(); }
+
+/* ---- EL ENGANCHE: repintar también las pestañas nuevas ---- */
+const _refOrig=refreshAll;
+refreshAll=function(){ _refOrig(); try{pintarPrecios();pintarSino();}catch(e){} };
+
+/* =============== PESTAÑA PRECIOS =============== */
+function pintarPrecios(){
+  const cont=document.getElementById('v-precios'); if(!cont) return;
+  const sinGrupo=EQ.filter(e=>!gpDeEq(e));
+  const sinPrecio=sinGrupo.filter(e=>!(+e.precioVenta>0));
+  const totGrupos=GPRE.reduce((s,g)=>s+(+g.total||0),0);
+
+  if(!EQ.length){
+    cont.innerHTML=`<div class="g4em"><h3>Primero carga tus pedidos</h3>
+      <p>Esta pestaña arma precios sobre los pedidos del order report. Carga los datos y vuelve.</p>
+      <button class="btn" onclick="verifyOpen()">Cargar datos</button></div>`;
+    return;
+  }
+  if(GSEL&&!gpDe(GSEL))GSEL=null;
+  if(!GSEL&&GPRE.length)GSEL=GPRE[0].id;
+
+  cont.innerHTML=`
+    <div class="snkpis">
+      <div class="snk"><div class="l">Grupos de precio</div><div class="v">${GPRE.length}</div>
+        <div class="d">cubren <b>${EQ.length-sinGrupo.length}</b> de ${EQ.length} pedidos</div></div>
+      <div class="snk"><div class="l">Valor de los grupos</div><div class="v">US$ ${fmtUSDs(totGrupos)}</div>
+        <div class="d">precio a clientes, escrito a mano</div></div>
+      <div class="snk"><div class="l">Pedidos sueltos con precio</div><div class="v">${sinGrupo.length-sinPrecio.length}</div>
+        <div class="d">con su precio individual de siempre</div></div>
+      <div class="snk"><div class="l">Pedidos sin precio</div>
+        <div class="v ${sinPrecio.length?'mal':'ok'}">${sinPrecio.length}</div>
+        <div class="d">${sinPrecio.length?'no entran al estado de cuenta':'todos tienen precio'}</div></div>
+    </div>
+    <div class="sec" style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
+      <h2 style="font-size:16px;font-weight:600">Precios por grupo</h2>
+      <div style="font-size:12.5px;color:var(--ink2)">cuando facturas varios proyectos juntos, un total y la herramienta lo reparte</div>
+      <div style="flex:1"></div>
+      <button class="btn primary" onclick="gpNuevo()">+ Nuevo grupo</button>
+    </div>
+    <div class="g4wrap">
+      <div>
+        <div class="g4list">${GPRE.length?GPRE.map(g=>{
+          const n=(g.eqRefs||[]).length;
+          return `<div class="g4item ${g.id===GSEL?'on':''}" onclick="GSEL='${g.id}';pintarPrecios()">
+            <span class="v">${fmtUSDs(g.total)}</span>
+            <div class="n">${esc4(g.nombre||g.facNum||'Grupo sin nombre')}</div>
+            <div class="m">${esc4(g.cliente||'sin cliente')} · ${n} pedido(s)${g.facNum?' · '+esc4(g.facNum):''}</div></div>`;
+        }).join(''):'<div style="padding:18px;font-size:12.5px;color:var(--ink3)">Todavía no has creado ningún grupo.</div>'}</div>
+        ${sinPrecio.length?`<div class="g4av" style="margin:14px 0 0">
+          <b>${sinPrecio.length} pedido(s) sin precio.</b> No suman al estado de cuenta.
+          <div style="margin-top:8px"><button class="btn" onclick="gpDesdeSinPrecio()">Crear un grupo con ellos</button></div>
+        </div>`:''}
+      </div>
+      <div>${GSEL?editorGrupo(gpDe(GSEL)):`<div class="g4em">
+        <h3>Crea tu primer grupo de precio</h3>
+        <p>Un grupo es una factura (o una que todavía no existe): escoges los pedidos que van juntos,
+           escribes <b>un solo total</b>, y la herramienta lo reparte entre ellos para el estado de cuenta.</p>
+        <button class="btn primary" onclick="gpNuevo()">+ Nuevo grupo</button></div>`}</div>
+    </div>`;
+}
+const esc4=s=>(''+(s==null?'':s)).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+function editorGrupo(g){
+  if(!g) return '';
+  const {eqs,aviso}=gpPesos(g);
+  const rep=gpRepartido(g), dif=Math.round(((+g.total||0)-rep)*100)/100;
+  const q=(GQ||'').toLowerCase().trim();
+  const cands=EQ.filter(e=>{const o=gpDeEq(e);return !o||o.id===g.id;})
+    .filter(e=>!g.cliente||e.cliente===g.cliente||gpDeEq(e))
+    .filter(e=>{ if(!q) return true;
+      if((g.eqRefs||[]).indexOf(e.derrame)>=0) return true;      /* los marcados nunca se esconden */
+      return ((e.derrame||'')+' '+(projOf(e)||'')+' '+(e.cliente||'')).toLowerCase().indexOf(q)>=0; })
+    /* primero los que ya están en el grupo: son los que estás tocando */
+    .sort((x,y)=>{const a=(g.eqRefs||[]).indexOf(x.derrame)>=0?0:1,
+                        bb=(g.eqRefs||[]).indexOf(y.derrame)>=0?0:1;return a-bb;});
+  const fac=g.facNum?FACT.find(f=>f.num===g.facNum):null;
+  const sug=!fac?FACT.filter(f=>(f.eqRefs||[]).some(d=>(g.eqRefs||[]).indexOf(d)>=0)&&!GPRE.some(x=>x.facNum===f.num)):[];
+
+  return `<div class="g4card">
+    <div class="g4h">
+      <div class="t">${esc4(g.nombre||'Grupo sin nombre')}</div>
+      <div style="font-size:12.5px;color:var(--ink2);margin-top:2px">
+        ${eqs.length} pedido(s) · reparto por ${({costo:'costo del pedido',equipos:'# de equipos',manual:'lo que yo escriba'})[g.base]}</div>
+    </div>
+
+    <div class="g4b"><div class="g4grid">
+      <div class="g4f"><label>Nombre del grupo</label>
+        <input value="${esc4(g.nombre)}" placeholder="Factura Mompox" oninput="gpSet('${g.id}','nombre',this.value)">
+        <div class="h">para reconocerlo en la lista</div></div>
+      <div class="g4f"><label>Cliente</label>
+        <select onchange="gpSet('${g.id}','cliente',this.value,true)">
+          <option value="">— sin cliente —</option>
+          ${CLIENTES.map(c=>`<option value="${esc4(c)}" ${c===g.cliente?'selected':''}>${esc4(c)}</option>`).join('')}
+        </select><div class="h">solo salen sus pedidos</div></div>
+      <div class="g4f"><label>Precio total del grupo (USD)</label>
+        <input class="n" type="number" step="any" value="${g.total||''}" placeholder="0"
+          oninput="gpSet('${g.id}','total',this.value)">
+        <div class="h">lo que le cobras al cliente por todo junto</div></div>
+      <div class="g4f"><label>Repartirlo por</label>
+        <select onchange="gpSet('${g.id}','base',this.value,true)">
+          <option value="costo" ${g.base==='costo'?'selected':''}>Costo de cada pedido</option>
+          <option value="equipos" ${g.base==='equipos'?'selected':''}># de equipos</option>
+          <option value="manual" ${g.base==='manual'?'selected':''}>A mano, pedido por pedido</option>
+        </select><div class="h">cambia solo el reparto, no el total</div></div>
+      <div class="g4f"><label>Fecha</label>
+        <input type="date" value="${esc4(g.fecha)}" onchange="gpSet('${g.id}','fecha',this.value)"><div class="h"></div></div>
+      <div class="g4f"><label>Nota</label>
+        <input value="${esc4(g.nota)}" placeholder="…" oninput="gpSet('${g.id}','nota',this.value)"><div class="h"></div></div>
+    </div></div>
+
+    ${aviso?`<div class="g4av">${aviso}</div>`:''}
+    ${g.base==='manual'&&Math.abs(dif)>0.5?`<div class="g4av">
+      Repartiste <b>${fmtUSDs(rep)}</b> de <b>${fmtUSDs(g.total)}</b>:
+      ${dif>0?`te faltan <b>${fmtUSDs(dif)}</b>`:`te pasaste por <b>${fmtUSDs(-dif)}</b>`}.
+      <button class="btn" style="margin-left:8px" onclick="gpCuadrar('${g.id}')">Cuadrar en la última fila</button>
+    </div>`:''}
+
+    <div class="g4sec" style="display:flex;align-items:center;gap:10px">
+      <span>Pedidos que cubre este grupo</span>
+      <span style="flex:1"></span>
+      <input id="gq" value="${esc4(GQ)}" placeholder="filtrar por pedido, proyecto o cliente…"
+        oninput="GQ=this.value;pintarPrecios();setTimeout(()=>{const i=document.getElementById('gq');
+          if(i){i.focus();i.setSelectionRange(i.value.length,i.value.length);}},0)"
+        style="text-transform:none;letter-spacing:0;font-weight:400;font-size:12px;border:1px solid var(--rule2);
+               border-radius:16px;padding:4px 11px;width:260px;background:var(--surface)">
+    </div>
+    <div style="max-height:420px;overflow:auto"><table class="g4t"><thead><tr>
+      <th style="width:34px"></th><th>Pedido</th><th>Proyecto</th>
+      <th class="r">Costo</th><th class="r">Equipos</th><th class="r">Le toca</th>
+    </tr></thead><tbody>
+      ${cands.length?cands.map(e=>{
+        const dentro=(g.eqRefs||[]).indexOf(e.derrame)>=0;
+        return `<tr style="${dentro?'':'opacity:.5'}">
+          <td><input type="checkbox" class="g4chk" ${dentro?'checked':''}
+            onchange="gpToggle('${g.id}','${e.derrame}',this.checked)"></td>
+          <td><b>${esc4(e.derrame)}</b><div style="font-size:11px;color:var(--ink3)">${esc4(e.cliente)}</div></td>
+          <td>${esc4(projOf(e)||'—')}</td>
+          <td class="r">${fmtUSDs(+e.cupoMonto||+e.mfgAmt||0)}</td>
+          <td class="r">${e.qty||1}</td>
+          <td class="r">${dentro?(g.base==='manual'
+            ? `<input class="n" type="number" step="any" value="${(g.partes||{})[e.derrame]||''}"
+                 placeholder="0" oninput="gpParteSet('${g.id}','${e.derrame}',this.value)">`
+            : `<b>${fmtUSDs(gpParte(g,e))}</b>`):'<span style="color:var(--ink3)">—</span>'}</td>
+        </tr>`;}).join(''):`<tr><td colspan="6" style="padding:16px;color:var(--ink3)">
+          ${g.cliente?'Ese cliente no tiene pedidos libres.':'Escoge un cliente para ver sus pedidos.'}</td></tr>`}
+      <tr class="tt"><td colspan="5">Total repartido</td>
+        <td class="r">${fmtUSDs(rep)}${Math.abs(dif)>0.5?` <span class="g4tag mal">faltan ${fmtUSDs(dif)}</span>`:''}</td></tr>
+    </tbody></table></div>
+
+    <div class="g4sec">Factura real</div>
+    <div class="g4b">
+      ${fac?`<div style="font-size:13px"><b>${esc4(fac.num)}</b> · ${fmtD(fac.fecha)} ·
+          total <b>${fmtUSDs(totalFac(fac))}</b>
+          <button class="btn" style="margin-left:10px" onclick="gpDesligar('${g.id}')">Desligar</button></div>
+        ${Math.abs(totalFac(fac)-(+g.total||0))>1?`<div class="g4av" style="margin:12px 0 0">
+          <b>El total de la factura no coincide con el que escribiste a mano.</b>
+          <div class="g4cmp">
+            <div><div class="l">Tu precio manual</div><div class="v">${fmtUSD(g.total)}</div>
+              <button class="btn" style="margin-top:9px" onclick="toast('Se deja tu precio manual')">Dejar el mío</button></div>
+            <div><div class="l">La factura ${esc4(fac.num)}</div><div class="v">${fmtUSD(totalFac(fac))}</div>
+              <button class="btn" style="margin-top:9px" onclick="gpTomarFac('${g.id}')">Usar el de la factura</button></div>
+          </div></div>`:`<div class="g4av" style="margin:12px 0 0;background:#E7F1EC;border-color:#B7D4C9;color:#2E6E5A">
+            Cuadra con tu precio manual.</div>`}`
+      :`<div style="font-size:12.5px;color:var(--ink2)">
+          Todavía no hay factura real enganchada. Cárgala con <b>Cargar facturas</b> y vuelve aquí,
+          o engánchala si ya está cargada.</div>
+        ${sug.length?`<div style="margin-top:11px;display:flex;gap:8px;flex-wrap:wrap">
+          ${sug.map(f=>`<button class="btn" onclick="gpLigar('${g.id}','${esc4(f.num)}')">
+            Enganchar ${esc4(f.num)} · ${fmtUSDs(totalFac(f))}</button>`).join('')}</div>`:''}`}
+    </div>
+
+    <div class="g4acts">
+      <button class="btn" onclick="navTo('clientes')">Ver el estado de cuenta</button>
+      <div style="flex:1"></div>
+      <button class="btn" style="color:var(--danger);border-color:#e8c9c5" onclick="gpBorrar('${g.id}')">Eliminar grupo</button>
+    </div>
+  </div>`;
+}
+
+function gpSet(id,f,v,recarga){
+  const g=gpDe(id); if(!g) return;
+  g[f]=(f==='total')?(+v||0):v;
+  if(f==='cliente'){ /* un pedido de otro cliente no puede quedarse en el grupo */
+    g.eqRefs=(g.eqRefs||[]).filter(d=>{const e=EQ.find(x=>x.derrame===d);return e&&(!v||e.cliente===v);});
+  }
+  refreshAll(); renderLedger(); guardar4();
+  if(recarga||f==='cliente') pintarPrecios();
+}
+function gpToggle(id,derrame,on){
+  const g=gpDe(id); if(!g) return;
+  g.eqRefs=g.eqRefs||[];
+  const i=g.eqRefs.indexOf(derrame);
+  if(on&&i<0) g.eqRefs.push(derrame);
+  if(!on&&i>=0){ g.eqRefs.splice(i,1); if(g.partes) delete g.partes[derrame]; }
+  pintarPrecios(); refreshAll(); renderLedger(); guardar4();
+}
+function gpParteSet(id,derrame,v){
+  const g=gpDe(id); if(!g) return;
+  g.partes=g.partes||{}; g.partes[derrame]=+v||0;
+  refreshAll(); renderLedger(); guardar4();
+  const el=document.querySelector('.g4t tr.tt td.r'); if(el) el.innerHTML=fmtUSDs(gpRepartido(g));
+}
+function gpCuadrar(id){
+  const g=gpDe(id); if(!g) return;
+  const eqs=gpEquipos(g); if(!eqs.length) return;
+  const ult=eqs[eqs.length-1];
+  let otros=0; eqs.slice(0,-1).forEach(e=>otros+=(+(g.partes||{})[e.derrame]||0));
+  g.partes=g.partes||{};
+  g.partes[ult.derrame]=Math.round(((+g.total||0)-otros)*100)/100;
+  pintarPrecios(); refreshAll(); renderLedger(); guardar4();
+  toast(`<b>${esc4(ult.derrame)}</b> ajustado a ${fmtUSDs(g.partes[ult.derrame])} para cuadrar el total`);
+}
+function gpBorrar(id){
+  const g=gpDe(id); if(!g) return;
+  if(!confirm('¿Eliminar el grupo "'+(g.nombre||'sin nombre')+'"? Los pedidos vuelven a su precio individual.')) return;
+  GPRE.splice(GPRE.indexOf(g),1); GSEL=null;
+  pintarPrecios(); refreshAll(); renderLedger(); guardar4();
+  toast('Grupo eliminado');
+}
+function gpDesdeSinPrecio(){
+  const sin=EQ.filter(e=>!gpDeEq(e)&&!(+e.precioVenta>0));
+  if(!sin.length) return;
+  const cli=sin[0].cliente;
+  const mismos=sin.filter(e=>e.cliente===cli);
+  gpNuevo();
+  const g=GPRE[GPRE.length-1];
+  g.cliente=cli; g.eqRefs=mismos.map(e=>e.derrame);
+  g.nombre='Sin facturar · '+cli;
+  pintarPrecios(); guardar4();
+  toast(`Grupo con los ${mismos.length} pedido(s) sin precio de <b>${esc4(cli)}</b> · ponle el total`);
+}
+function gpLigar(id,num){
+  const g=gpDe(id), f=FACT.find(x=>x.num===num); if(!g||!f) return;
+  g.facNum=f.num; g.facTotal=totalFac(f); g.facFecha=f.fecha||null;
+  if(!g.nombre) g.nombre=f.num;
+  pintarPrecios(); guardar4();
+  toast(Math.abs(totalFac(f)-(+g.total||0))>1
+    ? `<b>${esc4(f.num)}</b> enganchada · los totales no coinciden, decide cuál queda`
+    : `<b>${esc4(f.num)}</b> enganchada · cuadra con tu precio manual`);
+}
+function gpDesligar(id){
+  const g=gpDe(id); if(!g) return;
+  g.facNum=null; g.facTotal=null; g.facFecha=null;
+  pintarPrecios(); guardar4(); toast('Factura desligada · tu precio manual queda igual');
+}
+function gpTomarFac(id){
+  const g=gpDe(id), f=g&&g.facNum?FACT.find(x=>x.num===g.facNum):null; if(!g||!f) return;
+  const antes=+g.total||0;
+  g.total=totalFac(f);
+  if(f.fecha) g.fecha=isoW(f.fecha);
+  pintarPrecios(); refreshAll(); renderLedger(); guardar4();
+  toast(`Total del grupo: ${fmtUSDs(antes)} → <b>${fmtUSDs(g.total)}</b>, según ${esc4(f.num)}`);
+}
+
+/* =============== PESTAÑA SINOSURE ===============
+   Otra vista del detailed: qué dice la hoja de Andrés pedido por pedido,
+   qué calcula la herramienta, dónde está el desfase y qué decides hacer. */
+let SNFIL='difs';
+function setSnFil(f){SNFIL=f;pintarSino();}
+
+function pintarSino(){
+  const cont=document.getElementById('v-sinosure'); if(!cont) return;
+  if(!EQ.length||!CONCILIA){
+    cont.innerHTML=`<div class="g4em"><h3>Sin datos del detailed</h3>
+      <p>Esta pestaña lee la hoja <b>Sinosure</b> de tu detailed: lo que declara pedido por pedido
+         frente a lo que calcula la herramienta. Carga los datos y vuelve.</p>
+      <button class="btn" onclick="verifyOpen()">Cargar datos</button></div>`;
+    return;
+  }
+  const al=alarmasCupo()||{sinConfirmar:[],dup:[],sueltos:[],montoDistinto:[]};
+  const kc=mfg=>{
+    const c=cupoConcilia(mfg), disp=c.cupo-c.usado;
+    const decl=c.declarado;
+    return `<div class="snk"><div class="l">${mfg==='Singsun'?'Singsun · trackers':'Eaglerise · shelters'}</div>
+      <div class="v ${disp<0?'mal':'ok'}">${disp<0?'−':''}US$ ${fmtUSDs(Math.abs(disp))}</div>
+      <div class="d">usado <b>${fmtUSDs(c.usado)}</b> de ${fmtUSDs(c.cupo)}
+      ${decl!=null?`<br>la hoja declara <b>${fmtUSDs(decl)}</b>${Math.abs(decl-c.usado)>2
+        ?` · <b style="color:var(--dato-debo)">desfase ${fmtUSDs(Math.abs(decl-c.usado))}</b>`:' · cuadra'}`:''}</div></div>`;
+  };
+  const nAl=al.sinConfirmar.length+al.dup.length+al.sueltos.length+al.montoDistinto.length;
+
+  cont.innerHTML=`
+    <div class="snkpis">${kc('Singsun')}${kc('Eaglerise')}
+      <div class="snk"><div class="l">Desfases por resolver</div>
+        <div class="v ${nAl?'mal':'ok'}">${nAl}</div>
+        <div class="d">${nAl?'míralos abajo y decide':'todo conciliado'}</div></div>
+      <div class="snk"><div class="l">Regla de conteo</div>
+        <div class="v" style="font-size:15px;font-weight:600;line-height:1.3;margin-top:7px">
+          ${CUPO_REGLAS[CONFIG.cupoRegla||'sinosure'].split(',')[0]}</div>
+        <div class="d"><a href="#" onclick="navTo('config');return false" style="color:var(--ink2)">cambiar en Ajustes</a></div></div>
+    </div>
+
+    ${nAl?`<div class="g4av">
+      ${al.sinConfirmar.length?`<div><b>${al.sinConfirmar.length} pedido(s) con saldo que la hoja no lista.</b>
+        Son plata que va a caer al cupo apenas Andrés los cargue:
+        ${al.sinConfirmar.map(x=>esc4(x.e.derrame)+' '+fmtUSDs(x.monto)).join(' · ')}.
+        Decídelos uno por uno en la tabla.</div>`:''}
+      ${al.dup.length?`<div style="margin-top:7px"><b>${al.dup.length} renglón(es) repetido(s) en la hoja.</b>
+        ${al.dup.map(d=>esc4(d.celda)+' apunta a '+esc4(d.ref)+', ya contado en '+esc4(d.yaEn)+' ('+fmtUSDs(d.valor)+')').join(' · ')}.
+        Hoy ${CONFIG.contarDupSino?'<b>sí</b> suman':'<b>no</b> suman'};
+        <a href="#" onclick="setDupSino('${CONFIG.contarDupSino?'no':'si'}');pintarSino();return false">cambiarlo</a>.</div>`:''}
+      ${al.sueltos.length?`<div style="margin-top:7px"><b>${al.sueltos.length} renglón(es) de la hoja sin pedido.</b>
+        ${al.sueltos.map(x=>esc4(x.celda)+' "'+esc4(x.etiqueta)+'" '+fmtUSDs(x.valor)).join(' · ')}</div>`:''}
+      ${al.montoDistinto.length?`<div style="margin-top:7px"><b>${al.montoDistinto.length} pedido(s) donde el ORDER REPORT y el detailed no valen lo mismo.</b>
+        ${al.montoDistinto.map(d=>esc4(d.po)+': report '+fmtUSDs(d.or)+' vs detailed '+fmtUSDs(d.det)).join(' · ')}</div>`:''}
+    </div>`:''}
+
+    <div class="sec" style="display:flex;align-items:center;gap:12px;margin:22px 0 12px">
+      <h2 style="font-size:16px;font-weight:600">Pedido por pedido</h2>
+      <div style="font-size:12.5px;color:var(--ink2)">qué declara la hoja, qué cuento yo y qué decides</div>
+    </div>
+    <div class="snfil">
+      ${[['difs','Solo los que no cuadran'],['todos','Todos'],['sin','Sin cupo asignado'],
+         ['man','Decididos a mano'],['Singsun','Trackers'],['Eaglerise','Shelters']]
+        .map(f=>`<button class="chip ${SNFIL===f[0]?'on':''}" onclick="setSnFil('${f[0]}')">${f[1]}</button>`).join('')}
+      <div style="flex:1"></div>
+      <button class="btn" onclick="exportarSino()">Copiar para Andrés</button>
+    </div>
+    <div class="tblwrap">${tablaSino()}</div>`;
+}
+
+function filasSino(){
+  const idx=(CONCILIA&&CONCILIA.sinoPorDerrame)||{};
+  return EQ.map(e=>{
+    const mfg=e.mfg;
+    const suyo=idx[kOf(e)]!=null?idx[kOf(e)]:null;
+    const mio=consumoEq(e,mfg);
+    const dup=(CONCILIA.sinoDupPorDerrame||{})[kOf(e)]||0;
+    return {e,mfg,suyo,mio,dup,dif:Math.round((mio-(suyo==null?0:suyo))*100)/100,
+      cuadra:suyo!=null&&Math.abs(mio-suyo)<2};
+  }).filter(r=>{
+    if(SNFIL==='Singsun'||SNFIL==='Eaglerise') return r.mfg===SNFIL;
+    if(SNFIL==='sin')  return r.suyo==null&&(+r.e.cupoSaldo||0)>0.5;
+    if(SNFIL==='man')  return !!r.e.sinoManual;
+    if(SNFIL==='difs') return !r.cuadra&&((+r.e.cupoSaldo||0)>0.5||r.suyo!=null);
+    return true;
+  }).sort((a,b)=>Math.abs(b.dif)-Math.abs(a.dif));
+}
+
+function tablaSino(){
+  const fs=filasSino();
+  if(!fs.length) return `<div style="padding:34px;text-align:center;color:var(--ink3);font-size:13px">
+    Nada en este filtro.${SNFIL==='difs'?' Todo lo que la hoja lista cuadra con lo que cuenta la herramienta.':''}</div>`;
+  const sel=r=>{
+    const v=r.e.sinoManual||'';
+    return `<select class="snsel ${v==='si'?'si':v==='no'?'no':''}"
+      title="¿El saldo de este pedido entra al cupo Sinosure?"
+      onchange="setSinoManual('${esc4(r.e.derrame)}','${r.mfg}',this.value);pintarSino()">
+      ${[['','lo que diga la hoja'],['si','sí entra'],['no','no entra']]
+        .map(o=>`<option value="${o[0]}" ${o[0]===v?'selected':''}>${o[1]}</option>`).join('')}</select>`;
+  };
+  const motivo=r=>{
+    if(r.e.sinoManual==='si') return '<span class="g4tag avi">lo metí yo a mano</span>';
+    if(r.e.sinoManual==='no') return '<span class="g4tag avi">lo saqué yo a mano</span>';
+    if(r.suyo==null) return '<span class="g4tag mal">la hoja no lo lista</span>';
+    if(r.cuadra) return '<span class="g4tag ok">cuadra</span>';
+    return r.dif>0?'<span class="g4tag mal">cuento más que la hoja</span>'
+                  :'<span class="g4tag avi">cuento menos que la hoja</span>';
+  };
+  return `<table class="g4t"><thead><tr>
+    <th>Pedido</th><th>Proyecto</th><th>Estado</th>
+    <th class="r">Monto fáb.</th><th class="r">Saldo fáb.</th>
+    <th class="r">Dice la hoja</th><th class="r">Cuento yo</th><th class="r">Desfase</th>
+    <th>Por qué</th><th>¿Entra al cupo?</th>
+  </tr></thead><tbody>
+    ${fs.map(r=>`<tr>
+      <td><b>${esc4(r.e.derrame)}</b><div style="font-size:11px;color:var(--ink3)">${esc4(r.e.cliente)} · ${r.mfg||'—'}</div></td>
+      <td>${esc4(projOf(r.e)||'—')}</td>
+      <td><span class="g4tag">${STAGE[r.e.st]||'—'}</span></td>
+      <td class="r">${fmtUSDs(+r.e.cupoMonto||0)}</td>
+      <td class="r">${fmtUSDs(+r.e.cupoSaldo||0)}</td>
+      <td class="r">${r.suyo==null?'<span style="color:var(--ink3)">no lo lista</span>'
+        :fmtUSDs(r.suyo)+(r.dup?`<div style="font-size:10.5px;color:var(--dato-debo)">+${fmtUSDs(r.dup)} repetido</div>`:'')}</td>
+      <td class="r"><b>${fmtUSDs(r.mio)}</b></td>
+      <td class="r">${r.suyo==null
+        ? (r.mio>0.5?`<span class="sndif mas">+${fmtUSDs(r.mio)}</span>`
+                    :`<span class="sndif mas" style="font-weight:400;color:var(--ink3)">+${fmtUSDs(consumoEq(r.e,r.mfg,'andres'))} si entra</span>`)
+        : `<span class="sndif ${r.dif>0?'mas':r.dif<0?'menos':''}">${(r.dif>0?'+':'')+fmtUSDs(r.dif)}</span>`}</td>
+      <td>${motivo(r)}</td>
+      <td>${sel(r)}</td>
+    </tr>`).join('')}
+    <tr class="tt"><td colspan="5">Total de lo filtrado</td>
+      <td class="r">${fmtUSDs(fs.reduce((s,r)=>s+(r.suyo||0),0))}</td>
+      <td class="r">${fmtUSDs(fs.reduce((s,r)=>s+r.mio,0))}</td>
+      <td class="r">${fmtUSDs(fs.reduce((s,r)=>s+(r.suyo==null?0:r.dif),0))}</td>
+      <td colspan="2"></td></tr>
+  </tbody></table>`;
+}
+
+/* El resumen que le puedes mandar al dueño del detailed */
+function exportarSino(){
+  const fs=filasSino();
+  const l=['Pedido\tProyecto\tFabricante\tEstado\tMonto fab.\tSaldo fab.\tHoja Sinosure\tHerramienta\tDesfase\tPor qué'];
+  fs.forEach(r=>l.push([r.e.derrame,(projOf(r.e)||''),r.mfg||'',STAGE[r.e.st]||'',
+    Math.round(+r.e.cupoMonto||0),Math.round(+r.e.cupoSaldo||0),
+    r.suyo==null?'no lo lista':Math.round(r.suyo),Math.round(r.mio),
+    r.suyo==null?'':Math.round(r.dif),
+    r.e.sinoManual?'decidido a mano':(r.suyo==null?'la hoja no lo lista':(r.cuadra?'cuadra':'no cuadra'))].join('\t')));
+  const txt=l.join('\n');
+  const ta=document.createElement('textarea');
+  ta.value=txt; ta.style.position='fixed'; ta.style.opacity='0';
+  document.body.appendChild(ta); ta.select();
+  let ok=false; try{ ok=document.execCommand('copy'); }catch(e){}
+  document.body.removeChild(ta);
+  toast(ok?`Copiadas <b>${fs.length}</b> fila(s) · pégalas en un correo o en Excel`
+          :'No se pudo copiar solo · abre la consola del navegador y cópialo de ahí');
+  if(!ok) console.log(txt);
+}
+
+/* --- las pestañas nuevas se pintan al entrar --- */
+document.querySelectorAll('nav.tabs button[data-v="precios"],nav.tabs button[data-v="sinosure"]')
+  .forEach(b=>b.addEventListener('click',()=>{ b.dataset.v==='precios'?pintarPrecios():pintarSino(); }));
+
+console.log('%cMotor4 v0.22 · precios por grupo + Sinosure','background:#FD9C10;color:#17181A;padding:3px 9px;border-radius:4px;font-weight:700');
+</script>
