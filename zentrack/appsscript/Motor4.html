@@ -223,6 +223,7 @@ applyState=function(s){
   GPRE=Array.isArray(s.GPRE)?s.GPRE:[];
   GPRE.forEach(g=>{g.eqRefs=g.eqRefs||[];g.partes=g.partes||{};});
   if(GSEL&&!gpDe(GSEL))GSEL=null;
+  if(typeof sincronizarPrecios==='function') sincronizarPrecios();
 };
 function guardar4(){ if(typeof saveToServer==='function') saveToServer(); }
 
@@ -886,4 +887,75 @@ function grupoDesdeSeleccion(){
   navTo('precios'); GSEL=g.id; pintarPrecios();
   toast(`Grupo con <b>${eqs.length}</b> pedido(s) · escribe el precio total`);
 }
+
+/* =============== LIMPIEZA v0.23 ===============
+   Tres cosas que quedaron sueltas entre iteraciones. */
+
+/* 1) EL PRECIO DE GRUPO NO LLEGABA AL ESTADO DE CUENTA.
+   Seis sitios del motor leen e.precioVenta directo (la tabla de "estimado ·
+   pendiente facturar", los totales del cliente, la marca de "sin precio"…)
+   y se saltaban el grupo, así que todo seguía diciendo "definir".
+   En vez de parchar seis lecturas, el grupo escribe su parte en el pedido:
+   el grupo manda, y el campo de siempre queda sincronizado. */
+function sincronizarPrecios(){
+  let n=0;
+  GPRE.forEach(g=>{
+    gpEquipos(g).forEach(e=>{
+      const parte=gpParte(g,e);
+      if(Math.abs((+e.precioVenta||0)-parte)>0.005){ e.precioVenta=parte; n++; }
+    });
+  });
+  return n;
+}
+/* se sincroniza después de cualquier cosa que mueva un grupo */
+['gpSet','gpToggle','gpParteSet','gpCuadrar','gpBorrar','gpTomarFac','aplicarFusiones','grupoDesdeSeleccion']
+  .forEach(f=>{ if(typeof window[f]!=='function')return;
+    const orig=window[f];
+    window[f]=function(){ const r=orig.apply(this,arguments); sincronizarPrecios(); return r; };
+  });
+
+/* 2) BOTÓN QUE NO LLEVA A NINGUNA PARTE.
+   "Simular sacar pedidos" apunta a navTo('caja'), y la pestaña Caja no
+   existe: se quitó hace varias iteraciones y el botón se quedó. */
+if(typeof openPanel==='function'){
+  const _opOrig=openPanel;
+  openPanel=function(){
+    _opOrig.apply(this,arguments);
+    try{ limpiarPanel(); }catch(e){}
+  };
+}
+function limpiarPanel(){
+  document.querySelectorAll('#panel .pactions button').forEach(b=>{
+    const oc=b.getAttribute('onclick')||'';
+    if(/navTo\(\s*['"]caja['"]/.test(oc)) b.remove();
+  });
+  /* la palanca de Sinosure vive ahora en su pestaña; aquí solo estorbaba
+     repetida ocho veces. Se deja el dato, se quita el control. */
+  document.querySelectorAll('#panel .sinorow').forEach(row=>{
+    const sel=row.querySelector('select'); if(!sel) return;
+    const v=sel.value;
+    row.innerHTML=`<b>Sinosure</b> <span style="font-size:10.5px;color:var(--ink3)">${
+      v==='si'?'lo cuentas a mano':v==='no'?'lo dejaste fuera':'según la hoja'}</span>`;
+    row.style.cursor='pointer';
+    row.onclick=ev=>{ev.stopPropagation();closePanel();navTo('sinosure');};
+    row.title='Decidirlo en la pestaña Sinosure';
+  });
+}
+
+/* 3) la pestaña Precios ahora avisa si algo quedó a medias */
+const _pintarPreciosOrig=pintarPrecios;
+pintarPrecios=function(){
+  _pintarPreciosOrig.apply(this,arguments);
+  const cont=document.getElementById('v-precios'); if(!cont||!GPRE.length) return;
+  const malos=GPRE.filter(g=>!(+g.total>0)||!(g.eqRefs||[]).length);
+  if(!malos.length) return;
+  const av=document.createElement('div');
+  av.className='g4av'; av.style.margin='14px 0 0';
+  av.innerHTML=`<b>${malos.length} grupo(s) sin terminar:</b> `+
+    malos.map(g=>`${esc4(g.nombre||'sin nombre')} (${!(+g.total>0)?'sin total':'sin pedidos'})`).join(' · ')+
+    `. Mientras les falte eso, sus pedidos no suman al estado de cuenta.`;
+  cont.appendChild(av);
+};
+
+console.log('%cv0.23 · limpieza','background:#2E6E5A;color:#fff;padding:3px 9px;border-radius:4px;font-weight:700');
 </script>
