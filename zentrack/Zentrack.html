@@ -180,6 +180,37 @@ table.fust tr.tot td{background:var(--surface2);font-weight:600;border-bottom:no
 .fusacts{display:flex;gap:8px;margin-top:14px}
 table.g tr.grp td.rn{background:var(--accent-soft);color:#8a5300;font-weight:700}
 
+
+/* ---------- caja de pegado ---------- */
+.pegwrap{position:fixed;left:50%;top:50%;transform:translate(-50%,-48%) scale(.98);width:min(900px,94vw);
+  max-height:88vh;background:var(--paper);border-radius:14px;z-index:70;display:flex;flex-direction:column;
+  opacity:0;pointer-events:none;transition:.18s;box-shadow:0 24px 70px rgba(0,0,0,.28)}
+.pegwrap.on{opacity:1;pointer-events:auto;transform:translate(-50%,-50%) scale(1)}
+.pegh{display:flex;align-items:flex-start;gap:10px;padding:17px 22px;background:var(--surface);
+  border-bottom:1px solid var(--rule);border-radius:14px 14px 0 0}
+.pegh .dt{font-size:16px;font-weight:600}
+.pegh .dsub{font-size:12px;color:var(--ink2);margin-top:2px;max-width:640px;line-height:1.6}
+.pegbody{flex:1;overflow-y:auto;padding:16px 22px}
+#pegTa{width:100%;height:108px;border:1px solid var(--rule2);border-radius:9px;padding:10px 12px;
+  font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11.5px;line-height:1.5;resize:vertical;
+  background:var(--surface);white-space:pre;overflow:auto}
+#pegTa:focus{outline:none;border-color:var(--ink);box-shadow:0 0 0 3px rgba(23,24,26,.07)}
+.pegvacio{font-size:12.5px;color:var(--ink3);padding:22px 0;text-align:center}
+.pegres{font-size:13px;margin:15px 0 10px;display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+.pegchip{font-size:11px;background:var(--rule);color:var(--ink2);padding:3px 9px;border-radius:12px}
+.pegchip.mal{background:var(--accent-soft);color:#8a5300}
+.pegmapa{display:grid;grid-template-columns:repeat(auto-fill,minmax(168px,1fr));gap:7px}
+.pegcol{background:var(--surface);border:1px solid var(--rule);border-radius:8px;padding:7px 10px;min-width:0}
+.pegcol.mal{background:var(--danger-soft);border-color:#e8c9c5}
+.pegl{font-size:10.5px;font-weight:700;color:var(--ink2);text-transform:uppercase;letter-spacing:.03em;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pegcol.mal .pegl{color:var(--danger)}
+.pegv{font-size:12px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--ink)}
+.pegmodo{display:flex;gap:20px;flex-wrap:wrap;margin-top:15px;font-size:12.5px;color:var(--ink2)}
+.pegmodo label{display:flex;align-items:center;gap:6px;cursor:pointer}
+.pegfoot{display:flex;align-items:center;gap:8px;padding:13px 22px;background:var(--surface);
+  border-top:1px solid var(--rule);border-radius:0 0 14px 14px}
+
 /* ---------- cajón de edición ---------- */
 .scrim{position:fixed;inset:0;background:rgba(23,24,26,.34);opacity:0;pointer-events:none;transition:.18s;z-index:50}
 .scrim.on{opacity:1;pointer-events:auto}
@@ -300,7 +331,8 @@ tr.tot td{background:var(--surface2);font-weight:700;border-top:1px solid var(--
     <button class="btn" onclick="exportar()">Respaldar</button>
     <button class="btn" onclick="document.getElementById('imp').click()">Restaurar</button>
     <input type="file" id="imp" accept="application/json,.json" style="display:none" onchange="importar(this)">
-    <button class="btn primary" onclick="nuevoPedido()">+ Nuevo pedido</button>
+    <button class="btn primary" onclick="abrirPegar()">Pegar desde Excel</button>
+    <button class="btn" onclick="nuevoPedido()">+ Pedido</button>
   </header>
 
   <nav class="tabs">
@@ -408,6 +440,27 @@ tr.tot td{background:var(--surface2);font-weight:700;border-top:1px solid var(--
   <div class="dbody" id="ajBody"></div>
 </aside>
 
+<div class="scrim" id="scrimPeg" onclick="cerrarPegar()"></div>
+<div class="pegwrap" id="pegBox">
+  <div class="pegh">
+    <div><div class="dt">Pegar desde Excel</div>
+      <div class="dsub">abre tu hoja, selecciona desde <b>A2</b> hasta la última fila de la columna <b>S</b>,
+        copia con Ctrl+C y pega aquí abajo</div></div>
+    <div style="flex:1"></div>
+    <button class="btn ghost" onclick="cerrarPegar()" style="font-size:18px;padding:2px 10px">&times;</button>
+  </div>
+  <div class="pegbody">
+    <textarea id="pegTa" placeholder="Haz clic aquí y pega con Ctrl+V…"
+      oninput="pegLeer()" onpaste="setTimeout(pegLeer,0)"></textarea>
+    <div id="pegPrev"></div>
+  </div>
+  <div class="pegfoot">
+    <span class="muted" style="font-size:11.5px">No se importa nada hasta que le des al botón.</span>
+    <div style="flex:1"></div>
+    <button class="btn" onclick="cerrarPegar()">Cancelar</button>
+    <button class="btn primary" id="pegBtn" disabled onclick="pegImportar()">Importar</button>
+  </div>
+</div>
 <div id="tip"></div>
 <div class="toast" id="toast"></div>
 <datalist id="dlCli"></datalist>
@@ -805,9 +858,10 @@ function pintarLista(){
   if(!S.pedidos.length){
     document.getElementById('lista').innerHTML=`<div class="empty">
       <h3>Todavía no hay ningún pedido</h3>
-      <p>Aquí vas armando a mano cada pedido: el proyecto, el cliente, lo que le debes al fabricante
-         y el precio al que lo vendiste. Con eso solo ya salen el cupo y los estados de cuenta.</p>
-      <button class="btn primary" onclick="nuevoPedido()">Crear el primer pedido</button></div>`;
+      <p>Lo más rápido: abre tu <b>Documentación de compras</b>, selecciona de <b>A2</b> hasta la
+         última fila de la columna <b>S</b>, copia, y pégalo aquí. También puedes armarlos uno por uno.</p>
+      <button class="btn primary" onclick="abrirPegar()">Pegar desde Excel</button>
+      <button class="btn" style="margin-left:8px" onclick="nuevoPedido()">Crear uno a mano</button></div>`;
     return;
   }
   if(!ps.length){
@@ -1234,7 +1288,8 @@ function pintarRejilla(){
       <h3>La rejilla está vacía</h3>
       <p>Estampa de una vez todos los pedidos de una orden y después solo llenas lo que cambia,
          o abre filas en blanco y pega un bloque desde tu Excel.</p>
-      <button class="btn primary" onclick="plantillaOrden()">Plantilla de orden…</button>
+      <button class="btn primary" onclick="abrirPegar()">Pegar desde Excel</button>
+      <button class="btn" style="margin-left:8px" onclick="plantillaOrden()">Plantilla de orden…</button>
       <button class="btn" style="margin-left:8px" onclick="addFilas(10)">Abrir 10 filas en blanco</button></div>`;
     return;
   }
@@ -1249,6 +1304,7 @@ function pintarRejilla(){
       <div class="tmvent">${GRUPOS.map(g=>
         `<button class="${g[0]===GRUPO?'on':''}" onclick="setGrupo('${g[0]}')">${g[1]}</button>`).join('')}</div>
       <div style="flex:1"></div>
+      <button class="btn" onclick="abrirPegar()">Pegar desde Excel</button>
       <button class="btn" onclick="addFilas(5)">+ 5 filas</button>
       <button class="btn" onclick="plantillaOrden()">Plantilla de orden…</button>
     </div>
@@ -1630,6 +1686,129 @@ function aplicarFusiones(){
   toast(`Repartido en <b>${n}</b> fila(s) · quedan marcadas como grupo, por si quieres revisarlas`);
 }
 
+
+/* =========================================================================
+   CAJA DE PEGADO — la forma fácil de cargar el estado de cuenta entero.
+   Pegar dentro de la rejilla exige acertarle a la celda; aquí no: el
+   bloque siempre empieza en la columna A, se ve qué cayó en cada columna
+   y recién entonces se importa.
+   ========================================================================= */
+let PEG=null;
+function abrirPegar(){
+  document.getElementById('scrimPeg').classList.add('on');
+  document.getElementById('pegBox').classList.add('on');
+  const ta=document.getElementById('pegTa');
+  ta.value='';PEG=null;pegPreview();
+  setTimeout(()=>ta.focus(),120);
+}
+function cerrarPegar(){
+  document.getElementById('scrimPeg').classList.remove('on');
+  document.getElementById('pegBox').classList.remove('on');
+}
+function pegLeer(){
+  const txt=document.getElementById('pegTa').value;
+  if(!txt.trim()){PEG=null;pegPreview();return;}
+  /* Excel separa columnas con tabulador. Una celda con saltos de línea viene
+     entre comillas, así que se corta respetándolas. */
+  PEG={filas:partirTSV(txt)};
+  pegPreview();
+}
+function partirTSV(txt){
+  const out=[];let fila=[],cel='',q=false;
+  txt=txt.replace(/\r\n/g,'\n').replace(/\r/g,'\n');
+  for(let i=0;i<txt.length;i++){
+    const ch=txt[i];
+    if(q){
+      if(ch==='"'){ if(txt[i+1]==='"'){cel+='"';i++;} else q=false; }
+      else cel+=ch;
+    } else if(ch==='"'&&cel===''){ q=true; }
+    else if(ch==='\t'){ fila.push(cel);cel=''; }
+    else if(ch==='\n'){ fila.push(cel);out.push(fila);fila=[];cel=''; }
+    else cel+=ch;
+  }
+  if(cel!==''||fila.length){fila.push(cel);out.push(fila);}
+  /* fuera las filas totalmente vacías del final */
+  while(out.length&&out[out.length-1].every(c=>!(''+c).trim()))out.pop();
+  return out;
+}
+function pegPreview(){
+  const box=document.getElementById('pegPrev');
+  const btn=document.getElementById('pegBtn');
+  if(!PEG||!PEG.filas.length){
+    box.innerHTML='<div class="pegvacio">Pega aquí arriba y te muestro qué cayó en cada columna antes de importar nada.</div>';
+    btn.disabled=true;return;
+  }
+  const filas=PEG.filas, ancho=Math.max(...filas.map(f=>f.length));
+  const suyas=COLS.filter(c=>c.g==='tuyas');
+  const esEnc=f=>{const t=sinTildes(f.slice(0,4).join(' '));
+    return /equipo/.test(t)&&/cliente/.test(t);};
+  PEG.encabezado=esEnc(filas[0]);
+  const datos=PEG.encabezado?filas.slice(1):filas;
+  PEG.datos=datos;
+  const letra=i=>String.fromCharCode(65+i);
+  const mapa=[];
+  for(let i=0;i<ancho;i++){
+    const c=suyas[i];
+    const muestra=(datos.find(f=>(''+(f[i]||'')).trim())||[])[i]||'';
+    mapa.push({i,c,muestra:(''+muestra).replace(/\n/g,' / ').slice(0,30)});
+  }
+  const sobran=ancho-suyas.length;
+  box.innerHTML=`
+    <div class="pegres"><b>${datos.length}</b> fila(s) · <b>${ancho}</b> columna(s)
+      ${PEG.encabezado?'<span class="pegchip">se ignora la fila de encabezados</span>':''}
+      ${ancho!==suyas.length?`<span class="pegchip mal">tu hoja tiene ${suyas.length} columnas de la A a la S;
+        este bloque trae ${ancho}${sobran>0?`, así que ${sobran} se van a ignorar`:', así que las que falten quedan vacías'}</span>`:''}
+    </div>
+    <div class="pegmapa">${mapa.map(m=>`<div class="pegcol ${m.c?'':'mal'}">
+      <div class="pegl">${letra(m.i)} → ${m.c?esc(m.c.t):'<i>se ignora</i>'}</div>
+      <div class="pegv">${esc(m.muestra)||'<span class="muted">vacío</span>'}</div></div>`).join('')}</div>
+    ${S.pedidos.length?`<div class="pegmodo">
+      <label><input type="radio" name="pegmodo" value="agregar" checked
+        onchange="PEG.modo=this.value"> Agregar al final de los ${S.pedidos.length} que ya tienes</label>
+      <label><input type="radio" name="pegmodo" value="reemplazar"
+        onchange="PEG.modo=this.value"> Reemplazar los ${S.pedidos.length} por estos</label>
+    </div>`:''}`;
+  PEG.modo=S.pedidos.length?'agregar':'reemplazar';
+  btn.disabled=false;
+  btn.textContent='Importar '+datos.length+' fila(s)';
+}
+function pegImportar(){
+  if(!PEG||!PEG.datos||!PEG.datos.length)return;
+  const suyas=COLS.filter(c=>c.g==='tuyas');
+  const bloque=PEG.datos.map(f=>{const g=[];for(let i=0;i<suyas.length;i++)g.push(f[i]==null?'':f[i]);return g;});
+  if(PEG.modo==='reemplazar'){S.pedidos=[];S.seq=1;}
+  const base=S.pedidos.length;
+  bloque.forEach(()=>S.pedidos.push(pedidoNuevo()));
+
+  /* el orden de las fechas se decide mirando cada columna entera */
+  const ordenCol={};
+  suyas.forEach((c,j)=>{
+    if(c.f!=='etd'&&c.f!=='eta'&&c.tipo!=='fecha')return;
+    const o=ordenFechas(bloque.map(l=>l[j]));
+    if(o==='dmy'||o==='mdy'){ordenCol[j]=o;S.fechaOrden=o;}
+  });
+  bloque.forEach((lin,i)=>{
+    const p=S.pedidos[base+i];
+    suyas.forEach((c,j)=>colSet(c,p,aValor(c,lin[j],ordenCol[j])));
+  });
+
+  /* las filas que vienen de una celda combinada */
+  FUS=detectarFusiones(base,0,bloque,suyas);
+  if(!FUS.length)FUS=null;
+
+  marcarSucio();cerrarPegar();
+  MODO='rejilla';
+  document.getElementById('mv-lista').classList.remove('on');
+  document.getElementById('mv-rejilla').classList.add('on');
+  ajustarVisibilidad();pintarKpis();pintarCupoInputs();pintarTreemaps();
+  pintarRejilla();panelFusiones();pintarDatalists();
+  const n=bloque.length;
+  toast(`Importadas <b>${n}</b> fila(s)`+
+    (FUS?` · <b style="color:#ffcf8f">${FUS.length} grupo(s) comparten un valor: míralos arriba</b>`:'')+
+    ` · revísalo en la rejilla`);
+  PEG=null;
+}
+
 /* =========================================================================
    PESTAÑA ESTADOS DE CUENTA — el eje de la herramienta
    ========================================================================= */
@@ -1824,7 +2003,7 @@ function borrarTodo(){
    ========================================================================= */
 function pintarTodo(){pintarPedidos();if(VISTA==='ec')pintarEC();pintarGuardado();}
 document.addEventListener('keydown',e=>{
-  if(e.key==='Escape'){cerrarCajon();cerrarAjustes();}
+  if(e.key==='Escape'){cerrarCajon();cerrarAjustes();cerrarPegar();}
   if(e.key==='Enter'&&(e.metaKey||e.ctrlKey))cerrarCajon();
 });
 window.addEventListener('beforeunload',()=>{if(_dirty)guardar();});
