@@ -48,6 +48,41 @@ table.g4t input.n{width:104px;border:1px solid var(--rule2);border-radius:6px;pa
 .g4cmp .l{font-size:10.5px;color:var(--ink2);text-transform:uppercase;letter-spacing:.04em;font-weight:700}
 .g4cmp .v{font-size:19px;font-weight:700;font-variant-numeric:tabular-nums;margin-top:3px}
 .g4acts{display:flex;gap:8px;flex-wrap:wrap;padding:14px 22px;border-top:1px solid var(--rule);background:#FBFBFC}
+
+/* --- la hoja Sinosure tal cual --- */
+.sncols{display:grid;grid-template-columns:1fr 1fr;gap:22px;align-items:start}
+@media(max-width:1080px){.sncols{grid-template-columns:1fr}}
+.snhoja{background:var(--surface);border:1px solid var(--rule);border-radius:12px;overflow:hidden}
+.snht{padding:12px 16px;background:#FBFBFC;border-bottom:1px solid var(--rule);font-size:14px;font-weight:700}
+.snht span{float:right;font-size:11px;font-weight:400;color:var(--ink3);padding-top:3px}
+table.snt{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+table.snt td{padding:7px 10px;border-bottom:1px solid var(--rule);font-size:12.5px;vertical-align:top}
+table.snt td.c{width:42px;color:var(--ink3);font-size:10.5px;font-family:ui-monospace,Menlo,monospace;padding-top:9px}
+table.snt td.r{text-align:right;font-weight:600;white-space:nowrap;width:108px}
+table.snt td.r.neg{color:var(--danger)}
+table.snt td.p{width:40%;font-size:12px;color:var(--ink2)}
+table.snt .snm{font-size:10.5px;color:var(--ink3);margin-top:1px;line-height:1.4}
+table.snt tr.snzona td{background:#F4F5F6;font-size:10px;font-weight:700;text-transform:uppercase;
+  letter-spacing:.06em;color:var(--ink2);padding:7px 10px}
+table.snt tr.snzona .snzh{float:right;font-weight:400;text-transform:none;letter-spacing:0;
+  font-size:10.5px;color:var(--ink3)}
+table.snt tr.sntot td{background:#FBFBFC;font-weight:700;border-top:1px solid var(--rule2)}
+table.snt tr.difr td{background:var(--danger-soft)}
+table.snt tr.dupr td{background:var(--accent-soft)}
+table.snt tr.suelr td{background:var(--accent-soft)}
+table.snt tr.falta td{background:#F2F4F7}
+.snleyenda{display:flex;gap:16px;align-items:center;flex-wrap:wrap;margin:10px 0 14px;font-size:11.5px;color:var(--ink2)}
+.snleyenda .lg{display:flex;align-items:center;gap:6px}
+.snleyenda .lg i{width:11px;height:11px;border-radius:2px;display:inline-block;border:1px solid var(--rule2)}
+.snleyenda i.difr{background:var(--danger-soft)} .snleyenda i.dupr{background:var(--accent-soft)}
+.snleyenda i.falta{background:#F2F4F7}
+.snsim{padding:12px 16px;border-top:1px solid var(--rule);background:#FBFBFC;display:flex;
+  align-items:center;gap:8px;flex-wrap:wrap;font-size:12.5px;color:var(--ink2)}
+.snsim input{width:118px;border:1px solid var(--rule2);border-radius:7px;padding:5px 9px;font-size:12.5px;
+  text-align:right;font-variant-numeric:tabular-nums;background:var(--surface)}
+.snsim .simr{font-size:12.5px;color:var(--ink2)}
+.snsim .simr b{color:var(--ink)}
+
 /* --- sinosure --- */
 .snkpis{display:flex;border-top:1px solid var(--rule);border-bottom:1px solid var(--rule);margin-bottom:24px;flex-wrap:wrap}
 .snk{flex:1 1 180px;padding:15px 22px 15px 0;border-right:1px solid var(--rule)}
@@ -405,157 +440,226 @@ function gpTomarFac(id){
 }
 
 /* =============== PESTAÑA SINOSURE ===============
-   Otra vista del detailed: qué dice la hoja de Andrés pedido por pedido,
-   qué calcula la herramienta, dónde está el desfase y qué decides hacer. */
-let SNFIL='difs';
-function setSnFil(f){SNFIL=f;pintarSino();}
+   La hoja de Andrés tal como se ve en el detailed, celda por celda, con el
+   pedido al que apunta cada fórmula al lado. Más las tres decisiones que
+   de verdad se toman con ella: si cabe el próximo pedido, cuándo se libera
+   cupo, y qué hacer con lo que está en el aire. */
 
+/* Reconstruye los renglones de la hoja a partir de lo que ya quedó guardado:
+   cada línea de sinoDetalle es una celda de la hoja apuntando a un pedido. */
+function hojaSino(){
+  const C=CONCILIA; if(!C) return [];
+  const porCelda={};
+  Object.entries(C.sinoDetalle||{}).forEach(([clave,lineas])=>{
+    (lineas||[]).forEach(l=>{
+      const r=porCelda[l.celda]||(porCelda[l.celda]={celda:l.celda,etiqueta:l.etiqueta,
+        total:l.total,ref:l.ref,que:l.que,claves:[],conjunto:l.conjunto});
+      if(r.claves.indexOf(clave)<0) r.claves.push(clave);
+    });
+  });
+  (C.sinoDup||[]).forEach(d=>{porCelda[d.celda]={celda:d.celda,etiqueta:d.etiqueta,total:d.valor,
+    ref:d.ref,que:'',claves:[],dup:true,yaEn:d.yaEn,lado:d.lado,derrames:d.derrames||[]};});
+  (C.sinoSueltosL||[]).forEach(s=>{porCelda[s.celda]={celda:s.celda,etiqueta:s.etiqueta,total:s.valor,
+    ref:null,que:'',claves:[],suelto:true,lado:s.lado};});
+  const filas=Object.values(porCelda).map(r=>{
+    const col=(r.celda.match(/^[A-Z]+/)||['B'])[0], fil=+((r.celda.match(/\d+$/)||[0])[0]);
+    r.col=col; r.fil=fil; r.lado=r.lado||(col==='B'?'Singsun':'Eaglerise');
+    r.eqs=r.claves.map(k=>EQ.find(e=>kOf(e)===k)).filter(Boolean);
+    return r;
+  }).sort((a,b)=>a.fil-b.fil||a.col.localeCompare(b.col));
+
+  /* Andrés parte algunos pedidos en DOS renglones: uno por el anticipo y otro
+     por el balance (CFM 3.4 está en E10 y en E14). Comparar renglón contra
+     renglón marcaría las dos mitades como errores. La comparación se hace
+     contra el pedido completo, que es lo que sinoPorDerrame ya suma. */
+  const mapa=(C.sinoPorDerrame||{});
+  const hermanas={};
+  filas.forEach(r=>{ if(r.dup||r.suelto) return;
+    r.claves.forEach(k=>{ (hermanas[k]=hermanas[k]||[]).push(r.celda); }); });
+  filas.forEach(r=>{
+    if(r.dup||r.suelto){ r.mio=0; r.dif=0; r.cuadra=true; return; }
+    r.hojaPed=r.claves.reduce((s,k)=>s+(mapa[k]||0),0);
+    r.mio=r.eqs.reduce((s,e)=>s+consumoEq(e,e.mfg),0);
+    r.dif=Math.round((r.mio-r.hojaPed)*100)/100;
+    r.cuadra=Math.abs(r.dif)<=2;
+    /* las otras celdas del mismo pedido, para poder decirlo en la fila */
+    const otras=[...new Set(r.claves.flatMap(k=>hermanas[k]||[]))].filter(c=>c!==r.celda);
+    r.hermanas=otras;
+  });
+  return filas;
+}
+/* los pedidos vivos que la hoja no lista: no son renglones, pero sí plata */
+const fueraDeHoja=mfg=>EQ.filter(e=>e.mfg===mfg&&(+e.cupoSaldo||0)>0.5
+  &&((CONCILIA&&CONCILIA.sinoPorDerrame)||{})[kOf(e)]==null);
+
+let SNSIM={Singsun:'',Eaglerise:''};
 function pintarSino(){
   const cont=document.getElementById('v-sinosure'); if(!cont) return;
-  if(!EQ.length||!CONCILIA){
-    cont.innerHTML=`<div class="g4em"><h3>Sin datos del detailed</h3>
-      <p>Esta pestaña lee la hoja <b>Sinosure</b> de tu detailed: lo que declara pedido por pedido
-         frente a lo que calcula la herramienta. Carga los datos y vuelve.</p>
+  if(!EQ.length||!CONCILIA||!CONCILIA.sino){
+    cont.innerHTML=`<div class="g4em"><h3>Sin la hoja Sinosure</h3>
+      <p>Esta pestaña reproduce la hoja <b>Sinosure</b> de tu detailed, celda por celda,
+         con el pedido al que apunta cada fórmula. Carga el detailed y vuelve.</p>
       <button class="btn" onclick="verifyOpen()">Cargar datos</button></div>`;
     return;
   }
-  const al=alarmasCupo()||{sinConfirmar:[],dup:[],sueltos:[],montoDistinto:[]};
-  const kc=mfg=>{
-    const c=cupoConcilia(mfg), disp=c.cupo-c.usado;
-    const decl=c.declarado;
-    return `<div class="snk"><div class="l">${mfg==='Singsun'?'Singsun · trackers':'Eaglerise · shelters'}</div>
-      <div class="v ${disp<0?'mal':'ok'}">${disp<0?'−':''}US$ ${fmtUSDs(Math.abs(disp))}</div>
-      <div class="d">usado <b>${fmtUSDs(c.usado)}</b> de ${fmtUSDs(c.cupo)}
-      ${decl!=null?`<br>la hoja declara <b>${fmtUSDs(decl)}</b>${Math.abs(decl-c.usado)>2
-        ?` · <b style="color:var(--dato-debo)">desfase ${fmtUSDs(Math.abs(decl-c.usado))}</b>`:' · cuadra'}`:''}</div></div>`;
+  const filas=hojaSino();
+  const S=CONCILIA.sino;
+  const col=mfg=>{
+    const fs=filas.filter(r=>r.lado===mfg);
+    const ents=(S.cuposPorEntidad||{})[mfg]||{};
+    const techo=+S.cupos[mfg]||0;
+    const declara=mfg==='Singsun'?S.totalSingsun:S.totalEagle;
+    const dispHoja=mfg==='Singsun'?S.dispSingsun:S.dispEagle;
+    const mio=EQ.filter(e=>e.mfg===mfg).reduce((s,e)=>s+consumoEq(e,e.mfg),0);
+    const fuera=fueraDeHoja(mfg);
+    return `<div class="snhoja">
+      <div class="snht">${mfg==='Singsun'?'Singsun':'Eagle'}<span>columna ${mfg==='Singsun'?'A–B':'D–E'} de la hoja</span></div>
+      <table class="snt">
+        <tr class="snzona"><td colspan="4">Cupos</td></tr>
+        ${Object.entries(ents).map(([k,v])=>`<tr><td class="c"></td><td>${esc4(k)}</td>
+          <td class="r">${fmtUSDs(v)}</td><td></td></tr>`).join('')}
+        <tr class="sntot"><td class="c"></td><td>Total</td><td class="r">${fmtUSDs(techo)}</td><td></td></tr>
+        <tr class="snzona"><td colspan="4">Consumo<span class="snzh">celda · lo que dice Andrés · a qué pedido apunta</span></td></tr>
+        ${fs.map(r=>{
+          const cls=r.dup?'dupr':(r.suelto?'suelr':(!r.cuadra?'difr':''));
+          return `<tr class="${cls}">
+            <td class="c" title="${esc4(r.ref||'sin fórmula')}">${esc4(r.celda)}</td>
+            <td>${esc4(r.etiqueta)}
+              <div class="snm">${r.dup?`<b>repite ${esc4(r.yaEn)}</b> · ${esc4(r.ref||'')}`
+                :r.suelto?'<b>no cae en ningún pedido</b>'
+                :`${esc4(r.ref||'escrito a mano')}${r.que?' · '+esc4(r.que):''}`}</div></td>
+            <td class="r">${fmtUSDs(r.total)}</td>
+            <td class="p">${r.dup?`<span class="g4tag avi">no suma</span>`
+              :r.suelto?`<span class="g4tag mal">suelto</span>`
+              :r.eqs.length?`${r.eqs.map(e=>esc4(e.derrame)).join(', ')}
+                 ${(r.hermanas&&r.hermanas.length)
+                   ? `<div class="snm">+ ${r.hermanas.map(esc4).join(', ')} · entre todas <b>${fmtUSDs(r.hojaPed)}</b></div>`:''}
+                 ${!r.cuadra?`<div class="snm" style="color:var(--danger)">yo cuento ${fmtUSDs(r.mio)}
+                   · ${r.dif>0?'+':''}${fmtUSDs(r.dif)}</div>`:'<div class="snm">cuadra</div>'}`
+              :'<span class="g4tag mal">sin pedido</span>'}</td></tr>`;}).join('')}
+        <tr class="sntot"><td class="c"></td><td>Consumo total</td>
+          <td class="r">${fmtUSDs(declara)}</td>
+          <td class="p">${Math.abs(mio-declara)>2
+            ? `<span style="color:var(--danger)">yo cuento ${fmtUSDs(mio)}</span>`:'<span style="color:var(--ok)">cuadra</span>'}</td></tr>
+        <tr class="sntot"><td class="c"></td><td>Cupo disponible</td>
+          <td class="r ${dispHoja<0?'neg':''}">${fmtUSDs(dispHoja)}</td>
+          <td class="p">${Math.abs((techo-mio)-dispHoja)>2
+            ? `<span style="color:var(--danger)">yo: ${fmtUSDs(techo-mio)}</span>`:''}</td></tr>
+        ${fuera.length?`<tr class="snzona"><td colspan="4">Lo que la hoja todavía no lista
+            <span class="snzh">no está en el archivo de Andrés, pero es plata comprometida</span></td></tr>
+          ${fuera.map(e=>`<tr class="falta"><td class="c">—</td>
+            <td>${esc4(e.derrame)}<div class="snm">${esc4(projOf(e)||'')}</div></td>
+            <td class="r">${fmtUSDs(consumoEq(e,e.mfg,'andres'))}</td>
+            <td class="p">${selSino(e)}</td></tr>`).join('')}
+          <tr class="sntot"><td class="c"></td><td>Si Andrés los carga, quedarías en</td>
+            <td class="r ${(techo-mio-fuera.reduce((s,e)=>s+consumoEq(e,e.mfg,'andres'),0))<0?'neg':''}">${
+              fmtUSDs(techo-mio-fuera.reduce((s,e)=>s+(consumoEq(e,e.mfg)>0?0:consumoEq(e,e.mfg,'andres')),0))}</td>
+            <td></td></tr>`:''}
+      </table>
+      <div class="snsim">
+        <label>¿Me cabe un pedido de</label>
+        <input type="number" placeholder="0" value="${SNSIM[mfg]}"
+          oninput="SNSIM['${mfg}']=this.value;simSino('${mfg}')">
+        <label>USD?</label>
+        <span id="sim${mfg}" class="simr">${simTexto(mfg)}</span>
+      </div>
+    </div>`;
   };
-  const nAl=al.sinConfirmar.length+al.dup.length+al.sueltos.length+al.montoDistinto.length;
 
   cont.innerHTML=`
-    <div class="snkpis">${kc('Singsun')}${kc('Eaglerise')}
-      <div class="snk"><div class="l">Desfases por resolver</div>
-        <div class="v ${nAl?'mal':'ok'}">${nAl}</div>
-        <div class="d">${nAl?'míralos abajo y decide':'todo conciliado'}</div></div>
-      <div class="snk"><div class="l">Regla de conteo</div>
-        <div class="v" style="font-size:15px;font-weight:600;line-height:1.3;margin-top:7px">
-          ${CUPO_REGLAS[CONFIG.cupoRegla||'sinosure'].split(',')[0]}</div>
-        <div class="d"><a href="#" onclick="navTo('config');return false" style="color:var(--ink2)">cambiar en Ajustes</a></div></div>
-    </div>
-
-    ${nAl?`<div class="g4av">
-      ${al.sinConfirmar.length?`<div><b>${al.sinConfirmar.length} pedido(s) con saldo que la hoja no lista.</b>
-        Son plata que va a caer al cupo apenas Andrés los cargue:
-        ${al.sinConfirmar.map(x=>esc4(x.e.derrame)+' '+fmtUSDs(x.monto)).join(' · ')}.
-        Decídelos uno por uno en la tabla.</div>`:''}
-      ${al.dup.length?`<div style="margin-top:7px"><b>${al.dup.length} renglón(es) repetido(s) en la hoja.</b>
-        ${al.dup.map(d=>esc4(d.celda)+' apunta a '+esc4(d.ref)+', ya contado en '+esc4(d.yaEn)+' ('+fmtUSDs(d.valor)+')').join(' · ')}.
-        Hoy ${CONFIG.contarDupSino?'<b>sí</b> suman':'<b>no</b> suman'};
-        <a href="#" onclick="setDupSino('${CONFIG.contarDupSino?'no':'si'}');pintarSino();return false">cambiarlo</a>.</div>`:''}
-      ${al.sueltos.length?`<div style="margin-top:7px"><b>${al.sueltos.length} renglón(es) de la hoja sin pedido.</b>
-        ${al.sueltos.map(x=>esc4(x.celda)+' "'+esc4(x.etiqueta)+'" '+fmtUSDs(x.valor)).join(' · ')}</div>`:''}
-      ${al.montoDistinto.length?`<div style="margin-top:7px"><b>${al.montoDistinto.length} pedido(s) donde el ORDER REPORT y el detailed no valen lo mismo.</b>
-        ${al.montoDistinto.map(d=>esc4(d.po)+': report '+fmtUSDs(d.or)+' vs detailed '+fmtUSDs(d.det)).join(' · ')}</div>`:''}
-    </div>`:''}
-
-    <div class="sec" style="display:flex;align-items:center;gap:12px;margin:22px 0 12px">
-      <h2 style="font-size:16px;font-weight:600">Pedido por pedido</h2>
-      <div style="font-size:12.5px;color:var(--ink2)">qué declara la hoja, qué cuento yo y qué decides</div>
-    </div>
-    <div class="snfil">
-      ${[['difs','Solo los que no cuadran'],['todos','Todos'],['sin','Sin cupo asignado'],
-         ['man','Decididos a mano'],['Singsun','Trackers'],['Eaglerise','Shelters']]
-        .map(f=>`<button class="chip ${SNFIL===f[0]?'on':''}" onclick="setSnFil('${f[0]}')">${f[1]}</button>`).join('')}
+    <div class="sec" style="display:flex;align-items:baseline;gap:12px;margin-bottom:6px">
+      <h2 style="font-size:16px;font-weight:600">La hoja Sinosure</h2>
+      <div style="font-size:12.5px;color:var(--ink2)">como la ves en el detailed, con el pedido al que apunta cada fórmula</div>
       <div style="flex:1"></div>
       <button class="btn" onclick="exportarSino()">Copiar para Andrés</button>
     </div>
-    <div class="tblwrap">${tablaSino()}</div>`;
+    <div class="snleyenda">
+      <span class="lg"><i class="difr"></i>el pedido no cuadra con lo que cuento</span>
+      <span class="lg"><i class="dupr"></i>renglón repetido</span>
+      <span class="lg"><i class="falta"></i>pedido que la hoja no lista</span>
+      <span class="lg" style="margin-left:auto">${CONFIG.contarDupSino?'los repetidos <b>sí</b> suman':'los repetidos <b>no</b> suman'}
+        · <a href="#" onclick="setDupSino('${CONFIG.contarDupSino?'no':'si'}');pintarSino();return false">cambiarlo</a></span>
+    </div>
+    <div class="sncols">${col('Singsun')}${col('Eaglerise')}</div>
+    ${timelineSino()}`;
+}
+const selSino=e=>`<select class="snsel ${e.sinoManual==='si'?'si':e.sinoManual==='no'?'no':''}"
+  onchange="setSinoManual('${esc4(e.derrame)}','${e.mfg}',this.value);pintarSino()">
+  ${[['','pendiente'],['si','cuéntalo ya'],['no','déjalo fuera']]
+    .map(o=>`<option value="${o[0]}" ${o[0]===(e.sinoManual||'')?'selected':''}>${o[1]}</option>`).join('')}</select>`;
+
+/* --- ¿me cabe? --- */
+function simTexto(mfg){
+  const v=+SNSIM[mfg]||0;
+  const techo=+CUPO[mfg]||0, usado=EQ.filter(e=>e.mfg===mfg).reduce((s,e)=>s+consumoEq(e,e.mfg),0);
+  const libre=techo-usado;
+  if(!v) return `te quedan <b>${fmtUSDs(libre)}</b>`;
+  const queda=libre-v;
+  if(queda>=0) return `<b style="color:var(--ok)">sí cabe</b> · quedarías con ${fmtUSDs(queda)}`;
+  /* qué tendrías que girar primero para que quepa */
+  const cand=EQ.filter(e=>e.mfg===mfg&&consumoEq(e,e.mfg)>0)
+    .map(e=>({e,libera:consumoEq(e,e.mfg),saldo:+e.cupoSaldo||0,
+              f:e.limitePago?new Date(e.limitePago):null}))
+    .sort((a,b)=>b.libera-a.libera);
+  let falta=-queda, girar=0, cuales=[];
+  for(const c of cand){ if(falta<=0) break; cuales.push(c); girar+=c.saldo; falta-=c.libera; }
+  return `<b style="color:var(--danger)">no cabe por ${fmtUSDs(-queda)}</b>`+
+    (cuales.length?` · girando ${fmtUSDs(girar)} de ${cuales.map(c=>esc4(c.e.derrame)).join(', ')} sí cabría`:'');
+}
+function simSino(mfg){const el=document.getElementById('sim'+mfg); if(el) el.innerHTML=simTexto(mfg);}
+
+/* --- cuándo se libera cupo --- */
+function timelineSino(){
+  const hoy=new Date(); hoy.setHours(0,0,0,0);
+  const items=EQ.filter(e=>e.limitePago&&consumoEq(e,e.mfg)>0.5)
+    .map(e=>({e,f:new Date(e.limitePago),libera:consumoEq(e,e.mfg),girar:+e.cupoSaldo||0}))
+    .sort((a,b)=>a.f-b.f);
+  if(!items.length) return '';
+  const acum={Singsun:0,Eaglerise:0};
+  const libre=m=>(+CUPO[m]||0)-EQ.filter(e=>e.mfg===m).reduce((s,e)=>s+consumoEq(e,e.mfg),0);
+  const base={Singsun:libre('Singsun'),Eaglerise:libre('Eaglerise')};
+  return `<div class="sec" style="display:flex;align-items:baseline;gap:12px;margin:30px 0 10px">
+      <h2 style="font-size:16px;font-weight:600">Cuándo se te libera cupo</h2>
+      <div style="font-size:12.5px;color:var(--ink2)">el cupo se suelta el día que gires el saldo de cada pedido</div></div>
+    <div class="tblwrap"><table class="g4t"><thead><tr>
+      <th>Fecha límite</th><th>Pedido</th><th>Fabricante</th>
+      <th class="r">Tienes que girar</th><th class="r">Se libera</th><th class="r">Cupo libre después</th>
+    </tr></thead><tbody>
+      ${items.map(it=>{
+        acum[it.e.mfg]+=it.libera;
+        const d=Math.round((it.f-hoy)/86400000);
+        return `<tr>
+          <td>${fmtD(it.f)}<div class="snm" style="${d<0?'color:var(--danger);font-weight:600':''}">${
+            d<0?`vencida hace ${-d} d`:d===0?'es hoy':`en ${d} días`}</div></td>
+          <td><b>${esc4(it.e.derrame)}</b><div class="snm">${esc4(projOf(it.e)||'')}</div></td>
+          <td>${it.e.mfg}</td>
+          <td class="r">${fmtUSDs(it.girar)}</td>
+          <td class="r">${fmtUSDs(it.libera)}</td>
+          <td class="r"><b>${fmtUSDs(base[it.e.mfg]+acum[it.e.mfg])}</b></td></tr>`;}).join('')}
+    </tbody></table></div>`;
 }
 
-function filasSino(){
-  const idx=(CONCILIA&&CONCILIA.sinoPorDerrame)||{};
-  return EQ.map(e=>{
-    const mfg=e.mfg;
-    const suyo=idx[kOf(e)]!=null?idx[kOf(e)]:null;
-    const mio=consumoEq(e,mfg);
-    const dup=(CONCILIA.sinoDupPorDerrame||{})[kOf(e)]||0;
-    return {e,mfg,suyo,mio,dup,dif:Math.round((mio-(suyo==null?0:suyo))*100)/100,
-      cuadra:suyo!=null&&Math.abs(mio-suyo)<2};
-  }).filter(r=>{
-    if(SNFIL==='Singsun'||SNFIL==='Eaglerise') return r.mfg===SNFIL;
-    if(SNFIL==='sin')  return r.suyo==null&&(+r.e.cupoSaldo||0)>0.5;
-    if(SNFIL==='man')  return !!r.e.sinoManual;
-    if(SNFIL==='difs') return !r.cuadra&&((+r.e.cupoSaldo||0)>0.5||r.suyo!=null);
-    return true;
-  }).sort((a,b)=>Math.abs(b.dif)-Math.abs(a.dif));
-}
-
-function tablaSino(){
-  const fs=filasSino();
-  if(!fs.length) return `<div style="padding:34px;text-align:center;color:var(--ink3);font-size:13px">
-    Nada en este filtro.${SNFIL==='difs'?' Todo lo que la hoja lista cuadra con lo que cuenta la herramienta.':''}</div>`;
-  const sel=r=>{
-    const v=r.e.sinoManual||'';
-    return `<select class="snsel ${v==='si'?'si':v==='no'?'no':''}"
-      title="¿El saldo de este pedido entra al cupo Sinosure?"
-      onchange="setSinoManual('${esc4(r.e.derrame)}','${r.mfg}',this.value);pintarSino()">
-      ${[['','lo que diga la hoja'],['si','sí entra'],['no','no entra']]
-        .map(o=>`<option value="${o[0]}" ${o[0]===v?'selected':''}>${o[1]}</option>`).join('')}</select>`;
-  };
-  const motivo=r=>{
-    if(r.e.sinoManual==='si') return '<span class="g4tag avi">lo metí yo a mano</span>';
-    if(r.e.sinoManual==='no') return '<span class="g4tag avi">lo saqué yo a mano</span>';
-    if(r.suyo==null) return '<span class="g4tag mal">la hoja no lo lista</span>';
-    if(r.cuadra) return '<span class="g4tag ok">cuadra</span>';
-    return r.dif>0?'<span class="g4tag mal">cuento más que la hoja</span>'
-                  :'<span class="g4tag avi">cuento menos que la hoja</span>';
-  };
-  return `<table class="g4t"><thead><tr>
-    <th>Pedido</th><th>Proyecto</th><th>Estado</th>
-    <th class="r">Monto fáb.</th><th class="r">Saldo fáb.</th>
-    <th class="r">Dice la hoja</th><th class="r">Cuento yo</th><th class="r">Desfase</th>
-    <th>Por qué</th><th>¿Entra al cupo?</th>
-  </tr></thead><tbody>
-    ${fs.map(r=>`<tr>
-      <td><b>${esc4(r.e.derrame)}</b><div style="font-size:11px;color:var(--ink3)">${esc4(r.e.cliente)} · ${r.mfg||'—'}</div></td>
-      <td>${esc4(projOf(r.e)||'—')}</td>
-      <td><span class="g4tag">${STAGE[r.e.st]||'—'}</span></td>
-      <td class="r">${fmtUSDs(+r.e.cupoMonto||0)}</td>
-      <td class="r">${fmtUSDs(+r.e.cupoSaldo||0)}</td>
-      <td class="r">${r.suyo==null?'<span style="color:var(--ink3)">no lo lista</span>'
-        :fmtUSDs(r.suyo)+(r.dup?`<div style="font-size:10.5px;color:var(--dato-debo)">+${fmtUSDs(r.dup)} repetido</div>`:'')}</td>
-      <td class="r"><b>${fmtUSDs(r.mio)}</b></td>
-      <td class="r">${r.suyo==null
-        ? (r.mio>0.5?`<span class="sndif mas">+${fmtUSDs(r.mio)}</span>`
-                    :`<span class="sndif mas" style="font-weight:400;color:var(--ink3)">+${fmtUSDs(consumoEq(r.e,r.mfg,'andres'))} si entra</span>`)
-        : `<span class="sndif ${r.dif>0?'mas':r.dif<0?'menos':''}">${(r.dif>0?'+':'')+fmtUSDs(r.dif)}</span>`}</td>
-      <td>${motivo(r)}</td>
-      <td>${sel(r)}</td>
-    </tr>`).join('')}
-    <tr class="tt"><td colspan="5">Total de lo filtrado</td>
-      <td class="r">${fmtUSDs(fs.reduce((s,r)=>s+(r.suyo||0),0))}</td>
-      <td class="r">${fmtUSDs(fs.reduce((s,r)=>s+r.mio,0))}</td>
-      <td class="r">${fmtUSDs(fs.reduce((s,r)=>s+(r.suyo==null?0:r.dif),0))}</td>
-      <td colspan="2"></td></tr>
-  </tbody></table>`;
-}
-
-/* El resumen que le puedes mandar al dueño del detailed */
+/* El cuadro que le puedes mandar al dueño del detailed */
 function exportarSino(){
-  const fs=filasSino();
-  const l=['Pedido\tProyecto\tFabricante\tEstado\tMonto fab.\tSaldo fab.\tHoja Sinosure\tHerramienta\tDesfase\tPor qué'];
-  fs.forEach(r=>l.push([r.e.derrame,(projOf(r.e)||''),r.mfg||'',STAGE[r.e.st]||'',
-    Math.round(+r.e.cupoMonto||0),Math.round(+r.e.cupoSaldo||0),
-    r.suyo==null?'no lo lista':Math.round(r.suyo),Math.round(r.mio),
-    r.suyo==null?'':Math.round(r.dif),
-    r.e.sinoManual?'decidido a mano':(r.suyo==null?'la hoja no lo lista':(r.cuadra?'cuadra':'no cuadra'))].join('\t')));
+  const filas=hojaSino();
+  const l=['Celda\tLo que dice la hoja\tValor\tFórmula\tPedido\tLo que cuento yo\tDesfase\tObservación'];
+  filas.forEach(r=>l.push([r.celda,r.etiqueta,Math.round(r.total),r.ref||'sin fórmula',
+    r.eqs.map(e=>e.derrame).join(' + ')||'—',
+    r.dup||r.suelto?'':Math.round(r.mio), r.dup||r.suelto?'':(r.cuadra?0:Math.round(r.dif)),
+    r.dup?('repite '+r.yaEn+': cuenta dos veces la misma celda'):
+    r.suelto?'no cae en ningún pedido':
+    ((r.hermanas&&r.hermanas.length?'con '+r.hermanas.join(', ')+' suma '+Math.round(r.hojaPed)+' · ':'')
+      +(r.cuadra?'ok':'no cuadra'))].join('\t')));
+  ['Singsun','Eaglerise'].forEach(m=>fueraDeHoja(m).forEach(e=>
+    l.push(['—',e.derrame,Math.round(consumoEq(e,m,'andres')),'','','','','falta en la hoja'])));
   const txt=l.join('\n');
-  const ta=document.createElement('textarea');
-  ta.value=txt; ta.style.position='fixed'; ta.style.opacity='0';
+  const ta=document.createElement('textarea'); ta.value=txt;
+  ta.style.position='fixed'; ta.style.opacity='0';
   document.body.appendChild(ta); ta.select();
   let ok=false; try{ ok=document.execCommand('copy'); }catch(e){}
   document.body.removeChild(ta);
-  toast(ok?`Copiadas <b>${fs.length}</b> fila(s) · pégalas en un correo o en Excel`
-          :'No se pudo copiar solo · abre la consola del navegador y cópialo de ahí');
+  toast(ok?`Copiada la hoja con <b>${filas.length}</b> renglón(es) y su mapeo · pégala en un correo`
+          :'No se pudo copiar solo · está en la consola del navegador');
   if(!ok) console.log(txt);
 }
 
