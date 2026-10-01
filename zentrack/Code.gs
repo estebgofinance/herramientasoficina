@@ -19,11 +19,27 @@
 var DB_SHEET = 'DB_State';
 var CHUNK    = 45000; // < 50.000 caracteres (límite de una celda de Sheets)
 
-/** Sirve el frontend (tu HTML) como aplicación web. */
+/**
+ * Sirve el frontend como aplicación web.
+ *
+ * El HTML va partido en cinco archivos porque pegar 280 KB de una sola vez en
+ * el editor de Apps Script se corta a media pegada, y si el corte cae dentro
+ * del bloque <style> el navegador se traga el resto del documento como CSS y
+ * la página sale EN BLANCO.  Partido, ningún archivo pasa de 80 KB.
+ *
+ * Archivos HTML que tiene que haber en el proyecto:
+ *   Index · Estilos · Motor1 · Motor2 · Motor3
+ */
 function doGet() {
-  return HtmlService.createHtmlOutputFromFile('Index')
+  return HtmlService.createTemplateFromFile('Index')
+    .evaluate()
     .setTitle('Zentrack · Control')
     .addMetaTag('viewport', 'width=device-width, initial-scale=1, viewport-fit=cover');
+}
+
+/** Pega el contenido de otro archivo HTML dentro de Index, sin escapar nada. */
+function include(nombre) {
+  return HtmlService.createHtmlOutputFromFile(nombre).getContent();
 }
 
 /** Devuelve (o crea) la hoja donde vive el estado. */

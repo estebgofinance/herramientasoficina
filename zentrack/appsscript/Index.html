@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Zentrack · Control</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&display=swap" rel="stylesheet">
+<?!= include('Estilos'); ?>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>if(window["pdfjsLib"]){pdfjsLib.GlobalWorkerOptions.workerSrc="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";}</script>
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+</head>
+<body>
+<div class="shell">
+  <header class="bar">
+    <div class="brand"><span class="mark"></span><h1>Zentrack</h1><span>Control de cartera y cupo</span></div>
+    <button class="loadbtn" onclick="verifyOpen()"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" style="width:14px;height:14px"><path d="M8 2v8M5 7l3 3 3-3M3 13h10"/></svg> Cargar datos</button>
+    <button class="loadbtn" style="margin-left:6px;background:#0d9488;color:#fff;border-color:#0d9488" onclick="facWizOpen()"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" style="width:14px;height:14px"><path d="M4 2h6l3 3v9H4V2zM10 2v3h3"/></svg> Cargar facturas</button>
+    <div class="corte">
+      <b>v0.21</b> · 1 oct 2026 · cantidades reales y cupo Sinosure pedido por pedido<br><span style="color:var(--ink3)">si arriba a la derecha no dice v0.21, tu navegador está mostrando la versión vieja: Ctrl+Shift+R</span>
+    </div>
+  </header>
+
+  <nav class="tabs">
+    <button data-v="hoy" class="on">Tablero</button>
+    <button data-v="pedidos">Pedidos</button>
+    <button data-v="clientes">Clientes</button>
+    <button data-v="pagos">Pagos</button>
+    <button data-v="config">Ajustes</button>
+  </nav>
+
+  <div class="cmd">
+    <div class="box">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="7" cy="7" r="5"/><path d="M11 11l3 3"/></svg>
+      <input id="cmd" placeholder="Buscar una orden, un proyecto o un cliente" autocomplete="off">
+      <div class="cmd-results" id="cmdResults"></div>
+    </div>
+  </div>
+
+  <main>
+    <!-- ============ HOY ============ -->
+    <section class="view on" id="v-hoy">
+      <h2 class="title" id="hoyDate"></h2>
+      <div class="tb-sub" id="tbFuente"></div>
+      <div class="kpis" id="tbKpis"></div>
+
+      <div class="seg tm-mode" id="tmModeSeg">
+        <button data-tm="proyecto" class="on" onclick="setTmMode('proyecto',this)">Ver por proyecto</button>
+        <button data-tm="orden" onclick="setTmMode('orden',this)">Ver por orden</button>
+      </div>
+      <div class="cupo-cols">
+        <div class="cupo-col">
+          <h3 id="h3Singsun"></h3>
+          <svg id="tmSingsun" class="tm" viewBox="0 0 560 300" preserveAspectRatio="none"></svg>
+          <div class="tmcap" id="capSingsun"></div>
+        </div>
+        <div class="cupo-col">
+          <h3 id="h3Eaglerise"></h3>
+          <svg id="tmEaglerise" class="tm" viewBox="0 0 560 300" preserveAspectRatio="none"></svg>
+          <div class="tmcap" id="capEaglerise"></div>
+        </div>
+      </div>
+      <div class="tm-legend" id="tmLegend"></div>
+    </section>
+
+    <!-- ============ PEDIDOS ============ -->
+    <section class="view" id="v-pedidos">
+      <h2 class="title">Órdenes y pedidos</h2>
+      <div class="sub">La orden madre es el pedido completo que montamos a fábrica; cada pedido que se saca de ella es una fila del ORDER REPORT (7-2, 7-3, CFM 3-4…). Abre una orden para ver, pedido por pedido, el saldo del cupo, los otros componentes y lo que te debe el cliente.</div>
+
+      <div class="filters" id="filters">
+        <button class="chip on" data-f="todos">Todas</button>
+        <button class="chip" data-f="Tracker">Trackers</button>
+        <button class="chip" data-f="Shelter">Shelters</button>
+        <button class="chip" data-f="pipeline">Con equipos sin embarcar</button>
+        <button class="chip" data-f="vencida">Balance a China vencido</button>
+      </div>
+
+      <table class="ledger">
+        <thead><tr>
+          <th style="width:120px">Orden</th>
+          <th>Cliente</th>
+          <th>Estado de los equipos</th>
+          <th class="r">Cupo comprometido</th>
+          <th class="r">Balance por pagar</th>
+        </tr></thead>
+        <tbody id="ledger"></tbody>
+      </table>
+    </section>
+
+    <!-- ============ CLIENTES ============ -->
+    <section class="view" id="v-clientes">
+      <h2 class="title">Clientes</h2>
+      <div class="sub">Lo que te deben. Solenium va por el ORDER REPORT (anticipo, balance y logística de cada pedido); los clientes externos van por factura. Previsualiza el estado de cuenta como lo va a ver el cliente y sácalo en PDF o Excel.</div>
+      <div class="cl-grid">
+        <div class="cl-list" id="clList"></div>
+        <div class="cl-detail" id="clDetail"></div>
+      </div>
+    </section>
+
+    <!-- ============ PLANIFICADOR ============ -->
+    <section class="view" id="v-pagos">
+      <h2 class="title">Pagos</h2>
+      <div class="sub">Lo que entra de tus clientes y lo que le giras a China (Nexus por los trackers, Eaglerise por los shelters, y los otros componentes). La herramienta propone cómo repartir el giro y tú lo confirmas; todo admite abonos parciales y se puede reversar.</div>
+      <div class="pagos-grid">
+        <div class="pagos-form">
+          <div class="seg" id="pagoTipoSeg">
+            <button data-t="in" class="on">Entra · cliente</button>
+            <button data-t="out">Sale · China</button>
+          </div>
+          <div id="pagoForm"></div>
+        </div>
+        <div class="pagos-hist"><div class="ph">Historial de pagos</div><div id="pagoHist"></div></div>
+      </div>
+    </section>
+
+    <!-- ============ CONFIG CUPO ============ -->
+    <section class="view" id="v-config">
+      <h2 class="title">Ajustes</h2>
+      <div class="sub">Aquí se tunea todo lo que funciona por regla: cómo se cuenta el cupo Sinosure, el anticipo y el plazo de cada fabricante, los días que le transmites a cada cliente y la TRM de proyección. Lo demás lo lee la herramienta del ORDER REPORT.</div>
+      <div class="cfgsec">Cupo Sinosure</div>
+      <div id="cfgReglaCupo"></div>
+      <div id="cfgBody" class="cfg-cards"></div>
+      <div class="cfgsec">TRM para lo que aún no tiene factura</div>
+      <div id="cfgTrm"></div>
+      <div class="cfgsec">Clientes y plazos</div>
+      <div class="cfgnote2">A cada cliente le transmites menos días de los que te da China: esa gávela es tuya. Ajusta los días cliente por cliente. Un cliente nuevo entra con su plazo y con la forma en que le aplicas los pagos.</div>
+      <div id="cfgClientes"></div>
+      <div class="cfgsec">Mantenimiento</div>
+      <div class="cfgnote2">Re-reparte el saldo del cupo entre anticipo y balance según el último cruce. No borra precios de venta, logística ni clientes.</div>
+      <div style="margin:10px 0"><button class="prbtn" style="background:var(--z-orange);color:#fff;border:none" onclick="recalcularSaldos()">↻ Re-repartir saldo (col. O) entre anticipo y balance</button></div>
+      <div class="cfgsec">Cargas del ORDER REPORT · para devolverte si algo salió mal</div>
+      <div class="cfgnote2">Cada aprobación queda archivada. Puedes revertir a la anterior (deshace la carga; los pagos que registraste después se pierden si dependían de ese corte), o volver a abrir la última para corregir un dato (se aprueba como corrección y las anteriores se conservan).</div>
+      <div id="cfgHist"></div>
+      <div class="cfgsec">Excepciones · pedidos que consumen cupo distinto</div>
+      <div class="cfgnote2">Cuando un caso se sale de la regla (un shelter que salió sin anticipo y cargó 100%, un equipo guardado en zona franca), fíjalo aquí sin tocar la regla general.</div>
+      <div id="cfgExc"></div>
+    </section>
+  </main>
+</div>
+
+<!-- detail panel -->
+<div class="scrim" id="scrim"></div>
+<aside class="panel" id="panel"></aside>
+
+<!-- reconcile modal -->
+<div class="modal-scrim" id="editCliScrim"><div class="modal" style="width:min(1200px,96vw);max-height:88vh;overflow-y:auto"><div id="editCliBody"></div></div></div>
+<div class="modal-scrim" id="reconScrim">
+  <div class="modal wide">
+    <div class="mh">
+      <h3 id="reconTitle">Cargar datos</h3>
+      <p id="reconSub">Revisa dato por dato lo que se va a cargar. Nada se escribe hasta que apruebes.</p>
+    </div>
+    <div class="mb" id="reconBody"></div>
+    <div class="mf" id="reconFoot">
+      <button class="cancel" onclick="closeRecon()">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<input type="file" id="reportFile" accept=".xlsx,.xls" style="display:none">
+<input type="file" id="reportOldFile" accept=".xlsx,.xls" style="display:none">
+<div class="tl-tip" id="tip"></div>
+<div class="toast" id="toast"></div>
+
+<?!= include('Motor1'); ?>
+<?!= include('Motor2'); ?>
+<?!= include('Motor3'); ?>
+
+</body>
+</html>
