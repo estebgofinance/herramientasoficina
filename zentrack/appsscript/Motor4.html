@@ -564,4 +564,33 @@ document.querySelectorAll('nav.tabs button[data-v="precios"],nav.tabs button[dat
   .forEach(b=>b.addEventListener('click',()=>{ b.dataset.v==='precios'?pintarPrecios():pintarSino(); }));
 
 console.log('%cMotor4 v0.22 · precios por grupo + Sinosure','background:#FD9C10;color:#17181A;padding:3px 9px;border-radius:4px;font-weight:700');
+
+/* =============== NO DEJAR DOS PRECIOS PELEANDO ===============
+   En "Editar cliente" hay una casilla de precio por pedido. Si ese pedido
+   ya está en un grupo, el grupo manda y lo que se escriba ahí no se usa.
+   En vez de ignorarlo en silencio, se bloquea la casilla y se dice dónde
+   está el precio de verdad. */
+if(typeof renderEditCliente==='function'){
+  const _recOrig=renderEditCliente;
+  renderEditCliente=function(){
+    _recOrig.apply(this,arguments);
+    try{ marcarPreciosDeGrupo(); }catch(e){}
+  };
+}
+function marcarPreciosDeGrupo(){
+  document.querySelectorAll('#editCliBody input.ec-num, .ec-tbl input.ec-num').forEach(inp=>{
+    const oc=inp.getAttribute('onchange')||'';
+    if(oc.indexOf("'precioVenta'")<0) return;
+    const m=oc.match(/setEqField\((\d+)/); if(!m) return;
+    const e=EQ[+m[1]]; if(!e) return;
+    const g=gpDeEq(e); if(!g) return;
+    const td=inp.parentElement; if(!td||td.dataset.gp) return;
+    td.dataset.gp='1';
+    td.innerHTML=`<div style="font-variant-numeric:tabular-nums;font-weight:600">${fmtUSDs(gpParte(g,e))}</div>
+      <small style="display:block;font-size:10px;color:var(--ink3);line-height:1.35">
+        del grupo <b>${esc4(g.nombre||'sin nombre')}</b><br>
+        <a href="#" onclick="navTo('precios');GSEL='${g.id}';pintarPrecios();return false"
+           style="color:var(--accent)">editarlo ahí</a></small>`;
+  });
+}
 </script>
