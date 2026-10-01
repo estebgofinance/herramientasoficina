@@ -49,40 +49,80 @@ table.g4t input.n{width:104px;border:1px solid var(--rule2);border-radius:6px;pa
 .g4cmp .v{font-size:19px;font-weight:700;font-variant-numeric:tabular-nums;margin-top:3px}
 .g4acts{display:flex;gap:8px;flex-wrap:wrap;padding:14px 22px;border-top:1px solid var(--rule);background:#FBFBFC}
 
-/* --- la hoja Sinosure tal cual --- */
-.sncols{display:grid;grid-template-columns:1fr 1fr;gap:22px;align-items:start}
-@media(max-width:1080px){.sncols{grid-template-columns:1fr}}
-.snhoja{background:var(--surface);border:1px solid var(--rule);border-radius:12px;overflow:hidden}
-.snht{padding:12px 16px;background:#FBFBFC;border-bottom:1px solid var(--rule);font-size:14px;font-weight:700}
-.snht span{float:right;font-size:11px;font-weight:400;color:var(--ink3);padding-top:3px}
-table.snt{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
-table.snt td{padding:7px 10px;border-bottom:1px solid var(--rule);font-size:12.5px;vertical-align:top}
-table.snt td.c{width:42px;color:var(--ink3);font-size:10.5px;font-family:ui-monospace,Menlo,monospace;padding-top:9px}
-table.snt td.r{text-align:right;font-weight:600;white-space:nowrap;width:108px}
-table.snt td.r.neg{color:var(--danger)}
-table.snt td.p{width:40%;font-size:12px;color:var(--ink2)}
-table.snt .snm{font-size:10.5px;color:var(--ink3);margin-top:1px;line-height:1.4}
-table.snt tr.snzona td{background:#F4F5F6;font-size:10px;font-weight:700;text-transform:uppercase;
-  letter-spacing:.06em;color:var(--ink2);padding:7px 10px}
-table.snt tr.snzona .snzh{float:right;font-weight:400;text-transform:none;letter-spacing:0;
-  font-size:10.5px;color:var(--ink3)}
-table.snt tr.sntot td{background:#FBFBFC;font-weight:700;border-top:1px solid var(--rule2)}
-table.snt tr.difr td{background:var(--danger-soft)}
-table.snt tr.dupr td{background:var(--accent-soft)}
-table.snt tr.suelr td{background:var(--accent-soft)}
-table.snt tr.falta td{background:#F2F4F7}
-.snleyenda{display:flex;gap:16px;align-items:center;flex-wrap:wrap;margin:10px 0 14px;font-size:11.5px;color:var(--ink2)}
-.snleyenda .lg{display:flex;align-items:center;gap:6px}
-.snleyenda .lg i{width:11px;height:11px;border-radius:2px;display:inline-block;border:1px solid var(--rule2)}
-.snleyenda i.difr{background:var(--danger-soft)} .snleyenda i.dupr{background:var(--accent-soft)}
-.snleyenda i.falta{background:#F2F4F7}
-.snsim{padding:12px 16px;border-top:1px solid var(--rule);background:#FBFBFC;display:flex;
-  align-items:center;gap:8px;flex-wrap:wrap;font-size:12.5px;color:var(--ink2)}
+
+/* --- lista de pedidos con precio y selección --- */
+tr.row.ord td{cursor:pointer}
+tr.row.ord.ab td{background:#F4F5F6}
+tr.row.ord .chev{display:inline-block;width:14px;color:var(--ink3);font-size:10px}
+.lchk{width:14px;height:14px;cursor:pointer;accent-color:#17181A;margin-right:7px;vertical-align:-1px}
+tr.subrow td{padding:0 0 12px 34px!important;background:#F4F5F6!important;border-bottom:1px solid var(--rule)}
+table.ptab{width:100%;border-collapse:collapse;background:var(--surface);border:1px solid var(--rule);border-radius:9px}
+table.ptab th{font-size:9.5px;font-weight:700;color:var(--ink2);text-transform:uppercase;letter-spacing:.04em;
+  text-align:left;padding:7px 10px;border-bottom:1px solid var(--rule);white-space:nowrap}
+table.ptab th.r,table.ptab td.r{text-align:right}
+table.ptab td{padding:7px 10px;border-bottom:1px solid var(--rule);font-size:12.5px;
+  font-variant-numeric:tabular-nums;vertical-align:middle}
+table.ptab tbody tr:last-child td{border-bottom:none}
+table.ptab tr.sel td{background:var(--accent-soft)}
+.pinp{width:118px;border:1px solid var(--rule2);border-radius:7px;padding:5px 8px;font-size:12.5px;
+  text-align:right;font-variant-numeric:tabular-nums;background:var(--surface)}
+.pinp:focus{outline:none;border-color:var(--ink);box-shadow:0 0 0 3px rgba(23,24,26,.07)}
+.pnota{font-size:10px;color:var(--ink3);line-height:1.4;margin-top:1px}
+.lbar{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);z-index:150;display:flex;
+  align-items:center;gap:11px;background:#17181A;color:#fff;border-radius:11px;padding:11px 16px;
+  font-size:13px;box-shadow:0 10px 32px rgba(0,0,0,.3);max-width:92vw;flex-wrap:wrap}
+.lbar .m{font-size:11.5px;color:rgba(255,255,255,.65)}
+.lbar .btn{background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.2);color:#fff}
+.lbar .btn:hover{background:rgba(255,255,255,.18)}
+.lbar .btn.primary{background:#fff;color:#17181A;border-color:#fff}
+.lbar .btn:disabled{opacity:.4}
+
+/* --- la hoja Sinosure, con el formato del Excel --- */
+.hojawrap{display:grid;grid-template-columns:1fr 1fr;gap:46px;align-items:start;
+  background:var(--surface);border:1px solid var(--rule);border-radius:12px;padding:26px 30px}
+@media(max-width:1020px){.hojawrap{grid-template-columns:1fr;gap:30px}}
+table.hoja{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+table.hoja td{padding:3px 0;font-size:13.5px;vertical-align:top;border:none}
+table.hoja td.l{padding-right:14px}
+table.hoja td.v{text-align:right;white-space:nowrap;width:150px}
+table.hoja td.b{font-weight:700}
+table.hoja tr.h td{font-weight:700;padding-bottom:5px}
+table.hoja tr.h td.v{text-align:center;font-size:14px}
+table.hoja tr.sub td{border-top:1px solid var(--ink);padding-top:4px}
+table.hoja tr.esp td{height:17px;padding:0}
+table.hoja tr.tot td{border-top:1px solid var(--ink);padding-top:5px;font-size:13.5px}
+table.hoja tr.nota td{font-size:11px;color:var(--danger);padding-top:0}
+table.hoja td.v.neg{color:var(--danger)}
+table.hoja tr.cons{cursor:pointer}
+table.hoja tr.cons:hover td{background:#F4F5F6}
+table.hoja tr.cons.ab td{background:#F0F1F3;font-weight:600}
+table.hoja tr.cons.difr td.l,table.hoja tr.cons.difr td.v{background:var(--danger-soft)}
+table.hoja tr.cons.dupr td.l,table.hoja tr.cons.dupr td.v,
+table.hoja tr.cons.suelr td.l,table.hoja tr.cons.suelr td.v{background:var(--accent-soft)}
+table.hoja tr.falta td{background:#F2F4F7;color:var(--ink2)}
+table.hoja .chev{display:inline-block;width:13px;color:var(--ink3);font-size:10px}
+table.hoja .pen{font-size:10px;font-weight:700;padding:1px 6px;border-radius:4px;
+  background:var(--rule);color:var(--ink2);margin-left:5px;vertical-align:1px}
+table.hoja .pen.mal{background:var(--danger-soft);color:var(--danger)}
+table.hoja .pen.avi{background:var(--accent-soft);color:#8a5300}
+table.hoja tr.det td{padding:0 0 12px 13px;background:transparent!important}
+.dmeta{font-size:11px;color:var(--ink3);padding:7px 0 6px;font-family:ui-monospace,Menlo,monospace}
+.dmeta b{color:var(--ink2);font-family:'Archivo',system-ui}
+.dav{font-size:11.5px;color:#8a5300;background:var(--accent-soft);border-radius:7px;padding:8px 11px;margin-top:8px;line-height:1.6}
+table.dt{width:100%;border-collapse:collapse;background:var(--surface);border:1px solid var(--rule);border-radius:8px}
+table.dt th{font-size:9.5px;font-weight:700;color:var(--ink2);text-transform:uppercase;letter-spacing:.04em;
+  text-align:left;padding:6px 9px;border-bottom:1px solid var(--rule);white-space:nowrap}
+table.dt th.r,table.dt td.r{text-align:right}
+table.dt td{padding:7px 9px;border-bottom:1px solid var(--rule);font-size:12px}
+table.dt tbody tr{cursor:pointer} table.dt tbody tr:hover td{background:#FBFBFC}
+table.dt tbody tr:last-child td{border-bottom:none}
+.snsims{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:16px}
+@media(max-width:1020px){.snsims{grid-template-columns:1fr}}
+.snsim{background:var(--surface);border:1px solid var(--rule);border-radius:10px;padding:12px 16px;
+  display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:12.5px;color:var(--ink2)}
 .snsim input{width:118px;border:1px solid var(--rule2);border-radius:7px;padding:5px 9px;font-size:12.5px;
   text-align:right;font-variant-numeric:tabular-nums;background:var(--surface)}
-.snsim .simr{font-size:12.5px;color:var(--ink2)}
 .snsim .simr b{color:var(--ink)}
-
 /* --- sinosure --- */
 .snkpis{display:flex;border-top:1px solid var(--rule);border-bottom:1px solid var(--rule);margin-bottom:24px;flex-wrap:wrap}
 .snk{flex:1 1 180px;padding:15px 22px 15px 0;border-right:1px solid var(--rule)}
@@ -492,101 +532,125 @@ function hojaSino(){
 const fueraDeHoja=mfg=>EQ.filter(e=>e.mfg===mfg&&(+e.cupoSaldo||0)>0.5
   &&((CONCILIA&&CONCILIA.sinoPorDerrame)||{})[kOf(e)]==null);
 
+/* ---- la hoja, con el formato del Excel ---- */
+const money=n=>{const v=+n||0, s=v<0?'-':'';
+  return s+'$'+Math.abs(v).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});};
 let SNSIM={Singsun:'',Eaglerise:''};
+let SNAB={};                               /* qué renglones están abiertos */
+function abrirSino(celda){SNAB[celda]=!SNAB[celda];pintarSino();}
+
 function pintarSino(){
   const cont=document.getElementById('v-sinosure'); if(!cont) return;
   if(!EQ.length||!CONCILIA||!CONCILIA.sino){
     cont.innerHTML=`<div class="g4em"><h3>Sin la hoja Sinosure</h3>
-      <p>Esta pestaña reproduce la hoja <b>Sinosure</b> de tu detailed, celda por celda,
-         con el pedido al que apunta cada fórmula. Carga el detailed y vuelve.</p>
+      <p>Esta pestaña reproduce tu hoja <b>Sinosure</b> tal como la ves en el detailed.
+         Carga el detailed y vuelve.</p>
       <button class="btn" onclick="verifyOpen()">Cargar datos</button></div>`;
     return;
   }
-  const filas=hojaSino();
-  const S=CONCILIA.sino;
-  const col=mfg=>{
+  const filas=hojaSino(), S=CONCILIA.sino;
+  const ents=[...new Set([...Object.keys((S.cuposPorEntidad||{}).Singsun||{}),
+                          ...Object.keys((S.cuposPorEntidad||{}).Eaglerise||{})])];
+
+  const bloque=(mfg,titulo)=>{
     const fs=filas.filter(r=>r.lado===mfg);
-    const ents=(S.cuposPorEntidad||{})[mfg]||{};
+    const ce=(S.cuposPorEntidad||{})[mfg]||{};
     const techo=+S.cupos[mfg]||0;
-    const declara=mfg==='Singsun'?S.totalSingsun:S.totalEagle;
-    const dispHoja=mfg==='Singsun'?S.dispSingsun:S.dispEagle;
+    const total=mfg==='Singsun'?S.totalSingsun:S.totalEagle;
+    const disp=mfg==='Singsun'?S.dispSingsun:S.dispEagle;
     const mio=EQ.filter(e=>e.mfg===mfg).reduce((s,e)=>s+consumoEq(e,e.mfg),0);
     const fuera=fueraDeHoja(mfg);
-    return `<div class="snhoja">
-      <div class="snht">${mfg==='Singsun'?'Singsun':'Eagle'}<span>columna ${mfg==='Singsun'?'A–B':'D–E'} de la hoja</span></div>
-      <table class="snt">
-        <tr class="snzona"><td colspan="4">Cupos</td></tr>
-        ${Object.entries(ents).map(([k,v])=>`<tr><td class="c"></td><td>${esc4(k)}</td>
-          <td class="r">${fmtUSDs(v)}</td><td></td></tr>`).join('')}
-        <tr class="sntot"><td class="c"></td><td>Total</td><td class="r">${fmtUSDs(techo)}</td><td></td></tr>
-        <tr class="snzona"><td colspan="4">Consumo<span class="snzh">celda · lo que dice Andrés · a qué pedido apunta</span></td></tr>
-        ${fs.map(r=>{
-          const cls=r.dup?'dupr':(r.suelto?'suelr':(!r.cuadra?'difr':''));
-          return `<tr class="${cls}">
-            <td class="c" title="${esc4(r.ref||'sin fórmula')}">${esc4(r.celda)}</td>
-            <td>${esc4(r.etiqueta)}
-              <div class="snm">${r.dup?`<b>repite ${esc4(r.yaEn)}</b> · ${esc4(r.ref||'')}`
-                :r.suelto?'<b>no cae en ningún pedido</b>'
-                :`${esc4(r.ref||'escrito a mano')}${r.que?' · '+esc4(r.que):''}`}</div></td>
-            <td class="r">${fmtUSDs(r.total)}</td>
-            <td class="p">${r.dup?`<span class="g4tag avi">no suma</span>`
-              :r.suelto?`<span class="g4tag mal">suelto</span>`
-              :r.eqs.length?`${r.eqs.map(e=>esc4(e.derrame)).join(', ')}
-                 ${(r.hermanas&&r.hermanas.length)
-                   ? `<div class="snm">+ ${r.hermanas.map(esc4).join(', ')} · entre todas <b>${fmtUSDs(r.hojaPed)}</b></div>`:''}
-                 ${!r.cuadra?`<div class="snm" style="color:var(--danger)">yo cuento ${fmtUSDs(r.mio)}
-                   · ${r.dif>0?'+':''}${fmtUSDs(r.dif)}</div>`:'<div class="snm">cuadra</div>'}`
-              :'<span class="g4tag mal">sin pedido</span>'}</td></tr>`;}).join('')}
-        <tr class="sntot"><td class="c"></td><td>Consumo total</td>
-          <td class="r">${fmtUSDs(declara)}</td>
-          <td class="p">${Math.abs(mio-declara)>2
-            ? `<span style="color:var(--danger)">yo cuento ${fmtUSDs(mio)}</span>`:'<span style="color:var(--ok)">cuadra</span>'}</td></tr>
-        <tr class="sntot"><td class="c"></td><td>Cupo disponible</td>
-          <td class="r ${dispHoja<0?'neg':''}">${fmtUSDs(dispHoja)}</td>
-          <td class="p">${Math.abs((techo-mio)-dispHoja)>2
-            ? `<span style="color:var(--danger)">yo: ${fmtUSDs(techo-mio)}</span>`:''}</td></tr>
-        ${fuera.length?`<tr class="snzona"><td colspan="4">Lo que la hoja todavía no lista
-            <span class="snzh">no está en el archivo de Andrés, pero es plata comprometida</span></td></tr>
-          ${fuera.map(e=>`<tr class="falta"><td class="c">—</td>
-            <td>${esc4(e.derrame)}<div class="snm">${esc4(projOf(e)||'')}</div></td>
-            <td class="r">${fmtUSDs(consumoEq(e,e.mfg,'andres'))}</td>
-            <td class="p">${selSino(e)}</td></tr>`).join('')}
-          <tr class="sntot"><td class="c"></td><td>Si Andrés los carga, quedarías en</td>
-            <td class="r ${(techo-mio-fuera.reduce((s,e)=>s+consumoEq(e,e.mfg,'andres'),0))<0?'neg':''}">${
-              fmtUSDs(techo-mio-fuera.reduce((s,e)=>s+(consumoEq(e,e.mfg)>0?0:consumoEq(e,e.mfg,'andres')),0))}</td>
-            <td></td></tr>`:''}
-      </table>
-      <div class="snsim">
-        <label>¿Me cabe un pedido de</label>
-        <input type="number" placeholder="0" value="${SNSIM[mfg]}"
-          oninput="SNSIM['${mfg}']=this.value;simSino('${mfg}')">
-        <label>USD?</label>
-        <span id="sim${mfg}" class="simr">${simTexto(mfg)}</span>
-      </div>
-    </div>`;
+    return `<table class="hoja">
+      <tr class="h"><td class="l">${mfg==='Singsun'?'Cupos':''}</td><td class="v">${titulo}</td></tr>
+      ${ents.map(k=>`<tr><td class="l">${esc4(k)}</td>
+        <td class="v">${ce[k]!=null?money(ce[k]):''}</td></tr>`).join('')}
+      <tr class="sub"><td class="l"></td><td class="v b">${money(techo)}</td></tr>
+      <tr class="esp"><td colspan="2"></td></tr>
+      <tr class="h"><td class="l b">${mfg==='Singsun'?'Consumo':''}</td><td class="v"></td></tr>
+      ${fs.map(r=>renglonSino(r)).join('')}
+      ${fuera.length?`<tr class="esp"><td colspan="2"></td></tr>
+        ${fuera.map(e=>`<tr class="falta" title="No está en la hoja de Andrés">
+          <td class="l">${esc4(e.derrame)} <span class="pen">falta en la hoja</span></td>
+          <td class="v">${money(consumoEq(e,mfg,'andres'))}</td></tr>`).join('')}`:''}
+      <tr class="esp"><td colspan="2"></td></tr>
+      <tr class="tot"><td class="l b">${mfg==='Singsun'?'Consumo total':''}</td>
+        <td class="v b">${money(total)}</td></tr>
+      ${Math.abs(mio-total)>2?`<tr class="nota"><td class="l"></td>
+        <td class="v">el motor cuenta ${money(mio)}</td></tr>`:''}
+      <tr class="esp"><td colspan="2"></td></tr>
+      <tr class="tot"><td class="l b">${mfg==='Singsun'?'Cupo disponible':''}</td>
+        <td class="v b ${disp<0?'neg':''}">${money(disp)}</td></tr>
+    </table>`;
   };
 
+  const nd=filas.filter(r=>r.dup||r.suelto||!r.cuadra).length
+          +fueraDeHoja('Singsun').length+fueraDeHoja('Eaglerise').length;
   cont.innerHTML=`
-    <div class="sec" style="display:flex;align-items:baseline;gap:12px;margin-bottom:6px">
-      <h2 style="font-size:16px;font-weight:600">La hoja Sinosure</h2>
-      <div style="font-size:12.5px;color:var(--ink2)">como la ves en el detailed, con el pedido al que apunta cada fórmula</div>
+    <div class="sec" style="display:flex;align-items:baseline;gap:12px;margin-bottom:4px">
+      <h2 style="font-size:16px;font-weight:600">Hoja Sinosure</h2>
+      <div style="font-size:12.5px;color:var(--ink2)">
+        ${nd?`<b style="color:var(--dato-debo)">${nd} renglón(es) por revisar</b> · ábrelos para ver qué pedidos los componen`
+            :'todo conciliado · abre cualquier renglón para ver qué pedidos lo componen'}</div>
       <div style="flex:1"></div>
-      <button class="btn" onclick="exportarSino()">Copiar para Andrés</button>
+      <button class="btn" onclick="abrirTodoSino()">${Object.values(SNAB).some(Boolean)?'Cerrar todo':'Abrir todo'}</button>
+      <button class="btn" onclick="exportarSino()">Copiar</button>
     </div>
-    <div class="snleyenda">
-      <span class="lg"><i class="difr"></i>el pedido no cuadra con lo que cuento</span>
-      <span class="lg"><i class="dupr"></i>renglón repetido</span>
-      <span class="lg"><i class="falta"></i>pedido que la hoja no lista</span>
-      <span class="lg" style="margin-left:auto">${CONFIG.contarDupSino?'los repetidos <b>sí</b> suman':'los repetidos <b>no</b> suman'}
-        · <a href="#" onclick="setDupSino('${CONFIG.contarDupSino?'no':'si'}');pintarSino();return false">cambiarlo</a></span>
+    <div class="hojawrap">${bloque('Singsun','Singsun')}${bloque('Eaglerise','Eagle')}</div>
+    <div class="snsims">
+      ${['Singsun','Eaglerise'].map(m=>`<div class="snsim">
+        <label>¿Me cabe un pedido ${m==='Singsun'?'Singsun':'Eagle'} de</label>
+        <input type="number" placeholder="0" value="${SNSIM[m]}" oninput="SNSIM['${m}']=this.value;simSino('${m}')">
+        <label>USD?</label><span id="sim${m}" class="simr">${simTexto(m)}</span></div>`).join('')}
     </div>
-    <div class="sncols">${col('Singsun')}${col('Eaglerise')}</div>
     ${timelineSino()}`;
 }
-const selSino=e=>`<select class="snsel ${e.sinoManual==='si'?'si':e.sinoManual==='no'?'no':''}"
-  onchange="setSinoManual('${esc4(e.derrame)}','${e.mfg}',this.value);pintarSino()">
-  ${[['','pendiente'],['si','cuéntalo ya'],['no','déjalo fuera']]
-    .map(o=>`<option value="${o[0]}" ${o[0]===(e.sinoManual||'')?'selected':''}>${o[1]}</option>`).join('')}</select>`;
+
+/* un renglón de la hoja, abatible */
+function renglonSino(r){
+  const ab=!!SNAB[r.celda];
+  const marca=r.dup?'<span class="pen avi">repite '+esc4(r.yaEn)+'</span>'
+    :r.suelto?'<span class="pen mal">sin pedido</span>'
+    :!r.cuadra?'<span class="pen mal">revisar</span>':'';
+  return `<tr class="cons ${ab?'ab':''} ${r.dup?'dupr':r.suelto?'suelr':!r.cuadra?'difr':''}"
+      onclick="abrirSino('${esc4(r.celda)}')">
+      <td class="l"><span class="chev">${ab?'▾':'▸'}</span>${esc4(r.etiqueta)} ${marca}</td>
+      <td class="v">${money(r.total)}</td></tr>
+    ${ab?`<tr class="det"><td colspan="2">${detalleSino(r)}</td></tr>`:''}`;
+}
+function detalleSino(r){
+  const meta=`<div class="dmeta">${esc4(r.celda)} · ${esc4(r.ref||'escrito a mano')}${r.que?' · '+esc4(r.que):''}
+    ${r.hermanas&&r.hermanas.length?` · se suma con ${r.hermanas.map(esc4).join(', ')}
+      para dar <b>${money(r.hojaPed)}</b> del pedido`:''}</div>`;
+  if(r.dup) return meta+`<div class="dav">Este renglón apunta a la misma celda que <b>${esc4(r.yaEn)}</b>,
+    así que contaría dos veces los mismos ${money(r.total)}.
+    Hoy <b>${CONFIG.contarDupSino?'sí':'no'}</b> suma ·
+    <a href="#" onclick="event.stopPropagation();setDupSino('${CONFIG.contarDupSino?'no':'si'}');pintarSino();return false">cambiarlo</a></div>`;
+  if(r.suelto) return meta+`<div class="dav">Este renglón no cae en ningún pedido del detailed.
+    Puede ser una etiqueta que Andrés escribió distinto, o un pedido que ya no existe.</div>`;
+  if(!r.eqs.length) return meta+`<div class="dav">No se encontró el pedido al que apunta.</div>`;
+  const tot=r.eqs.reduce((s,e)=>s+(+e.cupoMonto||0),0);
+  return meta+`<table class="dt"><thead><tr>
+      <th>Pedido</th><th>Proyecto</th><th>Estado</th>
+      <th class="r">Monto fáb.</th><th class="r">Saldo fáb.</th><th class="r">De este renglón</th>
+    </tr></thead><tbody>
+    ${r.eqs.map(e=>{
+      const parte=r.eqs.length>1?(tot?r.total*((+e.cupoMonto||0)/tot):r.total/r.eqs.length):r.total;
+      return `<tr onclick="event.stopPropagation();openPanel('${e.ordenId}')">
+        <td><b>${esc4(e.derrame)}</b></td><td>${esc4(projOf(e)||'—')}</td>
+        <td><span class="g4tag">${STAGE[e.st]||'—'}</span></td>
+        <td class="r">${money(+e.cupoMonto||0)}</td>
+        <td class="r">${money(+e.cupoSaldo||0)}</td>
+        <td class="r"><b>${money(parte)}</b></td></tr>`;}).join('')}
+    </tbody></table>
+    ${!r.cuadra?`<div class="dav">La hoja le asigna <b>${money(r.hojaPed)}</b> a
+      ${r.eqs.map(e=>esc4(e.derrame)).join(', ')}, y el motor cuenta <b>${money(r.mio)}</b>
+      (${r.dif>0?'+':''}${money(r.dif)}).</div>`:''}`;
+}
+function abrirTodoSino(){
+  const hay=Object.values(SNAB).some(Boolean);
+  SNAB={}; if(!hay) hojaSino().forEach(r=>SNAB[r.celda]=true);
+  pintarSino();
+}
 
 /* --- ¿me cabe? --- */
 function simTexto(mfg){
@@ -696,5 +760,130 @@ function marcarPreciosDeGrupo(){
         <a href="#" onclick="navTo('precios');GSEL='${g.id}';pintarPrecios();return false"
            style="color:var(--accent)">editarlo ahí</a></small>`;
   });
+}
+
+/* =============== LISTA DE PEDIDOS: PRECIO Y SELECCIÓN DIRECTOS ===============
+   La lista mostraba solo la orden madre y había que abrir un panel para ver
+   los pedidos. Ahora cada orden se abre ahí mismo, con el precio editable en
+   la fila y una casilla para escoger los que van juntos en una factura. */
+let LSEL=new Set();          /* derrames escogidos */
+let LAB=new Set();           /* órdenes abiertas */
+
+if(typeof renderLedger==='function'){
+  renderLedger=function(){
+    const cont=document.getElementById('ledger'); if(!cont) return;
+    let os=ORD.slice();
+    if(typeof filtP!=='undefined'){
+      if(filtP==='Tracker')os=os.filter(o=>o.mfg==='Singsun');
+      else if(filtP==='Shelter')os=os.filter(o=>o.mfg==='Eaglerise');
+      else if(filtP==='vencida')os=os.filter(o=>o.equipos.some(isOver));
+      else if(filtP==='pipeline')os=os.filter(o=>o.equipos.some(e=>!isShipped(e)));
+      else if(filtP==='sinprecio')os=os.filter(o=>o.equipos.some(e=>!(precioVenta(e)>0)));
+    }
+    cont.innerHTML=os.map(o=>{
+      const comp=o.equipos.reduce((s,e)=>s+consumoEq(e,o.mfg),0);
+      const balPend=o.equipos.filter(e=>isShipped(e)).reduce((s,e)=>s+(+e.balSaldo||0),0);
+      const over=o.equipos.some(isOver);
+      const cnt={};o.equipos.forEach(e=>cnt[e.st]=(cnt[e.st]||0)+1);
+      const resumen=Object.entries(cnt).map(([k,v])=>`${v} ${STAGE[k].toLowerCase()}`).join(' · ');
+      const ab=LAB.has(o.id);
+      const todos=o.equipos.every(e=>LSEL.has(e.derrame));
+      const algunos=!todos&&o.equipos.some(e=>LSEL.has(e.derrame));
+      const sinP=o.equipos.filter(e=>!(precioVenta(e)>0)).length;
+      return `<tr class="row ord ${ab?'ab':''}" onclick="abrirOrden('${o.id}')">
+        <td><input type="checkbox" class="lchk" ${todos?'checked':''} ${algunos?'data-ind="1"':''}
+              onclick="event.stopPropagation();selOrden('${o.id}',this.checked)">
+            <span class="chev">${ab?'▾':'▸'}</span><span class="pid">Orden ${o.id}</span></td>
+        <td>${esc4(o.cliente)}<div class="stage" style="color:var(--ink3);font-size:12px">${
+          (function(){const n=nEquipos(o.equipos),t=o.mfg==='Singsun'?'tracker':'shelter';
+            return n+' '+t+(n===1?'':'s')+(n!==o.equipos.length?' en '+o.equipos.length+' pedidos':'');})()}
+          ${sinP?`<span class="g4tag avi" style="margin-left:6px">${sinP} sin precio</span>`:''}</div></td>
+        <td><span class="stage">${resumen}</span></td>
+        <td class="r">${fmtUSD(comp)}</td>
+        <td class="r">${balPend>0?fmtUSD(balPend):'<span style="color:var(--ink3)">—</span>'}${
+          over?' <span style="background:var(--danger-soft);color:var(--danger);font-size:10px;padding:1px 6px;border-radius:4px">vencido</span>':''}</td>
+      </tr>${ab?`<tr class="subrow"><td colspan="5">${tablaPedidos(o)}</td></tr>`:''}`;
+    }).join('');
+    barraSel();
+  };
+}
+function tablaPedidos(o){
+  return `<table class="ptab"><thead><tr>
+      <th style="width:30px"></th><th>Pedido</th><th>Proyecto</th><th>Estado</th>
+      <th class="r">Saldo cupo</th><th class="r" style="width:150px">Precio de venta</th><th style="width:80px"></th>
+    </tr></thead><tbody>
+    ${o.equipos.map(e=>{
+      const i=EQ.indexOf(e), g=gpDeEq(e), pv=precioVenta(e);
+      return `<tr class="${LSEL.has(e.derrame)?'sel':''}">
+        <td><input type="checkbox" class="lchk" ${LSEL.has(e.derrame)?'checked':''}
+              onclick="event.stopPropagation();selPedido('${esc4(e.derrame)}',this.checked)"></td>
+        <td><b>${esc4(e.derrame)}</b></td>
+        <td>${esc4(projOf(e)||'—')}</td>
+        <td><span class="g4tag">${STAGE[e.st]||'—'}</span></td>
+        <td class="r">${fmtUSDs(+e.cupoSaldo||0)}</td>
+        <td class="r">${g
+          ? `<b>${fmtUSDs(pv)}</b><div class="pnota">del grupo <b>${esc4(g.nombre||'sin nombre')}</b> ·
+             <a href="#" onclick="event.stopPropagation();navTo('precios');GSEL='${g.id}';pintarPrecios();return false">abrirlo</a></div>`
+          : `<input class="pinp" type="number" step="any" placeholder="0" value="${e.precioVenta||''}"
+               onclick="event.stopPropagation()"
+               oninput="setPrecioEq(${i},this.value,true)"
+               onchange="setPrecioEq(${i},this.value)">`}</td>
+        <td><button class="btn" style="padding:3px 9px;font-size:11px"
+              onclick="event.stopPropagation();openPanel('${o.id}')">ver</button></td>
+      </tr>`;}).join('')}
+    </tbody></table>`;
+}
+function abrirOrden(id){ LAB.has(id)?LAB.delete(id):LAB.add(id); renderLedger(); }
+let _pt=null;
+/* Mientras se escribe se guarda el número pero NO se repinta la tabla, porque
+   repintar le quitaría el foco al campo a media cifra. El repintado espera a
+   que salgas del campo. Así tampoco se pierde lo escrito si te vas de la pestaña. */
+function setPrecioEq(i,v,escribiendo){
+  const e=EQ[i]; if(!e) return;
+  e.precioVenta=parseFloat(v)||0;
+  clearTimeout(_pt);
+  if(escribiendo){ _pt=setTimeout(()=>{guardar4();refreshAll();},500); return; }
+  guardar4(); refreshAll(); renderLedger();
+}
+function selPedido(d,on){ on?LSEL.add(d):LSEL.delete(d); renderLedger(); }
+function selOrden(id,on){
+  const o=ORD.find(x=>x.id===id); if(!o) return;
+  o.equipos.forEach(e=>on?LSEL.add(e.derrame):LSEL.delete(e.derrame));
+  if(on)LAB.add(id);
+  renderLedger();
+}
+function barraSel(){
+  let bar=document.getElementById('lbar');
+  if(!LSEL.size){ if(bar)bar.remove(); return; }
+  if(!bar){ bar=document.createElement('div'); bar.id='lbar'; bar.className='lbar'; document.body.appendChild(bar); }
+  const eqs=EQ.filter(e=>LSEL.has(e.derrame));
+  const clis=[...new Set(eqs.map(e=>e.cliente))];
+  const suma=eqs.reduce((s,e)=>s+precioVenta(e),0);
+  const yaEn=eqs.filter(e=>gpDeEq(e)).length;
+  bar.innerHTML=`<b>${eqs.length}</b> pedido(s) escogido(s)
+    <span class="m">${clis.length===1?esc4(clis[0]):clis.length+' clientes distintos'}
+      · precio hoy ${fmtUSD(suma)}${yaEn?` · ${yaEn} ya está(n) en un grupo`:''}</span>
+    <span style="flex:1"></span>
+    <button class="btn" onclick="LSEL.clear();renderLedger()">Quitar la selección</button>
+    <button class="btn primary" ${clis.length>1?'disabled title="Escoge pedidos de un solo cliente"':''}
+      onclick="grupoDesdeSeleccion()">Ponerles un precio juntos</button>`;
+}
+/* el atajo que faltaba: de la lista de pedidos a un grupo de precio */
+function grupoDesdeSeleccion(){
+  const eqs=EQ.filter(e=>LSEL.has(e.derrame));
+  if(!eqs.length) return;
+  const cli=eqs[0].cliente;
+  if(eqs.some(e=>e.cliente!==cli)){ toast('Escoge pedidos de un solo cliente'); return; }
+  /* si ya estaban en otro grupo, salen de él */
+  GPRE.forEach(g=>{ g.eqRefs=(g.eqRefs||[]).filter(d=>!LSEL.has(d)); });
+  gpNuevo();
+  const g=GPRE[GPRE.length-1];
+  g.cliente=cli; g.eqRefs=eqs.map(e=>e.derrame);
+  g.nombre=eqs.length+' pedidos de '+cli;
+  g.total=eqs.reduce((s,e)=>s+(+e.precioVenta||0),0);
+  LSEL.clear();
+  guardar4(); refreshAll(); renderLedger();
+  navTo('precios'); GSEL=g.id; pintarPrecios();
+  toast(`Grupo con <b>${eqs.length}</b> pedido(s) · escribe el precio total`);
 }
 </script>
