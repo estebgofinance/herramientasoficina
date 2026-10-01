@@ -1,5 +1,7 @@
 <script>
 
+
+
 /* ================= MODELO ================= */
 const TODAY=new Date(new Date().getFullYear(),new Date().getMonth(),new Date().getDate()), HORIZON=180;
 const CUPO={Singsun:1300000, Eaglerise:3000000};
@@ -47,19 +49,7 @@ function sinoDeclarado(e){
   const girado=Math.max(0,(+e.cupoSaldo0||0)-(+e.cupoSaldo||0));
   return Math.max(0,base-girado);
 }
-/* ALARMAS DEL CUPO — la hoja Sinosure del detailed es la que manda; el ORDER REPORT proyecta */
-function alarmasCupo(){
-  const C=CONCILIA; if(!C) return null;
-  const sinConfirmar=[];
-  ['Singsun','Eaglerise'].forEach(mfg=>sinCargarAlCupo(mfg).forEach(x=>sinConfirmar.push({...x,mfg})));
-  const dup=(C.sinoDup||[]);
-  const sueltos=(C.sinoSueltosL||[]);
-  /* pedidos donde el ORDER REPORT y el detailed no valen lo mismo */
-  const montoDistinto=(C.dif||[]).filter(d=>d.cols.indexOf('M')>=0)
-    .map(d=>({po:d.po,derrames:d.derrames,mfg:d.mfg,or:d.rep.M,det:d.det.M}));
-  return {sinConfirmar, dup, sueltos, montoDistinto,
-    hay:sinConfirmar.length||dup.length||sueltos.length||montoDistinto.length};
-}
+
 /* Pedidos vivos que la hoja Sinosure todavía no lista: no cuentan en el consumo declarado,
    pero son plata que va a caer al cupo apenas Andrés los cargue. */
 function sinCargarAlCupo(mfg){
@@ -258,27 +248,7 @@ function puenteTot(dias){
 }
 
 /* ---- Conciliación del cupo contra la hoja Sinosure de Andrés ---- */
-/* Por qué mi total no es el de Andrés: pedido por pedido, qué cuenta él y qué cuento yo */
-function cupoExplica(mfg){
-  const reg=CONFIG.cupoRegla||'andres';
-  const idx=(CONCILIA&&CONCILIA.sinoPorDerrame)||{};
-  const lineas=[];
-  EQ.filter(e=>e.mfg===mfg).forEach(e=>{
-    const mio=consumoEq(e,mfg,reg);
-    const suyo=(idx[kOf(e)]!=null)?idx[kOf(e)]:null;
-    const dif=(suyo==null?mio:mio-suyo);
-    if(Math.abs(dif)>2) lineas.push({derrame:e.derrame, proj:e.proj, st:e.st, mio, suyo, dif,
-      motivo: suyo==null?'la hoja Sinosure no lo lista':(mio>suyo?'cuento más que él':'cuento menos que él')});
-  });
-  /* los renglones repetidos de la hoja: él los suma, la herramienta no */
-  if(!CONFIG.contarDupSino) ((CONCILIA&&CONCILIA.sinoDup)||[]).forEach(dp=>{
-    if(dp.lado!==mfg) return;
-    lineas.push({derrame:dp.etiqueta, proj:'', st:'', mio:0, suyo:dp.valor, dif:-dp.valor,
-      motivo:'renglón repetido: '+dp.celda+' apunta a '+dp.ref+', ya contado en '+dp.yaEn});
-  });
-  lineas.sort((a,b)=>Math.abs(b.dif)-Math.abs(a.dif));
-  return lineas;
-}
+
 function cupoConcilia(mfg){
   const eqs=EQ.filter(e=>e.mfg===mfg);
   const por=r=>eqs.reduce((s,e)=>s+consumoEq(e,mfg,r),0);
@@ -310,15 +280,13 @@ let CLIENTES=Object.keys(CLI);
 function addCliente(name,term,fifo,interno){name=(name||'').trim();if(!name||CLI[name])return false;CLI[name]={term:+term||60,fifo:!!fifo,interno:!!interno};CLIENTES=Object.keys(CLI);return true;}
 function esInterno(cli){return CLI[cli]&&CLI[cli].interno;}
 const esFIFO=cli=>!!(CLI[cli]&&CLI[cli].fifo);
-const clienteTerm=cli=>(CLI[cli]&&CLI[cli].term)||60;
-
 // cada factura fija SU propia TRM el día que se emite; el COP es la verdad contable, el USD = COP/TRM de esa factura
 // ============ FACTURAS (v0.6 — USD-first, con líneas y cronograma) ============
 // Estructura de cada factura:
 // { num, cliente, nit, fecha:Date, plazo:días, trmRef, lineas:[{cod,desc,usd,pass}], hitos:[{etiq,pct,trigger,desc,fecha:Date,pagado:0}], eqRefs:[derrame], proj }
 let FACT=[];
 function totalFac(f){ return (f.lineas||[]).reduce((s,l)=>s+(+l.usd||0),0); }
-function totalFacNoPass(f){ return (f.lineas||[]).filter(l=>!l.pass).reduce((s,l)=>s+(+l.usd||0),0); }
+
 function pagadoFac(f){ return (f.hitos||[]).reduce((s,h)=>s+(+h.pagado||0),0); }
 function saldoFac(f){ return totalFac(f)-pagadoFac(f); }
 function fechaHito(h, blDate){
@@ -405,8 +373,8 @@ function pagoMinCliente(cli){
 }
 
 function saldoCliente(cli){ return FACT.filter(f=>f.cliente===cli).reduce((s,f)=>s+saldoFac(f),0); } // USD (verdad)
-function saldoClienteUSD(cli){ return saldoCliente(cli); }
-function saldoClienteCOP(cli){ return FACT.filter(f=>f.cliente===cli).reduce((s,f)=>s+saldoFac(f)*(f.trmRef||CONFIG.trmProy||4000),0); }
+
+
 function moraCliente(cli){
   return FACT.filter(f=>f.cliente===cli).reduce((s,f)=>{
     hitosResueltos(f).forEach(h=>{ if(h.pend>0 && h.fecha && h.fecha<TODAY) s+=h.pend; });
@@ -419,7 +387,7 @@ function carteraCliente(cli){
     return {...f, hitosR:hr, total:totalFac(f), saldo:saldoFac(f), pagado:pagadoFac(f), proximo:proxHito};
   });
 }
-function facturaByNum(n){ return FACT.find(f=>f.num===n); }
+
 // días netos de financiación al cliente vs. China (para el módulo "desfase")
 /* ---- motor de pagos: aplicar / reversar / historial (todo parcial) ---- */
 let PAGOS=[], PID=1;
@@ -503,12 +471,9 @@ function pagosPend(){
   });
   return ev.sort((a,b)=>a.fecha-b.fecha);
 }
-function vencidoEq(e){ return pagosPend().filter(p=>p.eq===e&&p.fecha<TODAY).reduce((s,p)=>s+p.monto,0); }
-function vencidoChina(){ return pagosPend().filter(p=>p.fecha<TODAY).reduce((s,p)=>s+p.monto,0); }
-/* ---- próximos embarques/llegadas (lo que viene) ---- */
-function proximos(){
-  return EQ.filter(e=>!isShipped(e)&&e.etd).sort((a,b)=>a.etd-b.etd);
-}
+
+
+
 
 /* ================= NAV ================= */
 document.querySelectorAll('nav.tabs button').forEach(b=>{b.onclick=()=>{
@@ -726,7 +691,7 @@ function openPanel(id){
       ${body}
       <div class="pactions">
         <button onclick="navTo('pagos');closePanel()">Registrar giro a China</button>
-        <button onclick="navTo('caja');toast('Simula sacar pedidos de la orden <b>${o.id}</b> en Caja')">Simular sacar pedidos</button>
+        
         <button class="primary" onclick="navTo('clientes');closePanel()">Ver estado de cuenta de ${o.cliente}</button>
       </div>
     </div>`;
@@ -982,195 +947,5 @@ function selCliData(c){
   `;
 }
 
-
-/* ============ EDITAR CLIENTE (panel modal) ============ */
-function renderClientes(){
-  const list=document.getElementById('clList');
-  // clientes reales: los que tienen equipos asignados o facturas
-  const activos=[...new Set([...CLIENTES,...EQ.map(e=>e.cliente),...FACT.map(f=>f.cliente)])].filter(c=>c&&c!=='Por asignar');
-  const porAsignar=EQ.filter(e=>e.cliente==='Por asignar').length;
-  if(!activos.length&&!porAsignar){list.innerHTML='<div style="color:var(--ink3);font-size:13px;padding:14px">Sin clientes asignados. Al cargar el order report, asigna cada orden a su cliente.</div>';document.getElementById('clDetail').innerHTML='';return;}
-  const items=activos.map((c,i)=>{const s=saldoCliente(c),m=moraCliente(c),eqs=equiposCliente(c).length,facs=FACT.filter(f=>f.cliente===c).length;
-    return `<div class="cl-item ${i===0?'on':''}" onclick="selCli('${c}',this)"><div><div class="cn">${c}<button class="clidel" title="Eliminar cliente" onclick="event.stopPropagation();delCliente('${c}')">×</button></div><div class="cm">${facs} factura(s)${eqs>facs?` · ${eqs-facs} por facturar`:''}</div></div><div class="cbal"><b>${fmtCOPs(s)}</b>${m>0?`<small>${fmtCOPs(m)} en mora</small>`:''}</div></div>`;});
-  if(porAsignar)items.push(`<div class="cl-item pend" onclick="selCli('Por asignar',this)"><div><div class="cn">Por asignar</div><div class="cm">${porAsignar} equipo(s) sin cliente</div></div><div class="cbal"><small style="color:var(--danger)">asignar</small></div></div>`);
-  list.innerHTML=items.join('');
-  selCliData(activos[0]||'Por asignar');
-}
-function selCli(c,el){document.querySelectorAll('.cl-item').forEach(x=>x.classList.remove('on'));el.classList.add('on');selCliData(c);}
-const iso=d=>new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,10);
-const HW=91; // 13 semanas
-const ordOf=d=>d.replace(/-\d+$/,'');
-
-/* ================= PAGOS ================= */
-let pagoTipo='in';
-function renderPagos(){
-  document.querySelectorAll('#pagoTipoSeg button').forEach(b=>b.onclick=()=>{document.querySelectorAll('#pagoTipoSeg button').forEach(x=>x.classList.remove('on'));b.classList.add('on');pagoTipo=b.dataset.t;pagoForm();});
-  pagoForm();renderHist();
-}
-function pagoForm(){
-  const fecha=`<label>Fecha <input type="date" id="pfFecha" value="${iso(TODAY)}"></label>`;
-  const who=`<label>Quién <select id="pfWho"><option>Esteban</option><option>Luisa</option><option>Gerente</option></select></label>`;
-  if(pagoTipo==='in'){
-    document.getElementById('pagoForm').innerHTML=`
-      <div class="pf">
-        <label>Cliente <select id="pfCli" onchange="document.getElementById('pfProp').innerHTML=''">${CLIENTES.map(c=>`<option>${c}</option>`).join('')}</select></label>
-        <label>Moneda del pago <select id="pfMon" onchange="pfMonToggle()"><option value="COP">COP (pesos)</option><option value="USD">USD (dólares)</option></select></label>
-        <label>Monto recibido <input id="pfMonto" type="number" placeholder="0"></label>
-        <label id="pfTrmWrap" style="display:none">TRM del día del pago <input id="pfTrm" type="number" value="4050"></label>
-        ${fecha}${who}
-        <button class="prbtn" onclick="proponerIn()">Proponer reparto</button>
-      </div>
-      <div id="pfProp"></div>`;
-  } else {
-    document.getElementById('pagoForm').innerHTML=`
-      <div class="pf">
-        <label>Receptor <select id="pfMfg" onchange="document.getElementById('pfProp').innerHTML=''"><option value="Singsun">Nexus (trackers)</option><option value="Eaglerise">Eaglerise (shelters)</option></select></label>
-        <label>Monto pagado (USD) <input id="pfUsd" type="number" placeholder="0"></label>
-        ${fecha}
-        <button class="prbtn" onclick="proponerOut()">Proponer reparto</button>
-      </div>
-      <div id="pfProp"></div>`;
-  }
-}
-function pfMonToggle(){document.getElementById('pfTrmWrap').style.display=document.getElementById('pfMon').value==='USD'?'':'none';}
-function propRows(items,total,cli){
-  let pool=cli==='__manual'?0:total; const pre=items.map(it=>{const m=Math.min(pool,it.saldo);pool-=m;return Math.round(m);});
-  return `<div class="prop">
-    <div class="prop-h"><span>Aplicar contra</span><span>Saldo</span><span>Aplicar</span></div>
-    ${items.map((it,i)=>`<div class="prop-r"><span class="pl">${it.label}</span><span class="ps num">${fmtUSDs(it.saldo)}</span><input class="pi" data-key="${it.key}" type="number" value="${pre[i]}" oninput="propSum()"></div>`).join('')}
-    <div class="prop-f"><span id="propRem"></span><button class="prbtn ok" onclick="confirmarPago()">Confirmar pago</button></div>
-  </div>`;
-}
-function propSum(){const inps=[...document.querySelectorAll('.pi')];const sum=inps.reduce((s,i)=>s+(+i.value||0),0);const tot=window._propTot||0;const rem=tot-sum;const cur=window._propCur;const inUSD=cur==='out'||cur==='in-int';const f=n=>inUSD?('US$ '+fmtUSDs(n)):fmtCOPs(n);const el=document.getElementById('propRem');if(el)el.innerHTML=`Repartido <b class="num">${f(sum)}</b> de ${f(tot)} · ${rem>=0?'queda':'te pasas'} <b class="num" style="color:${rem<0?'var(--danger)':'var(--ink)'}">${f(Math.abs(rem))}</b>`;}
-function proponerIn(){
-  const cli=document.getElementById('pfCli').value, mon=document.getElementById('pfMon').value, monto=+document.getElementById('pfMonto').value||0, trm=+document.getElementById('pfTrm').value||TRM;
-  const interno=esInterno(cli);
-  window._propCli=cli;
-  if(interno){
-    /* CLIENTE INTERNO (Solenium) — aplicar contra hitos de equipos, en USD (verdad del negocio interno) */
-    const montoUsd = mon==='USD'? monto : (monto/trm);
-    const hs=hitosCliInterno(cli).sort((a,b)=>(a.fecha||9e15)-(b.fecha||9e15));
-    const items=hs.map(h=>{
-      const kind=h.tipo==='anticipo'?'ant':(h.tipo==='balance'?'bal':'log');
-      const iconos={anticipo:'⏱',balance:'📦',logistica:'🚢'};
-      const lbl=(iconos[h.tipo]||'')+' '+h.eq.derrame+' · '+h.lbl+(h.vencido?' <span style="color:var(--z-red);font-weight:600">VENCIDO</span>':(h.fecha?' <small style="color:var(--ink3)">vence '+fmtD(h.fecha)+'</small>':''));
-      return {key:'I:'+h.eq._i+':'+kind, label:lbl, saldo:h.pend};
-    });
-    window._propTot=montoUsd; window._propCur='in-int';
-    if(!items.length){
-      document.getElementById('pfProp').innerHTML='<div class="prop-note" style="color:var(--ink2)">'+cli+' no tiene hitos pendientes. Verifica precios de venta o marca del anticipo/balance/logística en Editar cliente.</div>';
-      return;
-    }
-    document.getElementById('pfProp').innerHTML=`<div class="prop-note"><b>${cli}</b> es cliente interno del grupo. Aplicando en <b>USD</b> contra los hitos pendientes.<br>${mon==='USD'?`Pago USD <b>${fmtUSDs(monto)}</b>.`:`Pago COP ${fmtCOP(monto)} → <b>US$ ${fmtUSDs(montoUsd)}</b> a TRM ${trm}.`}</div>`+propRowsUsd(items,montoUsd,esFIFO(cli)?cli:'__manual');
-    propSum();
-    return;
-  }
-  /* CLIENTE EXTERNO — igual que antes */
-  const cop = mon==='USD'? Math.round(monto*trm) : monto;
-  const fs=carteraCliente(cli).filter(f=>f.saldo>0);
-  const items=fs.map(f=>({key:'F:'+f.num,label:f.num+' · '+((f.eqRefs||[]).join(',')||'sin vincular'),saldo:f.saldo}));
-  window._propTot=cop; window._propCur='in';
-  document.getElementById('pfProp').innerHTML=`<div class="prop-note">${mon==='USD'?`Pago en USD ${fmtUSDs(monto)} → <b>${fmtCOP(cop)}</b> a TRM ${trm}. Se aplica en COP.`:`Pago en COP: <b>${fmtCOP(cop)}</b>.`}</div>`+propRows(items,cop,esFIFO(cli)?cli:'__manual');
-  propSum();
-}
-
-/* Variante de propRows para USD (usada por clientes internos) */
-function propRowsUsd(items,total,cli){
-  let pool=cli==='__manual'?0:total; const pre=items.map(it=>{const m=Math.min(pool,it.saldo);pool-=m;return Math.round(m*100)/100;});
-  return `<div class="prop">
-    <div class="prop-h"><span>Aplicar contra</span><span>Saldo USD</span><span>Aplicar USD</span></div>
-    ${items.map((it,i)=>`<div class="prop-r"><span class="pl">${it.label}</span><span class="ps num">${fmtUSDs(it.saldo)}</span><input class="pi" data-key="${it.key}" type="number" step="0.01" value="${pre[i]}" oninput="propSum()"></div>`).join('')}
-    <div class="prop-f"><span id="propRem"></span><button class="prbtn ok" onclick="confirmarPago()">Confirmar pago</button></div>
-  </div>`;
-}
-function proponerOut(){
-  const mfg=document.getElementById('pfMfg').value, usd=+document.getElementById('pfUsd').value||0;
-  const obl=[];EQ.filter(e=>e.mfg===mfg).forEach(e=>{if(e.balSaldo>0)obl.push({key:'B:'+e._i,label:e.proj+' · balance ('+e.ordenId+')',saldo:e.balSaldo,d:e.vence||e.etd||TODAY});if(e.antSaldo>0)obl.push({key:'A:'+e._i,label:e.proj+' · anticipo ('+e.ordenId+')',saldo:e.antSaldo,d:e.prodFin||e.etd||TODAY});});
-  obl.sort((a,b)=>a.d-b.d);
-  window._propTot=usd; window._propCur='out';
-  document.getElementById('pfProp').innerHTML=propRows(obl,usd,'china');
-  propSum();
-}
-function confirmarPago(){
-  const inps=[...document.querySelectorAll('.pi')].filter(i=>(+i.value||0)>0);
-  if(!inps.length){toast('No hay nada repartido');return;}
-  const fecha=new Date((document.getElementById('pfFecha').value||iso(TODAY))+'T00:00:00');
-  const cur=window._propCur;
-  if(cur==='in-int'){
-    /* CLIENTE INTERNO — aplicaciones a hitos por equipo (en USD) */
-    const cli=document.getElementById('pfCli').value, mon=document.getElementById('pfMon').value, monto=+document.getElementById('pfMonto').value||0, trm=+document.getElementById('pfTrm').value||TRM;
-    const who=document.getElementById('pfWho').value;
-    const aps=inps.map(i=>{
-      const parts=i.dataset.key.split(':'); /* I:eqI:kind */
-      return {ieq:+parts[1], ek:EQ[+parts[1]]?eqKey(EQ[+parts[1]]):null, kind:parts[2], monto:+i.value};
-    });
-    const usdTot=aps.reduce((s,a)=>s+a.monto,0);
-    registrarPago({tipo:'in',cliente:cli,mon,monto,trm,usd:usdTot,fecha,quien:who,aps,interno:true});
-    toast(`Pago de <b>${cli}</b> por US$ ${fmtUSDs(usdTot)} aplicado a ${aps.length} hito(s)`);
-  } else if(cur==='in'){
-    const cli=document.getElementById('pfCli').value, mon=document.getElementById('pfMon').value, monto=+document.getElementById('pfMonto').value||0, trm=+document.getElementById('pfTrm').value||TRM;
-    const cop = mon==='USD'? Math.round(monto*trm):monto;
-    const who=document.getElementById('pfWho').value;
-    const aps=inps.map(i=>({ref:i.dataset.key.slice(2),monto:+i.value}));
-    registrarPago({tipo:'in',cliente:cli,cop,mon,trm,fecha,quien:who,aps});
-    toast(`Pago de <b>${cli}</b> por ${mon==='USD'?fmtUSD(monto):fmtCOP(cop)} registrado y aplicado`);
-  } else {
-    const mfg=document.getElementById('pfMfg').value, usd=+document.getElementById('pfUsd').value||0;
-    const aps=inps.map(i=>{const n=+i.dataset.key.slice(2);return {eqI:n,ek:EQ[n]?eqKey(EQ[n]):null,kind:i.dataset.key[0]==='A'?'ant':'bal',monto:+i.value};});
-    registrarPago({tipo:'out',mfg,receptor:CONFIG[mfg].receptor,usd,fecha,aps});
-    toast(`Pago a ${CONFIG[mfg].receptor} por ${fmtUSDs(usd)} registrado · cupo actualizado`);
-  }
-  refreshAll();
-}
-
-function renderHist(){
-  document.getElementById('pagoHist').innerHTML=PAGOS.slice().reverse().map(p=>{
-    let monto,quien,meta;
-    if(p.tipo==='in'&&p.interno){
-      monto='US$ '+fmtUSDs(p.usd||0);
-      quien=p.cliente+' <span class="tag-oblig" style="margin-left:6px">interno</span>';
-      meta=`${p.aps.length} hito(s) de equipos · ${p.mon||'USD'} · registró ${p.quien}`;
-    }else if(p.tipo==='in'){
-      monto=p.mon==='USD'?'US$ '+fmtUSDs(p.cop/p.trm):fmtCOPs(p.cop);
-      quien=p.cliente;
-      meta=`${p.aps.length} factura(s) · ${p.mon||'COP'}${p.mon==='USD'?' @ TRM '+p.trm:''} · registró ${p.quien}`;
-    }else{
-      monto='US$ '+fmtUSDs(p.usd);
-      quien=(p.receptor||p.mfg);
-      meta=`${p.aps.length} aplicación(es) a ${p.receptor||p.mfg}`;
-    }
-    return `<div class="hrow ${p.rev?'rev':''}">
-      <div class="hd">${fmtD(p.fecha)}</div>
-      <div class="hm"><span class="htag ${p.tipo}">${p.tipo==='in'?'Entra':'Sale'}</span> ${quien}<small>${meta}${p.rev?' · REVERSADO':''}</small></div>
-      <div class="hv">${monto}</div>
-      <div class="hx">${p.rev?'':`<button onclick="doReverse(${p.id})">Reversar</button>`}</div>
-    </div>`;}).join('')||'<div style="color:var(--ink3);font-size:13px">Sin pagos registrados</div>';
-}
-function doReverse(id){reversePago(id);toast('Pago reversado · saldos restaurados');refreshAll();}
-function refreshAll(){syncFlags();renderHoy();renderPagos();renderClientes();renderConfig();}
-
-/* ================= COMMAND / RECON / TOAST ================= */
-/* ================= BUSCADOR ================= */
-(function(){const cmd=document.getElementById('cmd');if(!cmd)return;
-  cmd.addEventListener('input',()=>runSearch(cmd.value));
-  cmd.addEventListener('focus',()=>{if(cmd.value)runSearch(cmd.value);});
-  document.addEventListener('click',e=>{if(!e.target.closest('.cmd'))document.getElementById('cmdResults').innerHTML='';});
-})();
-function navTo(v){const b=document.querySelector('nav.tabs button[data-v="'+v+'"]');if(b)b.click();}
-function srClose(){document.getElementById('cmdResults').innerHTML='';document.getElementById('cmd').value='';}
-function srOrder(id){srClose();openPanel(id);}
-function srClient(c){srClose();navTo('clientes');selCliData(c);const items=[...document.querySelectorAll('.cl-item')];items.forEach(x=>x.classList.remove('on'));const idx=CLIENTES.indexOf(c);if(items[idx])items[idx].classList.add('on');}
-function runSearch(q){
-  q=(q||'').trim().toLowerCase();const box=document.getElementById('cmdResults');if(!box)return;
-  if(!q){box.innerHTML='';return;}
-  const ords=ORD.filter(o=>('orden '+o.id).includes(q)||o.id.toLowerCase().includes(q)).slice(0,5);
-  const seen=new Set();const projs=EQ.filter(e=>{const p=projOf(e);if(!p||!p.toLowerCase().includes(q))return false;if(seen.has(p))return false;seen.add(p);return true;}).slice(0,6);
-  const clis=CLIENTES.filter(c=>c.toLowerCase().includes(q)).slice(0,4);
-  let html='';
-  if(ords.length)html+=`<div class="sr-h">Órdenes</div>`+ords.map(o=>`<div class="sr" onclick="srOrder('${o.id}')"><b>Orden ${o.id}</b><span>${o.cliente} · ${o.equipos.length} equipos · ${o.mfg==='Singsun'?'trackers':'shelters'}</span></div>`).join('');
-  if(projs.length)html+=`<div class="sr-h">Proyectos</div>`+projs.map(e=>`<div class="sr" onclick="srOrder('${e.ordenId}')"><b>${e.proj}</b><span>orden ${e.ordenId}${e.derrame?' · derrame '+e.derrame:''} · ${STAGE[e.st]}</span></div>`).join('');
-  if(clis.length)html+=`<div class="sr-h">Clientes</div>`+clis.map(c=>`<div class="sr" onclick="srClient('${c}')"><b>${c}</b><span>ver estado de cuenta</span></div>`).join('');
-  box.innerHTML=html||`<div class="sr none">Sin resultados para "${q}"</div>`;
-}
 
 </script>

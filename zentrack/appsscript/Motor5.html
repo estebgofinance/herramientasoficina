@@ -1,0 +1,503 @@
+<script>
+
+/* =============== PESTAÑA SINOSURE ===============
+   La hoja de Andrés tal como se ve en el detailed, celda por celda, con el
+   pedido al que apunta cada fórmula al lado. Más las tres decisiones que
+   de verdad se toman con ella: si cabe el próximo pedido, cuándo se libera
+   cupo, y qué hacer con lo que está en el aire. */
+
+/* Reconstruye los renglones de la hoja a partir de lo que ya quedó guardado:
+   cada línea de sinoDetalle es una celda de la hoja apuntando a un pedido. */
+function hojaSino(){
+  const C=CONCILIA; if(!C) return [];
+  const porCelda={};
+  Object.entries(C.sinoDetalle||{}).forEach(([clave,lineas])=>{
+    (lineas||[]).forEach(l=>{
+      const r=porCelda[l.celda]||(porCelda[l.celda]={celda:l.celda,etiqueta:l.etiqueta,
+        total:l.total,ref:l.ref,que:l.que,claves:[],conjunto:l.conjunto});
+      if(r.claves.indexOf(clave)<0) r.claves.push(clave);
+    });
+  });
+  (C.sinoDup||[]).forEach(d=>{porCelda[d.celda]={celda:d.celda,etiqueta:d.etiqueta,total:d.valor,
+    ref:d.ref,que:'',claves:[],dup:true,yaEn:d.yaEn,lado:d.lado,derrames:d.derrames||[]};});
+  (C.sinoSueltosL||[]).forEach(s=>{porCelda[s.celda]={celda:s.celda,etiqueta:s.etiqueta,total:s.valor,
+    ref:null,que:'',claves:[],suelto:true,lado:s.lado};});
+  const filas=Object.values(porCelda).map(r=>{
+    const col=(r.celda.match(/^[A-Z]+/)||['B'])[0], fil=+((r.celda.match(/\d+$/)||[0])[0]);
+    r.col=col; r.fil=fil; r.lado=r.lado||(col==='B'?'Singsun':'Eaglerise');
+    r.eqs=r.claves.map(k=>EQ.find(e=>kOf(e)===k)).filter(Boolean);
+    return r;
+  }).sort((a,b)=>a.fil-b.fil||a.col.localeCompare(b.col));
+
+  /* Andrés parte algunos pedidos en DOS renglones: uno por el anticipo y otro
+     por el balance (CFM 3.4 está en E10 y en E14). Comparar renglón contra
+     renglón marcaría las dos mitades como errores. La comparación se hace
+     contra el pedido completo, que es lo que sinoPorDerrame ya suma. */
+  const mapa=(C.sinoPorDerrame||{});
+  const hermanas={};
+  filas.forEach(r=>{ if(r.dup||r.suelto) return;
+    r.claves.forEach(k=>{ (hermanas[k]=hermanas[k]||[]).push(r.celda); }); });
+  filas.forEach(r=>{
+    if(r.dup||r.suelto){ r.mio=0; r.dif=0; r.cuadra=true; return; }
+    r.hojaPed=r.claves.reduce((s,k)=>s+(mapa[k]||0),0);
+    r.mio=r.eqs.reduce((s,e)=>s+consumoEq(e,e.mfg),0);
+    r.dif=Math.round((r.mio-r.hojaPed)*100)/100;
+    r.cuadra=Math.abs(r.dif)<=2;
+    /* las otras celdas del mismo pedido, para poder decirlo en la fila */
+    const otras=[...new Set(r.claves.flatMap(k=>hermanas[k]||[]))].filter(c=>c!==r.celda);
+    r.hermanas=otras;
+  });
+  return filas;
+}
+/* los pedidos vivos que la hoja no lista: no son renglones, pero sí plata */
+const fueraDeHoja=mfg=>EQ.filter(e=>e.mfg===mfg&&(+e.cupoSaldo||0)>0.5
+  &&((CONCILIA&&CONCILIA.sinoPorDerrame)||{})[kOf(e)]==null);
+
+/* ---- la hoja, con el formato del Excel ---- */
+const money=n=>{const v=+n||0, s=v<0?'-':'';
+  return s+'$'+Math.abs(v).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});};
+let SNSIM={Singsun:'',Eaglerise:''};
+let SNAB={};                               /* qué renglones están abiertos */
+function abrirSino(celda){SNAB[celda]=!SNAB[celda];pintarSino();}
+
+function pintarSino(){
+  const cont=document.getElementById('v-sinosure'); if(!cont) return;
+  if(!EQ.length||!CONCILIA||!CONCILIA.sino){
+    cont.innerHTML=`<div class="g4em"><h3>Sin la hoja Sinosure</h3>
+      <p>Esta pestaña reproduce tu hoja <b>Sinosure</b> tal como la ves en el detailed.
+         Carga el detailed y vuelve.</p>
+      <button class="btn" onclick="verifyOpen()">Cargar datos</button></div>`;
+    return;
+  }
+  const filas=hojaSino(), S=CONCILIA.sino;
+  const ents=[...new Set([...Object.keys((S.cuposPorEntidad||{}).Singsun||{}),
+                          ...Object.keys((S.cuposPorEntidad||{}).Eaglerise||{})])];
+
+  const bloque=(mfg,titulo)=>{
+    const fs=filas.filter(r=>r.lado===mfg);
+    const ce=(S.cuposPorEntidad||{})[mfg]||{};
+    const techo=+S.cupos[mfg]||0;
+    const total=mfg==='Singsun'?S.totalSingsun:S.totalEagle;
+    const disp=mfg==='Singsun'?S.dispSingsun:S.dispEagle;
+    const mio=EQ.filter(e=>e.mfg===mfg).reduce((s,e)=>s+consumoEq(e,e.mfg),0);
+    const fuera=fueraDeHoja(mfg);
+    return `<table class="hoja">
+      <tr class="h"><td class="l">${mfg==='Singsun'?'Cupos':''}</td><td class="v">${titulo}</td></tr>
+      ${ents.map(k=>`<tr><td class="l">${esc4(k)}</td>
+        <td class="v">${ce[k]!=null?money(ce[k]):''}</td></tr>`).join('')}
+      <tr class="sub"><td class="l"></td><td class="v b">${money(techo)}</td></tr>
+      <tr class="esp"><td colspan="2"></td></tr>
+      <tr class="h"><td class="l b">${mfg==='Singsun'?'Consumo':''}</td><td class="v"></td></tr>
+      ${fs.map(r=>renglonSino(r)).join('')}
+      ${fuera.length?`<tr class="esp"><td colspan="2"></td></tr>
+        ${fuera.map(e=>`<tr class="falta" title="No está en la hoja de Andrés">
+          <td class="l">${esc4(e.derrame)} <span class="pen">falta en la hoja</span></td>
+          <td class="v">${money(consumoEq(e,mfg,'andres'))}</td></tr>`).join('')}`:''}
+      <tr class="esp"><td colspan="2"></td></tr>
+      <tr class="tot"><td class="l b">${mfg==='Singsun'?'Consumo total':''}</td>
+        <td class="v b">${money(total)}</td></tr>
+      ${Math.abs(mio-total)>2?`<tr class="nota"><td class="l"></td>
+        <td class="v">el motor cuenta ${money(mio)}</td></tr>`:''}
+      <tr class="esp"><td colspan="2"></td></tr>
+      <tr class="tot"><td class="l b">${mfg==='Singsun'?'Cupo disponible':''}</td>
+        <td class="v b ${disp<0?'neg':''}">${money(disp)}</td></tr>
+    </table>`;
+  };
+
+  const nd=filas.filter(r=>r.dup||r.suelto||!r.cuadra).length
+          +fueraDeHoja('Singsun').length+fueraDeHoja('Eaglerise').length;
+  cont.innerHTML=`
+    <div class="sec" style="display:flex;align-items:baseline;gap:12px;margin-bottom:4px">
+      <h2 style="font-size:16px;font-weight:600">Hoja Sinosure</h2>
+      <div style="font-size:12.5px;color:var(--ink2)">
+        ${nd?`<b style="color:var(--dato-debo)">${nd} renglón(es) por revisar</b> · ábrelos para ver qué pedidos los componen`
+            :'todo conciliado · abre cualquier renglón para ver qué pedidos lo componen'}</div>
+      <div style="flex:1"></div>
+      <button class="btn" onclick="abrirTodoSino()">${Object.values(SNAB).some(Boolean)?'Cerrar todo':'Abrir todo'}</button>
+      <button class="btn" onclick="exportarSino()">Copiar</button>
+    </div>
+    <div class="hojawrap">${bloque('Singsun','Singsun')}${bloque('Eaglerise','Eagle')}</div>
+    <div class="snsims">
+      ${['Singsun','Eaglerise'].map(m=>`<div class="snsim">
+        <label>¿Me cabe un pedido ${m==='Singsun'?'Singsun':'Eagle'} de</label>
+        <input type="number" placeholder="0" value="${SNSIM[m]}" oninput="SNSIM['${m}']=this.value;simSino('${m}')">
+        <label>USD?</label><span id="sim${m}" class="simr">${simTexto(m)}</span></div>`).join('')}
+    </div>
+    ${timelineSino()}`;
+}
+
+/* un renglón de la hoja, abatible */
+function renglonSino(r){
+  const ab=!!SNAB[r.celda];
+  const marca=r.dup?'<span class="pen avi">repite '+esc4(r.yaEn)+'</span>'
+    :r.suelto?'<span class="pen mal">sin pedido</span>'
+    :!r.cuadra?'<span class="pen mal">revisar</span>':'';
+  return `<tr class="cons ${ab?'ab':''} ${r.dup?'dupr':r.suelto?'suelr':!r.cuadra?'difr':''}"
+      onclick="abrirSino('${esc4(r.celda)}')">
+      <td class="l"><span class="chev">${ab?'▾':'▸'}</span>${esc4(r.etiqueta)} ${marca}</td>
+      <td class="v">${money(r.total)}</td></tr>
+    ${ab?`<tr class="det"><td colspan="2">${detalleSino(r)}</td></tr>`:''}`;
+}
+function detalleSino(r){
+  const meta=`<div class="dmeta">${esc4(r.celda)} · ${esc4(r.ref||'escrito a mano')}${r.que?' · '+esc4(r.que):''}
+    ${r.hermanas&&r.hermanas.length?` · se suma con ${r.hermanas.map(esc4).join(', ')}
+      para dar <b>${money(r.hojaPed)}</b> del pedido`:''}</div>`;
+  if(r.dup) return meta+`<div class="dav">Este renglón apunta a la misma celda que <b>${esc4(r.yaEn)}</b>,
+    así que contaría dos veces los mismos ${money(r.total)}.
+    Hoy <b>${CONFIG.contarDupSino?'sí':'no'}</b> suma ·
+    <a href="#" onclick="event.stopPropagation();setDupSino('${CONFIG.contarDupSino?'no':'si'}');pintarSino();return false">cambiarlo</a></div>`;
+  if(r.suelto) return meta+`<div class="dav">Este renglón no cae en ningún pedido del detailed.
+    Puede ser una etiqueta que Andrés escribió distinto, o un pedido que ya no existe.</div>`;
+  if(!r.eqs.length) return meta+`<div class="dav">No se encontró el pedido al que apunta.</div>`;
+  const tot=r.eqs.reduce((s,e)=>s+(+e.cupoMonto||0),0);
+  return meta+`<table class="dt"><thead><tr>
+      <th>Pedido</th><th>Proyecto</th><th>Estado</th>
+      <th class="r">Monto fáb.</th><th class="r">Saldo fáb.</th><th class="r">De este renglón</th>
+    </tr></thead><tbody>
+    ${r.eqs.map(e=>{
+      const parte=r.eqs.length>1?(tot?r.total*((+e.cupoMonto||0)/tot):r.total/r.eqs.length):r.total;
+      return `<tr onclick="event.stopPropagation();openPanel('${e.ordenId}')">
+        <td><b>${esc4(e.derrame)}</b></td><td>${esc4(projOf(e)||'—')}</td>
+        <td><span class="g4tag">${STAGE[e.st]||'—'}</span></td>
+        <td class="r">${money(+e.cupoMonto||0)}</td>
+        <td class="r">${money(+e.cupoSaldo||0)}</td>
+        <td class="r"><b>${money(parte)}</b></td></tr>`;}).join('')}
+    </tbody></table>
+    ${!r.cuadra?`<div class="dav">La hoja le asigna <b>${money(r.hojaPed)}</b> a
+      ${r.eqs.map(e=>esc4(e.derrame)).join(', ')}, y el motor cuenta <b>${money(r.mio)}</b>
+      (${r.dif>0?'+':''}${money(r.dif)}).</div>`:''}`;
+}
+function abrirTodoSino(){
+  const hay=Object.values(SNAB).some(Boolean);
+  SNAB={}; if(!hay) hojaSino().forEach(r=>SNAB[r.celda]=true);
+  pintarSino();
+}
+
+/* --- ¿me cabe? --- */
+function simTexto(mfg){
+  const v=+SNSIM[mfg]||0;
+  const techo=+CUPO[mfg]||0, usado=EQ.filter(e=>e.mfg===mfg).reduce((s,e)=>s+consumoEq(e,e.mfg),0);
+  const libre=techo-usado;
+  if(!v) return `te quedan <b>${fmtUSDs(libre)}</b>`;
+  const queda=libre-v;
+  if(queda>=0) return `<b style="color:var(--ok)">sí cabe</b> · quedarías con ${fmtUSDs(queda)}`;
+  /* qué tendrías que girar primero para que quepa */
+  const cand=EQ.filter(e=>e.mfg===mfg&&consumoEq(e,e.mfg)>0)
+    .map(e=>({e,libera:consumoEq(e,e.mfg),saldo:+e.cupoSaldo||0,
+              f:e.limitePago?new Date(e.limitePago):null}))
+    .sort((a,b)=>b.libera-a.libera);
+  let falta=-queda, girar=0, cuales=[];
+  for(const c of cand){ if(falta<=0) break; cuales.push(c); girar+=c.saldo; falta-=c.libera; }
+  return `<b style="color:var(--danger)">no cabe por ${fmtUSDs(-queda)}</b>`+
+    (cuales.length?` · girando ${fmtUSDs(girar)} de ${cuales.map(c=>esc4(c.e.derrame)).join(', ')} sí cabría`:'');
+}
+function simSino(mfg){const el=document.getElementById('sim'+mfg); if(el) el.innerHTML=simTexto(mfg);}
+
+/* --- cuándo se libera cupo --- */
+function timelineSino(){
+  const hoy=new Date(); hoy.setHours(0,0,0,0);
+  const items=EQ.filter(e=>e.limitePago&&consumoEq(e,e.mfg)>0.5)
+    .map(e=>({e,f:new Date(e.limitePago),libera:consumoEq(e,e.mfg),girar:+e.cupoSaldo||0}))
+    .sort((a,b)=>a.f-b.f);
+  if(!items.length) return '';
+  const acum={Singsun:0,Eaglerise:0};
+  const libre=m=>(+CUPO[m]||0)-EQ.filter(e=>e.mfg===m).reduce((s,e)=>s+consumoEq(e,e.mfg),0);
+  const base={Singsun:libre('Singsun'),Eaglerise:libre('Eaglerise')};
+  return `<div class="sec" style="display:flex;align-items:baseline;gap:12px;margin:30px 0 10px">
+      <h2 style="font-size:16px;font-weight:600">Cuándo se te libera cupo</h2>
+      <div style="font-size:12.5px;color:var(--ink2)">el cupo se suelta el día que gires el saldo de cada pedido</div></div>
+    <div class="tblwrap"><table class="g4t"><thead><tr>
+      <th>Fecha límite</th><th>Pedido</th><th>Fabricante</th>
+      <th class="r">Tienes que girar</th><th class="r">Se libera</th><th class="r">Cupo libre después</th>
+    </tr></thead><tbody>
+      ${items.map(it=>{
+        acum[it.e.mfg]+=it.libera;
+        const d=Math.round((it.f-hoy)/86400000);
+        return `<tr>
+          <td>${fmtD(it.f)}<div class="snm" style="${d<0?'color:var(--danger);font-weight:600':''}">${
+            d<0?`vencida hace ${-d} d`:d===0?'es hoy':`en ${d} días`}</div></td>
+          <td><b>${esc4(it.e.derrame)}</b><div class="snm">${esc4(projOf(it.e)||'')}</div></td>
+          <td>${it.e.mfg}</td>
+          <td class="r">${fmtUSDs(it.girar)}</td>
+          <td class="r">${fmtUSDs(it.libera)}</td>
+          <td class="r"><b>${fmtUSDs(base[it.e.mfg]+acum[it.e.mfg])}</b></td></tr>`;}).join('')}
+    </tbody></table></div>`;
+}
+
+/* El cuadro que le puedes mandar al dueño del detailed */
+function exportarSino(){
+  const filas=hojaSino();
+  const l=['Celda\tLo que dice la hoja\tValor\tFórmula\tPedido\tLo que cuento yo\tDesfase\tObservación'];
+  filas.forEach(r=>l.push([r.celda,r.etiqueta,Math.round(r.total),r.ref||'sin fórmula',
+    r.eqs.map(e=>e.derrame).join(' + ')||'—',
+    r.dup||r.suelto?'':Math.round(r.mio), r.dup||r.suelto?'':(r.cuadra?0:Math.round(r.dif)),
+    r.dup?('repite '+r.yaEn+': cuenta dos veces la misma celda'):
+    r.suelto?'no cae en ningún pedido':
+    ((r.hermanas&&r.hermanas.length?'con '+r.hermanas.join(', ')+' suma '+Math.round(r.hojaPed)+' · ':'')
+      +(r.cuadra?'ok':'no cuadra'))].join('\t')));
+  ['Singsun','Eaglerise'].forEach(m=>fueraDeHoja(m).forEach(e=>
+    l.push(['—',e.derrame,Math.round(consumoEq(e,m,'andres')),'','','','','falta en la hoja'])));
+  const txt=l.join('\n');
+  const ta=document.createElement('textarea'); ta.value=txt;
+  ta.style.position='fixed'; ta.style.opacity='0';
+  document.body.appendChild(ta); ta.select();
+  let ok=false; try{ ok=document.execCommand('copy'); }catch(e){}
+  document.body.removeChild(ta);
+  toast(ok?`Copiada la hoja con <b>${filas.length}</b> renglón(es) y su mapeo · pégala en un correo`
+          :'No se pudo copiar solo · está en la consola del navegador');
+  if(!ok) console.log(txt);
+}
+
+/* --- las pestañas nuevas se pintan al entrar --- */
+document.querySelectorAll('nav.tabs button[data-v="precios"],nav.tabs button[data-v="sinosure"]')
+  .forEach(b=>b.addEventListener('click',()=>{ b.dataset.v==='precios'?pintarPrecios():pintarSino(); }));
+
+
+
+/* =============== NO DEJAR DOS PRECIOS PELEANDO ===============
+   En "Editar cliente" hay una casilla de precio por pedido. Si ese pedido
+   ya está en un grupo, el grupo manda y lo que se escriba ahí no se usa.
+   En vez de ignorarlo en silencio, se bloquea la casilla y se dice dónde
+   está el precio de verdad. */
+if(typeof renderEditCliente==='function'){
+  const _recOrig=renderEditCliente;
+  renderEditCliente=function(){
+    _recOrig.apply(this,arguments);
+    try{ marcarPreciosDeGrupo(); }catch(e){}
+  };
+}
+function marcarPreciosDeGrupo(){
+  document.querySelectorAll('#editCliBody input.ec-num, .ec-tbl input.ec-num').forEach(inp=>{
+    const oc=inp.getAttribute('onchange')||'';
+    if(oc.indexOf("'precioVenta'")<0) return;
+    const m=oc.match(/setEqField\((\d+)/); if(!m) return;
+    const e=EQ[+m[1]]; if(!e) return;
+    const g=gpDeEq(e); if(!g) return;
+    const td=inp.parentElement; if(!td||td.dataset.gp) return;
+    td.dataset.gp='1';
+    td.innerHTML=`<div style="font-variant-numeric:tabular-nums;font-weight:600">${fmtUSDs(gpParte(g,e))}</div>
+      <small style="display:block;font-size:10px;color:var(--ink3);line-height:1.35">
+        del grupo <b>${esc4(g.nombre||'sin nombre')}</b><br>
+        <a href="#" onclick="navTo('precios');GSEL='${g.id}';pintarPrecios();return false"
+           style="color:var(--accent)">editarlo ahí</a></small>`;
+  });
+}
+
+/* =============== LISTA DE PEDIDOS: PRECIO Y SELECCIÓN DIRECTOS ===============
+   La lista mostraba solo la orden madre y había que abrir un panel para ver
+   los pedidos. Ahora cada orden se abre ahí mismo, con el precio editable en
+   la fila y una casilla para escoger los que van juntos en una factura. */
+let LSEL=new Set();          /* derrames escogidos */
+let LAB=new Set();           /* órdenes abiertas */
+
+if(typeof renderLedger==='function'){
+  renderLedger=function(){
+    const cont=document.getElementById('ledger'); if(!cont) return;
+    let os=ORD.slice();
+    if(typeof filtP!=='undefined'){
+      if(filtP==='Tracker')os=os.filter(o=>o.mfg==='Singsun');
+      else if(filtP==='Shelter')os=os.filter(o=>o.mfg==='Eaglerise');
+      else if(filtP==='vencida')os=os.filter(o=>o.equipos.some(isOver));
+      else if(filtP==='pipeline')os=os.filter(o=>o.equipos.some(e=>!isShipped(e)));
+      else if(filtP==='sinprecio')os=os.filter(o=>o.equipos.some(e=>!(precioVenta(e)>0)));
+      else if(filtP==='sincupo')os=os.filter(o=>o.equipos.some(e=>e.mfg&&(+e.cupoSaldo||0)>0.5
+        && !e.sinoManual && ((CONCILIA&&CONCILIA.sinoPorDerrame)||{})[kOf(e)]==null));
+    }
+    cont.innerHTML=os.map(o=>{
+      const comp=o.equipos.reduce((s,e)=>s+consumoEq(e,o.mfg),0);
+      const balPend=o.equipos.filter(e=>isShipped(e)).reduce((s,e)=>s+(+e.balSaldo||0),0);
+      const over=o.equipos.some(isOver);
+      const cnt={};o.equipos.forEach(e=>cnt[e.st]=(cnt[e.st]||0)+1);
+      const resumen=Object.entries(cnt).map(([k,v])=>`${v} ${STAGE[k].toLowerCase()}`).join(' · ');
+      const ab=LAB.has(o.id);
+      const todos=o.equipos.every(e=>LSEL.has(e.derrame));
+      const algunos=!todos&&o.equipos.some(e=>LSEL.has(e.derrame));
+      const sinP=o.equipos.filter(e=>!(precioVenta(e)>0)).length;
+      return `<tr class="row ord ${ab?'ab':''}" onclick="abrirOrden('${o.id}')">
+        <td><input type="checkbox" class="lchk" ${todos?'checked':''} ${algunos?'data-ind="1"':''}
+              onclick="event.stopPropagation();selOrden('${o.id}',this.checked)">
+            <span class="chev">${ab?'▾':'▸'}</span><span class="pid">Orden ${o.id}</span></td>
+        <td>${esc4(o.cliente)}<div class="stage" style="color:var(--ink3);font-size:12px">${
+          (function(){const n=nEquipos(o.equipos),t=o.mfg==='Singsun'?'tracker':'shelter';
+            return n+' '+t+(n===1?'':'s')+(n!==o.equipos.length?' en '+o.equipos.length+' pedidos':'');})()}
+          ${sinP?`<span class="g4tag avi" style="margin-left:6px">${sinP} sin precio</span>`:''}</div></td>
+        <td><span class="stage">${resumen}</span></td>
+        <td class="r">${fmtUSD(comp)}</td>
+        <td class="r">${balPend>0?fmtUSD(balPend):'<span style="color:var(--ink3)">—</span>'}${
+          over?' <span style="background:var(--danger-soft);color:var(--danger);font-size:10px;padding:1px 6px;border-radius:4px">vencido</span>':''}</td>
+      </tr>${ab?`<tr class="subrow"><td colspan="5">${tablaPedidos(o)}</td></tr>`:''}`;
+    }).join('');
+    barraSel();
+  };
+}
+function tablaPedidos(o){
+  return `<table class="ptab"><thead><tr>
+      <th style="width:30px"></th><th>Pedido</th><th>Proyecto</th><th>Estado</th>
+      <th class="r">Saldo cupo</th>
+      <th title="¿El saldo de este pedido consume cupo Sinosure?">Cupo Sinosure</th>
+      <th class="r" style="width:150px">Precio de venta</th><th style="width:80px"></th>
+    </tr></thead><tbody>
+    ${o.equipos.map(e=>{
+      const i=EQ.indexOf(e), g=gpDeEq(e), pv=precioVenta(e);
+      return `<tr class="${LSEL.has(e.derrame)?'sel':''}">
+        <td><input type="checkbox" class="lchk" ${LSEL.has(e.derrame)?'checked':''}
+              onclick="event.stopPropagation();selPedido('${esc4(e.derrame)}',this.checked)"></td>
+        <td><b>${esc4(e.derrame)}</b></td>
+        <td>${esc4(projOf(e)||'—')}</td>
+        <td><span class="g4tag">${STAGE[e.st]||'—'}</span></td>
+        <td class="r">${fmtUSDs(+e.cupoSaldo||0)}</td>
+        <td>${cupoSel(e)}</td>
+        <td class="r">${g
+          ? `<b>${fmtUSDs(pv)}</b><div class="pnota">del grupo <b>${esc4(g.nombre||'sin nombre')}</b> ·
+             <a href="#" onclick="event.stopPropagation();navTo('precios');GSEL='${g.id}';pintarPrecios();return false">abrirlo</a></div>`
+          : `<input class="pinp" type="number" step="any" placeholder="0" value="${e.precioVenta||''}"
+               onclick="event.stopPropagation()"
+               oninput="setPrecioEq(${i},this.value,true)"
+               onchange="setPrecioEq(${i},this.value)">`}</td>
+        <td><button class="btn" style="padding:3px 9px;font-size:11px"
+              onclick="event.stopPropagation();openPanel('${o.id}')">ver</button></td>
+      </tr>`;}).join('')}
+    </tbody></table>`;
+}
+/* ¿Este pedido consume cupo Sinosure? Por defecto manda la hoja de Andrés;
+   aquí se fuerza a mano para los que él todavía no ha cargado, como el PO#16. */
+function cupoSel(e){
+  if(!e.mfg) return '<span style="color:var(--ink3);font-size:11px">—</span>';
+  const m=(CONCILIA&&CONCILIA.sinoPorDerrame)||null;
+  const hoja=m?m[kOf(e)]:null;
+  const v=e.sinoManual||'';
+  const cls=v==='si'?'si':v==='no'?'no':'';
+  const nota=v==='si'?'lo cuentas tú'
+    :v==='no'?'fuera del cupo'
+    :(hoja!=null?'la hoja lo lista':(m?'la hoja no lo lista':'sin hoja'));
+  return `<select class="csel ${cls}" onclick="event.stopPropagation()"
+      title="Consume hoy ${fmtUSDs(consumoEq(e,e.mfg))}"
+      onchange="event.stopPropagation();setSinoManual('${(''+e.derrame).replace(/'/g,'')}','${e.mfg}',this.value);renderLedger()">
+      ${[['','Lo que diga la hoja'],['si','Sí consume'],['no','No consume']]
+        .map(o=>`<option value="${o[0]}" ${o[0]===v?'selected':''}>${o[1]}</option>`).join('')}
+    </select><div class="pnota">${nota} · ${fmtUSDs(consumoEq(e,e.mfg))}</div>`;
+}
+function abrirOrden(id){ LAB.has(id)?LAB.delete(id):LAB.add(id); renderLedger(); }
+let _pt=null;
+/* Mientras se escribe se guarda el número pero NO se repinta la tabla, porque
+   repintar le quitaría el foco al campo a media cifra. El repintado espera a
+   que salgas del campo. Así tampoco se pierde lo escrito si te vas de la pestaña. */
+function setPrecioEq(i,v,escribiendo){
+  const e=EQ[i]; if(!e) return;
+  e.precioVenta=parseFloat(v)||0;
+  clearTimeout(_pt);
+  if(escribiendo){ _pt=setTimeout(()=>{guardar4();refreshAll();},500); return; }
+  guardar4(); refreshAll(); renderLedger();
+}
+function selPedido(d,on){ on?LSEL.add(d):LSEL.delete(d); renderLedger(); }
+function selOrden(id,on){
+  const o=ORD.find(x=>x.id===id); if(!o) return;
+  o.equipos.forEach(e=>on?LSEL.add(e.derrame):LSEL.delete(e.derrame));
+  if(on)LAB.add(id);
+  renderLedger();
+}
+function barraSel(){
+  let bar=document.getElementById('lbar');
+  if(!LSEL.size){ if(bar)bar.remove(); return; }
+  if(!bar){ bar=document.createElement('div'); bar.id='lbar'; bar.className='lbar'; document.body.appendChild(bar); }
+  const eqs=EQ.filter(e=>LSEL.has(e.derrame));
+  const clis=[...new Set(eqs.map(e=>e.cliente))];
+  const suma=eqs.reduce((s,e)=>s+precioVenta(e),0);
+  const yaEn=eqs.filter(e=>gpDeEq(e)).length;
+  bar.innerHTML=`<b>${eqs.length}</b> pedido(s) escogido(s)
+    <span class="m">${clis.length===1?esc4(clis[0]):clis.length+' clientes distintos'}
+      · precio hoy ${fmtUSD(suma)}${yaEn?` · ${yaEn} ya está(n) en un grupo`:''}</span>
+    <span style="flex:1"></span>
+    <button class="btn" onclick="LSEL.clear();renderLedger()">Quitar la selección</button>
+    <button class="btn primary" ${clis.length>1?'disabled title="Escoge pedidos de un solo cliente"':''}
+      onclick="grupoDesdeSeleccion()">Ponerles un precio juntos</button>`;
+}
+/* el atajo que faltaba: de la lista de pedidos a un grupo de precio */
+function grupoDesdeSeleccion(){
+  const eqs=EQ.filter(e=>LSEL.has(e.derrame));
+  if(!eqs.length) return;
+  const cli=eqs[0].cliente;
+  if(eqs.some(e=>e.cliente!==cli)){ toast('Escoge pedidos de un solo cliente'); return; }
+  /* si ya estaban en otro grupo, salen de él */
+  GPRE.forEach(g=>{ g.eqRefs=(g.eqRefs||[]).filter(d=>!LSEL.has(d)); });
+  gpNuevo();
+  const g=GPRE[GPRE.length-1];
+  g.cliente=cli; g.eqRefs=eqs.map(e=>e.derrame);
+  g.nombre=eqs.length+' pedidos de '+cli;
+  g.total=eqs.reduce((s,e)=>s+(+e.precioVenta||0),0);
+  LSEL.clear();
+  guardar4(); refreshAll(); renderLedger();
+  navTo('precios'); GSEL=g.id; pintarPrecios();
+  toast(`Grupo con <b>${eqs.length}</b> pedido(s) · escribe el precio total`);
+}
+
+/* =============== LIMPIEZA v0.23 ===============
+   Tres cosas que quedaron sueltas entre iteraciones. */
+
+/* 1) EL PRECIO DE GRUPO NO LLEGABA AL ESTADO DE CUENTA.
+   Seis sitios del motor leen e.precioVenta directo (la tabla de "estimado ·
+   pendiente facturar", los totales del cliente, la marca de "sin precio"…)
+   y se saltaban el grupo, así que todo seguía diciendo "definir".
+   En vez de parchar seis lecturas, el grupo escribe su parte en el pedido:
+   el grupo manda, y el campo de siempre queda sincronizado. */
+function sincronizarPrecios(){
+  let n=0;
+  GPRE.forEach(g=>{
+    gpEquipos(g).forEach(e=>{
+      const parte=gpParte(g,e);
+      if(Math.abs((+e.precioVenta||0)-parte)>0.005){ e.precioVenta=parte; n++; }
+    });
+  });
+  return n;
+}
+/* se sincroniza después de cualquier cosa que mueva un grupo */
+['gpSet','gpToggle','gpParteSet','gpCuadrar','gpBorrar','gpTomarFac','aplicarFusiones','grupoDesdeSeleccion']
+  .forEach(f=>{ if(typeof window[f]!=='function')return;
+    const orig=window[f];
+    window[f]=function(){ const r=orig.apply(this,arguments); sincronizarPrecios(); return r; };
+  });
+
+/* 2) BOTÓN QUE NO LLEVA A NINGUNA PARTE.
+   La palanca de "entra al cupo Sinosure" se repetía ocho veces en el panel,
+   una por pedido. En el panel queda el dato; se decide en Pedidos o en la
+   pestaña Sinosure. */
+if(typeof openPanel==='function'){
+  const _opOrig=openPanel;
+  openPanel=function(){
+    _opOrig.apply(this,arguments);
+    try{ limpiarPanel(); }catch(e){}
+  };
+}
+function limpiarPanel(){
+  /* la palanca de Sinosure vive ahora en su pestaña; aquí solo estorbaba
+     repetida ocho veces. Se deja el dato, se quita el control. */
+  document.querySelectorAll('#panel .sinorow').forEach(row=>{
+    const sel=row.querySelector('select'); if(!sel) return;
+    const v=sel.value;
+    row.innerHTML=`<b>Sinosure</b> <span style="font-size:10.5px;color:var(--ink3)">${
+      v==='si'?'lo cuentas a mano':v==='no'?'lo dejaste fuera':'según la hoja'}</span>`;
+    row.style.cursor='pointer';
+    row.onclick=ev=>{ev.stopPropagation();closePanel();navTo('sinosure');};
+    row.title='Decidirlo en la pestaña Sinosure';
+  });
+}
+
+/* 3) la pestaña Precios ahora avisa si algo quedó a medias */
+const _pintarPreciosOrig=pintarPrecios;
+pintarPrecios=function(){
+  _pintarPreciosOrig.apply(this,arguments);
+  const cont=document.getElementById('v-precios'); if(!cont||!GPRE.length) return;
+  const malos=GPRE.filter(g=>!(+g.total>0)||!(g.eqRefs||[]).length);
+  if(!malos.length) return;
+  const av=document.createElement('div');
+  av.className='g4av'; av.style.margin='14px 0 0';
+  av.innerHTML=`<b>${malos.length} grupo(s) sin terminar:</b> `+
+    malos.map(g=>`${esc4(g.nombre||'sin nombre')} (${!(+g.total>0)?'sin total':'sin pedidos'})`).join(' · ')+
+    `. Mientras les falte eso, sus pedidos no suman al estado de cuenta.`;
+  cont.appendChild(av);
+};
+
+
+
+
+</script>

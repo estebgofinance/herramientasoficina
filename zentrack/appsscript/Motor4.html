@@ -1,143 +1,485 @@
-<style>
-/* ===== v0.22 · Precios por grupo y pestaña Sinosure ===== */
-.g4wrap{display:grid;grid-template-columns:270px 1fr;gap:24px;align-items:start}
-@media(max-width:980px){.g4wrap{grid-template-columns:1fr}}
-.g4list{background:var(--surface);border:1px solid var(--rule);border-radius:12px;overflow:hidden}
-.g4item{padding:12px 14px;border-bottom:1px solid var(--rule);cursor:pointer}
-.g4item:last-child{border-bottom:none}
-.g4item:hover{background:#FBFBFC}
-.g4item.on{background:var(--ink);color:#fff}
-.g4item .n{font-size:13px;font-weight:600}
-.g4item .m{font-size:11px;color:var(--ink3);margin-top:1px}
-.g4item.on .m{color:rgba(255,255,255,.62)}
-.g4item .v{font-size:12.5px;font-weight:600;font-variant-numeric:tabular-nums;float:right}
-.g4card{background:var(--surface);border:1px solid var(--rule);border-radius:12px;overflow:hidden}
-.g4h{padding:18px 22px;border-bottom:1px solid var(--rule)}
-.g4h .t{font-size:18px;font-weight:700;letter-spacing:-.02em}
-.g4sec{font-size:10.5px;font-weight:700;color:var(--ink2);text-transform:uppercase;letter-spacing:.07em;
-  padding:14px 22px 8px;background:#FBFBFC;border-bottom:1px solid var(--rule);border-top:1px solid var(--rule)}
-.g4b{padding:16px 22px}
-.g4grid{display:grid;gap:12px 14px;grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
-.g4f{display:flex;flex-direction:column;gap:4px;min-width:0}
-.g4f label{font-size:11px;color:var(--ink2);font-weight:500}
-.g4f input,.g4f select{border:1px solid var(--rule2);background:var(--surface);border-radius:7px;padding:7px 9px;font-size:13px;width:100%}
-.g4f input:focus,.g4f select:focus{outline:none;border-color:var(--ink);box-shadow:0 0 0 3px rgba(23,24,26,.07)}
-.g4f input.n{text-align:right;font-variant-numeric:tabular-nums}
-.g4f .h{font-size:10.5px;color:var(--ink3);min-height:13px;font-variant-numeric:tabular-nums}
-table.g4t{width:100%;border-collapse:collapse}
-table.g4t th{font-size:10px;font-weight:700;color:var(--ink2);text-transform:uppercase;letter-spacing:.04em;
-  text-align:left;padding:8px 10px;border-bottom:1px solid var(--rule);white-space:nowrap}
-table.g4t th.r,table.g4t td.r{text-align:right;font-variant-numeric:tabular-nums}
-table.g4t td{padding:9px 10px;border-bottom:1px solid var(--rule);font-size:12.5px;vertical-align:middle}
-table.g4t tr:last-child td{border-bottom:none}
-table.g4t tr.tt td{background:#FBFBFC;font-weight:700;border-top:1px solid var(--rule2)}
-table.g4t input.n{width:104px;border:1px solid var(--rule2);border-radius:6px;padding:4px 7px;font-size:12.5px;
-  text-align:right;font-variant-numeric:tabular-nums}
-.g4chk{width:15px;height:15px;cursor:pointer;accent-color:#17181A}
-.g4tag{display:inline-block;font-size:10px;font-weight:700;padding:2px 7px;border-radius:5px;background:var(--rule);color:var(--ink2)}
-.g4tag.ok{background:#E7F1EC;color:#2E6E5A} .g4tag.mal{background:var(--danger-soft);color:var(--danger)}
-.g4tag.avi{background:var(--accent-soft);color:#8a5300}
-.g4em{background:var(--surface);border:1px dashed var(--rule2);border-radius:12px;padding:44px 28px;text-align:center}
-.g4em h3{font-size:16px;font-weight:600;margin-bottom:5px}
-.g4em p{font-size:13px;color:var(--ink2);max-width:460px;margin:0 auto 16px}
-.g4av{font-size:12px;color:#8a5300;background:var(--accent-soft);border:1px solid #F2D9A8;border-radius:9px;
-  padding:11px 14px;margin:14px 22px;line-height:1.65}
-.g4av b{color:#6b4612}
-.g4cmp{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:10px}
-.g4cmp>div{border:1px solid var(--rule);border-radius:9px;padding:11px 13px;background:var(--surface)}
-.g4cmp .l{font-size:10.5px;color:var(--ink2);text-transform:uppercase;letter-spacing:.04em;font-weight:700}
-.g4cmp .v{font-size:19px;font-weight:700;font-variant-numeric:tabular-nums;margin-top:3px}
-.g4acts{display:flex;gap:8px;flex-wrap:wrap;padding:14px 22px;border-top:1px solid var(--rule);background:#FBFBFC}
-
-
-/* --- lista de pedidos con precio y selección --- */
-tr.row.ord td{cursor:pointer}
-tr.row.ord.ab td{background:#F4F5F6}
-tr.row.ord .chev{display:inline-block;width:14px;color:var(--ink3);font-size:10px}
-.lchk{width:14px;height:14px;cursor:pointer;accent-color:#17181A;margin-right:7px;vertical-align:-1px}
-tr.subrow td{padding:0 0 12px 34px!important;background:#F4F5F6!important;border-bottom:1px solid var(--rule)}
-table.ptab{width:100%;border-collapse:collapse;background:var(--surface);border:1px solid var(--rule);border-radius:9px}
-table.ptab th{font-size:9.5px;font-weight:700;color:var(--ink2);text-transform:uppercase;letter-spacing:.04em;
-  text-align:left;padding:7px 10px;border-bottom:1px solid var(--rule);white-space:nowrap}
-table.ptab th.r,table.ptab td.r{text-align:right}
-table.ptab td{padding:7px 10px;border-bottom:1px solid var(--rule);font-size:12.5px;
-  font-variant-numeric:tabular-nums;vertical-align:middle}
-table.ptab tbody tr:last-child td{border-bottom:none}
-table.ptab tr.sel td{background:var(--accent-soft)}
-.pinp{width:118px;border:1px solid var(--rule2);border-radius:7px;padding:5px 8px;font-size:12.5px;
-  text-align:right;font-variant-numeric:tabular-nums;background:var(--surface)}
-.pinp:focus{outline:none;border-color:var(--ink);box-shadow:0 0 0 3px rgba(23,24,26,.07)}
-.pnota{font-size:10px;color:var(--ink3);line-height:1.4;margin-top:1px}
-.lbar{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);z-index:150;display:flex;
-  align-items:center;gap:11px;background:#17181A;color:#fff;border-radius:11px;padding:11px 16px;
-  font-size:13px;box-shadow:0 10px 32px rgba(0,0,0,.3);max-width:92vw;flex-wrap:wrap}
-.lbar .m{font-size:11.5px;color:rgba(255,255,255,.65)}
-.lbar .btn{background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.2);color:#fff}
-.lbar .btn:hover{background:rgba(255,255,255,.18)}
-.lbar .btn.primary{background:#fff;color:#17181A;border-color:#fff}
-.lbar .btn:disabled{opacity:.4}
-
-/* --- la hoja Sinosure, con el formato del Excel --- */
-.hojawrap{display:grid;grid-template-columns:1fr 1fr;gap:46px;align-items:start;
-  background:var(--surface);border:1px solid var(--rule);border-radius:12px;padding:26px 30px}
-@media(max-width:1020px){.hojawrap{grid-template-columns:1fr;gap:30px}}
-table.hoja{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
-table.hoja td{padding:3px 0;font-size:13.5px;vertical-align:top;border:none}
-table.hoja td.l{padding-right:14px}
-table.hoja td.v{text-align:right;white-space:nowrap;width:150px}
-table.hoja td.b{font-weight:700}
-table.hoja tr.h td{font-weight:700;padding-bottom:5px}
-table.hoja tr.h td.v{text-align:center;font-size:14px}
-table.hoja tr.sub td{border-top:1px solid var(--ink);padding-top:4px}
-table.hoja tr.esp td{height:17px;padding:0}
-table.hoja tr.tot td{border-top:1px solid var(--ink);padding-top:5px;font-size:13.5px}
-table.hoja tr.nota td{font-size:11px;color:var(--danger);padding-top:0}
-table.hoja td.v.neg{color:var(--danger)}
-table.hoja tr.cons{cursor:pointer}
-table.hoja tr.cons:hover td{background:#F4F5F6}
-table.hoja tr.cons.ab td{background:#F0F1F3;font-weight:600}
-table.hoja tr.cons.difr td.l,table.hoja tr.cons.difr td.v{background:var(--danger-soft)}
-table.hoja tr.cons.dupr td.l,table.hoja tr.cons.dupr td.v,
-table.hoja tr.cons.suelr td.l,table.hoja tr.cons.suelr td.v{background:var(--accent-soft)}
-table.hoja tr.falta td{background:#F2F4F7;color:var(--ink2)}
-table.hoja .chev{display:inline-block;width:13px;color:var(--ink3);font-size:10px}
-table.hoja .pen{font-size:10px;font-weight:700;padding:1px 6px;border-radius:4px;
-  background:var(--rule);color:var(--ink2);margin-left:5px;vertical-align:1px}
-table.hoja .pen.mal{background:var(--danger-soft);color:var(--danger)}
-table.hoja .pen.avi{background:var(--accent-soft);color:#8a5300}
-table.hoja tr.det td{padding:0 0 12px 13px;background:transparent!important}
-.dmeta{font-size:11px;color:var(--ink3);padding:7px 0 6px;font-family:ui-monospace,Menlo,monospace}
-.dmeta b{color:var(--ink2);font-family:'Archivo',system-ui}
-.dav{font-size:11.5px;color:#8a5300;background:var(--accent-soft);border-radius:7px;padding:8px 11px;margin-top:8px;line-height:1.6}
-table.dt{width:100%;border-collapse:collapse;background:var(--surface);border:1px solid var(--rule);border-radius:8px}
-table.dt th{font-size:9.5px;font-weight:700;color:var(--ink2);text-transform:uppercase;letter-spacing:.04em;
-  text-align:left;padding:6px 9px;border-bottom:1px solid var(--rule);white-space:nowrap}
-table.dt th.r,table.dt td.r{text-align:right}
-table.dt td{padding:7px 9px;border-bottom:1px solid var(--rule);font-size:12px}
-table.dt tbody tr{cursor:pointer} table.dt tbody tr:hover td{background:#FBFBFC}
-table.dt tbody tr:last-child td{border-bottom:none}
-.snsims{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:16px}
-@media(max-width:1020px){.snsims{grid-template-columns:1fr}}
-.snsim{background:var(--surface);border:1px solid var(--rule);border-radius:10px;padding:12px 16px;
-  display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:12.5px;color:var(--ink2)}
-.snsim input{width:118px;border:1px solid var(--rule2);border-radius:7px;padding:5px 9px;font-size:12.5px;
-  text-align:right;font-variant-numeric:tabular-nums;background:var(--surface)}
-.snsim .simr b{color:var(--ink)}
-/* --- sinosure --- */
-.snkpis{display:flex;border-top:1px solid var(--rule);border-bottom:1px solid var(--rule);margin-bottom:24px;flex-wrap:wrap}
-.snk{flex:1 1 180px;padding:15px 22px 15px 0;border-right:1px solid var(--rule)}
-.snk:last-child{border-right:none} .snk:not(:first-child){padding-left:22px}
-.snk .l{font-size:11.5px;color:var(--ink2)}
-.snk .v{font-size:24px;font-weight:700;font-variant-numeric:tabular-nums;margin-top:3px;letter-spacing:-.02em}
-.snk .v.mal{color:var(--danger)} .snk .v.ok{color:var(--ok)}
-.snk .d{font-size:11.5px;color:var(--ink2);margin-top:3px;font-variant-numeric:tabular-nums}
-.sndif{font-variant-numeric:tabular-nums;font-weight:600}
-.sndif.mas{color:var(--danger)} .sndif.menos{color:var(--ok)}
-.snsel{border:1px solid var(--rule2);border-radius:6px;padding:3px 6px;font-size:11.5px;background:var(--surface)}
-.snsel.si{border-color:#B7D4C9;background:#E7F1EC} .snsel.no{border-color:#f0c4c0;background:#fdeceb}
-.snfil{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;align-items:center}
-</style>
 <script>
+
+/* ================= CONFIG CUPO ================= */
+EQ.forEach((e,i)=>e._i=i);
+function stageOpts(sel){return ['confirm','prod','finished','booked','shipping'].map(s=>`<option value="${s}" ${s===sel?'selected':''}>${STAGE[s]}</option>`).join('');}
+function setCfg(mfg,f,v){CONFIG[mfg][f]=(f==='antPct')?Math.max(0,Math.min(1,parseFloat(v)||0)):(f==='dias'?(+v||0):v);if(f==='dias')recalcVenceChina();refreshCupo();}
+function setCupo(mfg,v){CUPO[mfg]=Math.max(0,+v||0);refreshCupo();}
+function setOverride(i,v){EQ[i].pctOverride=(v==='auto')?null:parseFloat(v);refreshCupo();}
+function setDupSino(v){CONFIG.contarDupSino=(v==='si');refreshAll();renderLedger();if(typeof saveToServer==='function')saveToServer();toast(CONFIG.contarDupSino?'Los renglones repetidos vuelven a sumar':'Cada celda de la hoja Sinosure cuenta una sola vez');}
+function setCupoRegla(v){CONFIG.cupoRegla=v;refreshAll();renderLedger();if(typeof saveToServer==='function')saveToServer();toast('Cupo contado por: <b>'+CUPO_REGLAS[v]+'</b>');}
+function setTrmProy(v){CONFIG.trmProy=+v||4050;renderConfig();}
+function setCliTerm(c,v){if(CLI[c]){CLI[c].term=+v||0;recalcVence();}refreshCupo();if(document.getElementById('v-clientes').classList.contains('on'))renderClientes();}
+function setCliFifo(c,v){if(CLI[c])CLI[c].fifo=(v==='fifo');}
+function recalcVence(){/* en el nuevo modelo los vencimientos son por hito y se resuelven en vivo */}
+function recalcVenceChina(){EQ.forEach(e=>{if(isShipped(e)&&e.bl)e.vence=addD(e.bl,CONFIG[e.mfg].dias);});}
+function delCliente(c){
+  if(!CLI[c])return;
+  const eqs=EQ.filter(e=>e.cliente===c).length;
+  const facs=FACT.filter(f=>f.cliente===c).length;
+  const pag=PAGOS.filter(p=>p.cliente===c).length;
+  if(eqs||facs||pag){toast('No se puede eliminar <b>'+c+'</b>: tiene '+(eqs?eqs+' equipo(s) ':'')+(facs?facs+' factura(s) ':'')+(pag?pag+' pago(s)':'')+'. Reasígnalos primero.');return;}
+  if(!confirm('¿Eliminar el cliente '+c+'? Esta acción no se puede deshacer.'))return;
+  delete CLI[c];CLIENTES=Object.keys(CLI);
+  renderConfig();if(document.getElementById('v-clientes').classList.contains('on'))renderClientes();
+  toast('Cliente <b>'+c+'</b> eliminado');
+  if(typeof saveToServer==='function')saveToServer();
+}
+function addClienteUI(){const n=document.getElementById('ncName').value,t=document.getElementById('ncTerm').value,f=document.getElementById('ncFifo').value==='fifo';if(addCliente(n,t,f)){renderConfig();if(typeof renderClientes==='function')renderClientes();toast('Cliente <b>'+n.trim()+'</b> agregado · '+(+t||60)+' días');}else toast('Nombre vacío o cliente ya existe');}
+function refreshCupo(){renderHoy();renderConfig();if(document.getElementById('v-pagos').classList.contains('on'))renderPagos();}
+function stageOpts(sel){return ['confirm','prod','finished','booked','shipping'].map(s=>`<option value="${s}" ${s===sel?'selected':''}>${STAGE[s]}</option>`).join('');}
+function renderHistCargas(){
+  const el=document.getElementById('cfgHist');if(!el)return;
+  if(!HIST.length){el.innerHTML='<div style="color:var(--ink3);font-size:13px;padding:6px 0">Aún no hay cargas archivadas — la primera queda al aprobar el asistente.</div>';return;}
+  const rows=HIST.slice().reverse().map((h,i)=>{
+    const last=i===0, prev=HIST[HIST.length-1-i-1];
+    const delta=prev?(h.nEq-prev.nEq):h.nEq;const dS=prev?(h.cupoS-prev.cupoS):0;const dE=prev?(h.cupoE-prev.cupoE):0;
+    return `<div class="hist-row ${last?'last':''}">
+      <div class="h-meta"><b>${h.id}</b><small>${fmtD(h.ts)} · ${h.autor}</small></div>
+      <div class="h-nums">${h.nEq} equipos${prev?` (${delta>=0?'+':''}${delta})`:''} · cupo Singsun ${fmtUSDs(h.cupoS)}${dS?` (${dS>=0?'+':''}${fmtUSDs(dS)})`:''} · Eaglerise ${fmtUSDs(h.cupoE)}${dE?` (${dE>=0?'+':''}${fmtUSDs(dE)})`:''}</div>
+      <div class="h-actions">${last?`<button class="hbtn" onclick="corregirUltima()" title="Reabrir esta carga en el asistente para modificarla">Corregir</button><button class="hbtn danger" onclick="revertCarga()" title="Volver al estado ANTES de esta carga">Revertir</button>`:'<span class="h-tag">archivada</span>'}</div>
+    </div>`;
+  }).join('');
+  el.innerHTML=rows;
+}
+function revertCarga(){
+  if(!HIST.length){return;}
+  const last=HIST[HIST.length-1];
+  if(!last.snapPrev){toast('No hay estado previo para revertir esta carga');return;}
+  if(!confirm('Revertir la carga '+last.id+'? Esto vuelve al estado ANTES de esa carga. Los pagos y cambios que hiciste después se perderán si dependían de ella.'))return;
+  hydrateSnap(last.snapPrev);HIST.pop();
+  renderHoy();renderLedger();renderClientes();renderConfig();renderPagos();
+  toast('Carga '+last.id+' revertida');
+  if(typeof saveToServer==='function')saveToServer();
+}
+function corregirUltima(){
+  if(!HIST.length){toast('No hay cargas para corregir');return;}
+  /* reabrir el asistente con lo cargado hoy (todos los campos: montos M…U, detailed, etc.) */
+  WIZ={step:2,work:null,prev:null,err:0,filter:'todos',loaded:true,totals:{},corte:new Date(),orNombre:'corrección de la última carga'};
+  WIZ.work=EQ.map(e=>{const w={...e};w.antPend=e.antSaldo;w.antPaid=e.antSaldo<1;if(w.cupoMonto==null)w.cupoMonto=e.mfgAmt;if(w.cupoSaldo==null)w.cupoSaldo=consumoEq(e,e.mfg);if(w.totalSaldo==null)w.totalSaldo=w.cupoSaldo+(+e.otrosSaldo||0);return w;});
+  WIZ.prev=prevDe();
+  _prevSnap=snapNow();
+  document.getElementById('reconScrim').classList.add('on');renderWiz();
+}
+
+function renderConfig(){
+  renderHistCargas();
+  const pm=document.getElementById('cfgPagoMin');if(pm)pm.value=CONFIG.pagoMinDias||15;
+  const ld=document.getElementById('cfgLogDias');if(ld)ld.value=CONFIG.logDias||30;
+  document.getElementById('cfgBody').innerHTML=['Singsun','Eaglerise'].map(mfg=>{
+    const cfg=CONFIG[mfg],cover=Math.round((1-cfg.antPct)*100),comp=Math.round(cargaViva(mfg)),disp=Math.round(disponible(mfg)),cupo=CUPO[mfg];
+    return `<div class="cfgcard">
+      <h3>${mfg==='Singsun'?'Trackers · Singsun (se le paga a Nexus)':'Shelters · Eaglerise (pago directo)'}</h3>
+      <div class="cfgrow"><label>Techo de cupo con Sinosure (USD)</label><input class="cfgmini wide" type="number" min="0" value="${cupo}" onchange="setCupo('${mfg}',this.value)"></div>
+      <div class="cfgrow"><label>Desde qué estado del ORDER REPORT empieza a pesar en el cupo</label><select onchange="setCfg('${mfg}','reserveFrom',this.value)">${stageOpts(cfg.reserveFrom)}</select></div>
+      <div class="cfgrow"><label>Anticipo</label><div class="cfgpct"><input type="number" value="${Math.round(cfg.antPct*100)}" min="0" max="100" onchange="setCfg('${mfg}','antPct',this.value/100)">%</div></div>
+      <div class="cfgrow"><label>Días que te da China desde el BL</label><input class="cfgmini" type="number" value="${cfg.dias}" min="0" onchange="setCfg('${mfg}','dias',this.value)"></div>
+      <div class="cfgnote">Con el anticipo pagado queda comprometido el <b>${cover}%</b> del pedido, y el cupo se libera cuando pagas el balance. El giro va a <b>${cfg.receptor}</b>.</div>
+      <div class="cfgstate">Ahora: comprometido <b>${fmtUSDs(comp)}</b> · ${disp<0?`<span style="color:var(--danger)">sobregirado ${fmtUSDs(-disp)}</span>`:`disponible ${fmtUSDs(disp)}`}</div>
+    </div>`;
+  }).join('');
+  const cr=document.getElementById('cfgReglaCupo');
+  if(cr) cr.innerHTML=`<div class="cfgrow" style="max-width:760px"><label>Qué consume cupo Sinosure</label>
+      <select onchange="setCupoRegla(this.value)">${Object.keys(CUPO_REGLAS).map(r=>`<option value="${r}" ${CONFIG.cupoRegla===r?'selected':''}>${CUPO_REGLAS[r]}</option>`).join('')}</select></div>
+    <div class="cfgrow" style="max-width:760px"><label>Renglones repetidos de la hoja Sinosure</label>
+      <select onchange="setDupSino(this.value)"><option value="no" ${!CONFIG.contarDupSino?'selected':''}>Contar una sola vez (correcto)</option><option value="si" ${CONFIG.contarDupSino?'selected':''}>Contarlos como los suma Andrés</option></select></div>
+    <div class="cfgnote2">Manda en el treemap, en los KPIs del tablero y en el disponible. <b>Como la hoja de Andrés</b> es la que más se acerca a lo que él reporta; <b>saldo por pagar</b> es el 90% del tracker (o el 80% del shelter) una vez pagado el anticipo.</div>`;
+  document.getElementById('cfgTrm').innerHTML=`<div class="cfgrow" style="max-width:520px"><label>TRM para embarques de prueba (lo que aún no tiene factura)</label><input class="cfgmini" type="number" value="${CONFIG.trmProy}" onchange="setTrmProy(this.value)"></div><div class="cfgnote2">Lo ya facturado usa la TRM fija de cada factura. Solo lo hipotético (probar embarque) usa esta TRM, salvo que pongas otra en el propio embarque.</div>`;
+  document.getElementById('cfgClientes').innerHTML=`<table class="excT"><thead><tr><th>Cliente</th><th class="r">Plazo (días)</th><th>Aplicación de pagos</th></tr></thead><tbody>
+    ${CLIENTES.map(c=>`<tr><td><b>${c}</b></td><td class="r"><input class="cfgmini" type="number" value="${CLI[c].term}" min="0" onchange="setCliTerm('${c}',this.value)"></td>
+      <td><select onchange="setCliFifo('${c}',this.value)"><option value="fifo" ${CLI[c].fifo?'selected':''}>FIFO (más viejo primero)</option><option value="manual" ${!CLI[c].fifo?'selected':''}>Manual (a mano)</option></select></td><td class="r"><button class="act del" title="Eliminar cliente" onclick="delCliente('${c}')">×</button></td></tr>`).join('')}
+    </tbody></table>
+    <div class="addcli"><input id="ncName" placeholder="Nombre del cliente nuevo"><input id="ncTerm" type="number" placeholder="días" value="60" style="width:90px"><select id="ncFifo"><option value="manual">Manual</option><option value="fifo">FIFO</option></select><button class="prbtn" onclick="addClienteUI()">Agregar cliente</button></div>`;
+  const cand=EQ.filter(e=>e.pctOverride!=null || (!e.antPaid && consumoEq(e,e.mfg)>0)).slice(0,10);
+  document.getElementById('cfgExc').innerHTML=`<table class="excT"><thead><tr><th>Equipo</th><th>Orden</th><th>Estado</th><th class="r">Consume hoy</th><th>Regla de cupo</th></tr></thead><tbody>
+    ${cand.map(e=>{const cover=Math.round(cov(e.mfg)*100);const cur=e.pctOverride==null?'auto':(e.pctOverride===1?'1':String(cov(e.mfg)));
+      return `<tr><td>${e.proj}</td><td>${e.ordenId}</td><td class="stage">${STAGE[e.st]}</td><td class="r num">${fmtUSDs(consumoEq(e,e.mfg))}</td>
+      <td><select onchange="setOverride(${e._i},this.value)"><option value="auto" ${cur==='auto'?'selected':''}>Automática</option><option value="1" ${cur==='1'?'selected':''}>Forzar 100%</option><option value="${cov(e.mfg)}" ${cur===String(cov(e.mfg))?'selected':''}>Forzar ${cover}%</option></select></td></tr>`;}).join('')||'<tr><td colspan="5" style="color:var(--ink3)">Sin excepciones activas</td></tr>'}
+  </tbody></table>`;
+}
+function recalcularSaldos(){
+  if(!EQ.length){toast('No hay equipos cargados. Carga primero un order report.');return;}
+  const viejos=EQ.filter(e=>e.cupoSaldo==null||e.lector!=='v2').length;
+  if(viejos){toast('<b>'+viejos+'</b> equipo(s) vienen de una versión vieja del lector. Vuelve a cargar el ORDER REPORT + detailed: recalcular no puede inventar la columna O.');return;}
+  if(!confirm('Re-repartir el saldo del cupo (columna O) entre anticipo y balance según el último cruce con el detailed. No cambia ningún monto del ORDER REPORT ni borra precios, logística o clientes. ¿Continuar?'))return;
+  EQ.forEach(function(e){
+    const O=+e.cupoSaldo||0;
+    const ant=e.antPaid?0:Math.min(O,(+e.antSaldo>0?+e.antSaldo:(+e.antTot||0)));
+    e.antSaldo=ant; e.balSaldo=Math.max(0,O-ant);
+  });
+  refreshAll();renderLedger();
+  if(typeof saveToServer==='function')saveToServer();
+  toast('Saldos re-repartidos desde la columna O en '+EQ.length+' equipo(s)');
+}
+function genEC(cli,fmt){
+  const rows=carteraCliente(cli);
+  const usdSal=rows.reduce((s,f)=>s+f.saldo,0), usdTot=rows.reduce((s,f)=>s+f.total,0);
+  if(fmt==='xlsx'){
+    let csv='Estado de cuenta;'+cli+';corte '+fmtD(TODAY)+';USD\n\nFactura;Fecha;Plazo;TRM ref;Concepto;Monto USD;Hito;Vence;Saldo USD\n';
+    rows.forEach(f=>{
+      f.lineas.forEach(l=>{csv+=[f.num,fmtD(f.fecha),f.plazo+'d',f.trmRef,l.desc+(l.pass?' (pass-through)':''),l.usd,'','',''].join(';')+'\n';});
+      f.hitosR.forEach(h=>{csv+=[f.num,'','','','',h.monto,h.etiq+' '+h.pct+'%',h.fecha?fmtD(h.fecha):'—',h.pend].join(';')+'\n';});
+    });
+    csv+=';;;;;'+Math.round(usdTot)+';Saldo total;;'+Math.round(usdSal)+'\n';
+    const blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8;'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='EstadoCuenta_'+cli+'.csv';document.body.appendChild(a);a.click();a.remove();
+    toast('Estado de cuenta de <b>'+cli+'</b> descargado (Excel/CSV)');
+  } else {
+    const w=window.open('','_blank'); if(!w){toast('El navegador bloqueó la ventana');return;}
+    const body=rows.map(f=>`<h3 style="margin-top:24px">Factura ${f.num} · ${fmtD(f.fecha)} · plazo ${f.plazo}d · TRM ref ${f.trmRef}</h3>
+      <table><thead><tr><th>Concepto</th><th style="text-align:right">USD</th></tr></thead><tbody>${f.lineas.map(l=>`<tr><td>${l.desc}${l.pass?' <em>(pass-through)</em>':''}</td><td style="text-align:right">${fmtUSDs(l.usd)}</td></tr>`).join('')}<tr style="font-weight:700"><td>Total factura</td><td style="text-align:right">${fmtUSDs(f.total)}</td></tr></tbody></table>
+      <table style="margin-top:8px"><thead><tr><th>Hito</th><th>Fecha</th><th style="text-align:right">Monto</th><th style="text-align:right">Saldo</th></tr></thead><tbody>${f.hitosR.map(h=>`<tr><td>${h.etiq} ${h.pct}%</td><td>${h.fecha?fmtD(h.fecha):'—'}</td><td style="text-align:right">${fmtUSDs(h.monto)}</td><td style="text-align:right">${h.pend>0.01?fmtUSDs(h.pend):'pagado'}</td></tr>`).join('')}</tbody></table>`).join('');
+    w.document.write(`<html><head><title>EC ${cli}</title><style>body{font-family:Arial,sans-serif;color:#17181A;padding:32px}h2{margin:0}p{color:#666;margin:4px 0 20px}h3{color:#17181A;margin:20px 0 6px;font-size:14px}table{border-collapse:collapse;width:100%;font-size:11px;margin-bottom:8px}th,td{border-bottom:1px solid #ddd;padding:6px 8px;text-align:left}th{background:#f4f5f6;font-size:10px;text-transform:uppercase}.tot{font-weight:700;font-size:15px;margin-top:18px}em{color:#999;font-style:italic}</style></head><body><h2>Zentrack · Estado de cuenta</h2><p>${cli} · corte ${fmtD(TODAY)} · USD</p>${body}<p class="tot">Saldo total: US$ ${fmtUSDs(usdSal)}</p></body></html>`);
+    w.document.close();setTimeout(()=>w.print(),300);
+  }
+}
+/* ================= ASISTENTE DE CARGA DE FACTURAS ================= */
+let FWIZ={step:1, files:[], parsed:[], idx:0, links:{}};
+
+function facWizOpen(){
+  FWIZ={step:1, files:[], parsed:[], idx:0, links:{}, _prevSnap:snapNow()};
+  document.getElementById('reconScrim').classList.add('on');
+  renderFacWiz();
+}
+
+function parseInvoiceText(t){
+  const tc=t.replace(/\n(?=\w)/g,' ');
+  const lines=t.split('\n').map(l=>l.trim()).filter(Boolean);
+  const text=lines.join(' ');
+  const inv={_health:[]};
+  let m;
+  m=text.match(/\b(ZEFV\d+)\b/); inv.num=m?m[1]:null; if(!inv.num)inv._health.push('num');
+  m=text.match(/NIT:\s*(\d[\d\-]*)/); inv.nit=m?m[1]:null;
+  inv.cliente=lines[0]||null; if(!inv.cliente)inv._health.push('cliente');
+  const fs=[...text.matchAll(/(\d{2})-(\d{2})-(\d{4})/g)].map(x=>({d:x[1],m:x[2],y:x[3]}));
+  inv.fecha=fs[0]?new Date(+fs[0].y, +fs[0].m-1, +fs[0].d):null; if(!inv.fecha)inv._health.push('fecha');
+  inv.limite=fs[1]?new Date(+fs[1].y, +fs[1].m-1, +fs[1].d):null;
+  m=text.match(/Términos de pago:\s*(\d+)\s*d/); inv.plazo=m?parseInt(m[1],10):null;
+  if(!inv.plazo && inv.fecha && inv.limite) inv.plazo=Math.round((inv.limite-inv.fecha)/86400000);
+  if(!inv.plazo)inv._health.push('plazo');
+  m=text.match(/TRM DEL DIA[:\s]*(\d+[.,]?\d*)/); inv.trm=m?parseFloat(m[1].replace(',','.')):null; if(!inv.trm)inv._health.push('trm');
+  inv.hitos=[];
+  const hitosRe=/(Anticipo \d+|Balance):\s*(\d+)\s*%\s*([^.\n]+?)(?=(?:Anticipo|Balance|TRM|$))/g;
+  let hm;
+  while((hm=hitosRe.exec(text))!==null){
+    const etiq=hm[1],pct=parseInt(hm[2],10),disp=hm[3].trim(),d=disp.toLowerCase();
+    let trigger='manual';
+    if(d.includes('confirmar'))trigger='confirm';
+    else if(d.includes('despacho')||d.includes('despacha'))trigger='despacho';
+    else if(d.includes('bl')){const dm=disp.match(/(\d+)\s*d[íi]as?\s*(?:del|desde|después)?\s*(?:del\s*)?BL/i);trigger=dm?'bl+'+dm[1]+'d':'bl';}
+    inv.hitos.push({etiq,pct,trigger,desc:disp,pagado:0});
+  }
+  if(!inv.hitos.length){inv.hitos=[{etiq:'Único',pct:100,trigger:'manual',desc:'monto único',pagado:0}];inv._health.push('hitos');}
+  inv.lineas=[];
+  const linRe=/\[([A-Za-z0-9\-]+)\]\s+([^\[]+?)\s+USD\s+([\d\.,]+)/g;
+  let lm;
+  while((lm=linRe.exec(tc))!==null){
+    const cod=lm[1],mid=lm[2],importe=lm[3];
+    const desc=mid.replace(/\s+1,00.*?Unidades?.*?[\d\.,]+\s*$/,'').trim();
+    const usd=parseFloat(importe.replace(/\./g,'').replace(',','.'));
+    if(isNaN(usd))continue;
+    const pass=cod.startsWith('INGRETER')||cod.startsWith('INGTERC')||desc.includes('Terceros');
+    inv.lineas.push({cod,desc,usd,pass});
+  }
+  if(!inv.lineas.length)inv._health.push('lineas');
+  m=tc.match(/Total\s+(?:Total\s+)?USD\s+(?:USD\s+)?([\d\.,]+)/);
+  inv.total=m?parseFloat(m[1].replace(/\./g,'').replace(',','.')):null;
+  inv._ok=inv._health.length===0;
+  return inv;
+}
+
+async function extractPdfText(file){
+  if(!window.pdfjsLib) throw new Error('pdf.js no disponible');
+  const buf=await file.arrayBuffer();
+  const pdf=await pdfjsLib.getDocument({data:buf}).promise;
+  let text='';
+  for(let i=1;i<=pdf.numPages;i++){
+    const page=await pdf.getPage(i);
+    const tc=await page.getTextContent();
+    text+=tc.items.map(it=>it.str).join('\n')+'\n';
+  }
+  return text;
+}
+
+async function onFacFiles(files){
+  const el=document.getElementById('facWizBody');
+  if(el)el.innerHTML='<div style="padding:26px;color:var(--ink2)">Leyendo '+files.length+' factura(s)…</div>';
+  FWIZ.parsed=[];
+  for(const f of files){
+    try{
+      const txt=await extractPdfText(f);
+      const inv=parseInvoiceText(txt);
+      inv._file=f.name;
+      FWIZ.parsed.push(inv);
+    }catch(err){FWIZ.parsed.push({_file:f.name,_error:err.message,_ok:false,_health:['error']});}
+  }
+  FWIZ.idx=0;FWIZ.step=2;renderFacWiz();
+}
+
+function facWizGo(s){if(s>=1&&s<=4){FWIZ.step=s;renderFacWiz();}}
+function facSetField(field,val){
+  const inv=FWIZ.parsed[FWIZ.idx];if(!inv)return;
+  if(field==='fecha') inv.fecha=val?new Date(val+'T00:00:00'):null;
+  else if(field==='plazo'||field==='trm') inv[field]=parseFloat(val)||null;
+  else inv[field]=val;
+  renderFacWiz();
+}
+function facSetLinea(i,field,val){
+  const inv=FWIZ.parsed[FWIZ.idx];if(!inv||!inv.lineas[i])return;
+  if(field==='usd') inv.lineas[i].usd=parseFloat(val)||0;
+  else if(field==='pass') inv.lineas[i].pass=val;
+  else inv.lineas[i][field]=val;
+  renderFacWiz();
+}
+function facAddLinea(){const inv=FWIZ.parsed[FWIZ.idx];if(!inv)return;(inv.lineas=inv.lineas||[]).push({cod:'',desc:'',usd:0,pass:false});renderFacWiz();}
+function facDelLinea(i){const inv=FWIZ.parsed[FWIZ.idx];if(!inv)return;inv.lineas.splice(i,1);renderFacWiz();}
+function facSetHito(i,field,val){
+  const inv=FWIZ.parsed[FWIZ.idx];if(!inv||!inv.hitos[i])return;
+  if(field==='pct') inv.hitos[i].pct=parseFloat(val)||0;
+  else if(field==='fecha') inv.hitos[i].fecha=val?new Date(val+'T00:00:00'):null;
+  else inv.hitos[i][field]=val;
+  renderFacWiz();
+}
+function facAddHito(){const inv=FWIZ.parsed[FWIZ.idx];if(!inv)return;(inv.hitos=inv.hitos||[]).push({etiq:'Hito '+(inv.hitos.length+1),pct:0,trigger:'manual',desc:'',pagado:0});renderFacWiz();}
+function facDelHito(i){const inv=FWIZ.parsed[FWIZ.idx];if(!inv)return;inv.hitos.splice(i,1);renderFacWiz();}
+function facDelInvoice(){if(!confirm('¿Descartar esta factura del lote?'))return;FWIZ.parsed.splice(FWIZ.idx,1);if(FWIZ.idx>=FWIZ.parsed.length)FWIZ.idx=Math.max(0,FWIZ.parsed.length-1);if(!FWIZ.parsed.length){toast('Se descartaron todas las facturas');closeRecon();return;}renderFacWiz();}
+function facLink(num,derrame){
+  FWIZ.links[num]=FWIZ.links[num]||[];
+  const arr=FWIZ.links[num];
+  const i=arr.indexOf(derrame);
+  if(i>=0)arr.splice(i,1);else arr.push(derrame);
+  renderFacWiz();
+}
+
+function facWizApprove(){
+  let _deltas=[];
+  FWIZ.parsed.forEach(inv=>{
+    if(FACT.find(x=>x.num===inv.num)){toast('Factura '+inv.num+' ya existía — sobrescrita');FACT=FACT.filter(x=>x.num!==inv.num);}
+    const eqRefs=FWIZ.links[inv.num]||[];
+    /* Detectar reemplazo de estimado: si algún equipo vinculado tenía precioVenta+logística estimados */
+    eqRefs.forEach(d=>{const e=EQ.find(x=>x.derrame===d);if(e){
+      const estim=(+e.precioVenta||0)+logisticaTotal(e);
+      const real=(inv.lineas||[]).reduce((s,l)=>s+l.usd,0);
+      if(estim>0){const delta=real-estim;_deltas.push({eq:e,inv:inv.num,estim,real,delta});}
+    }});
+    const proj=eqRefs.length?eqRefs.map(d=>{const e=EQ.find(x=>x.derrame===d);return e?e.proj:d;}).join(' · '):(inv._file||'sin vincular');
+    FACT.push({num:inv.num,cliente:inv.cliente,nit:inv.nit,fecha:inv.fecha,plazo:inv.plazo,trmRef:inv.trm,lineas:inv.lineas||[],hitos:inv.hitos||[],eqRefs,proj});
+    if(!CLI[inv.cliente]){CLI[inv.cliente]={term:inv.plazo||60,fifo:true};}
+  });
+  CLIENTES=Object.keys(CLI);
+  const nEqPrev=(HIST.length?HIST[HIST.length-1].nEq:0);
+  pushHistoria(nEqPrev);HIST[HIST.length-1].snapPrev=FWIZ._prevSnap||null;HIST[HIST.length-1].nFac=FWIZ.parsed.length;HIST[HIST.length-1].tipo='facturas';
+  if(_deltas.length){
+    const msg=_deltas.map(d=>`${d.eq.derrame} · ${d.inv}: estimado US$${fmtUSDs(d.estim)} → real US$${fmtUSDs(d.real)} (Δ ${d.delta>=0?'+':''}${fmtUSDs(d.delta)})`).join('<br>');
+    setTimeout(()=>toast('Estimados reemplazados por facturas reales:<br>'+msg),400);
+  }
+  toast(FWIZ.parsed.length+' factura(s) cargadas · US$ '+fmtUSDs(FWIZ.parsed.reduce((s,i)=>s+(i.lineas||[]).reduce((a,l)=>a+l.usd,0),0)));
+  closeRecon();
+  renderHoy();renderClientes();renderConfig();renderPagos();
+  if(typeof saveToServer==='function')saveToServer();
+}
+
+function renderFacWiz(){
+  const steps=['Recepción','Revisar y editar','Vincular con equipos','Resumen y aprobar'];
+  document.getElementById('reconTitle').innerHTML='Cargar facturas de venta';
+  document.getElementById('reconSub').innerHTML='<div class="wizsteps">'+steps.map((s,k)=>`<span class="wstep ${FWIZ.step===k+1?'on':''} ${FWIZ.step>k+1?'done':''}"><b>${k+1}</b> ${s}</span>`).join('<span class="warr">→</span>')+'</div>';
+  const body=document.getElementById('reconBody');
+  let ftFoot='';
+  if(FWIZ.step===1){
+    body.innerHTML=`<div id="facWizBody">
+      <div class="drop-zone" id="facDrop" ondragover="event.preventDefault();this.classList.add('over')" ondragleave="this.classList.remove('over')" ondrop="event.preventDefault();this.classList.remove('over');onFacFiles(Array.from(event.dataTransfer.files).filter(f=>f.name.toLowerCase().endsWith('.pdf')));">
+        <div class="dz-title">Arrastra aquí uno o varios PDFs de factura</div>
+        <div class="dz-sub">o <label class="dz-lbl">selecciónalos<input type="file" multiple accept=".pdf" style="display:none" onchange="onFacFiles(Array.from(this.files))"></label></div>
+        <div class="dz-note">Se procesan uno por uno con extracción automática. Los revisas y ajustas antes de aprobar.</div>
+      </div>
+    </div>`;
+    ftFoot='<button class="wbtn" onclick="closeRecon()">Cancelar</button>';
+  } else if(FWIZ.step===2){
+    const inv=FWIZ.parsed[FWIZ.idx];
+    if(!inv){body.innerHTML='<div style="padding:26px">Sin facturas</div>';return;}
+    const isoFecha=inv.fecha?inv.fecha.toISOString().slice(0,10):'';
+    const totLin=(inv.lineas||[]).reduce((s,l)=>s+(+l.usd||0),0);
+    const totPct=(inv.hitos||[]).reduce((s,h)=>s+(+h.pct||0),0);
+    const okPct=Math.abs(totPct-100)<0.1;
+    const trigOpts=(sel)=>[['confirm','Al confirmar orden'],['despacho','Antes del despacho'],['bl+30d','30 días desde BL'],['bl+60d','60 días desde BL'],['bl+90d','90 días desde BL'],['bl+120d','120 días desde BL'],['bl','Fecha del BL'],['manual','Fecha manual']].map(([v,t])=>`<option value="${v}" ${v===sel?'selected':''}>${t}</option>`).join('');
+    body.innerHTML=`<div id="facWizBody"><div class="facnav">
+      ${FWIZ.parsed.map((p,i)=>`<button class="fn-tab ${i===FWIZ.idx?'on':''} ${p._ok?'ok':'warn'}" onclick="FWIZ.idx=${i};renderFacWiz()">${p.num||'?'}<small>${p._health&&p._health.length?p._health.length+' dudas':'OK'}</small></button>`).join('')}
+    </div>
+    <div class="faccard">
+      <div class="fh"><div class="fh-l"><input class="we lg" value="${inv.num||''}" oninput="facSetField('num',this.value)"><small>${inv._file||''}</small></div><div class="fh-r"><button class="wbtn danger" onclick="facDelInvoice()">Descartar factura</button></div></div>
+      ${inv._error?`<div class="ferr">Error al leer PDF: ${inv._error}</div>`:''}
+      ${inv._health&&inv._health.length?`<div class="fwarn">Revisar campos: ${inv._health.join(', ')}</div>`:''}
+      <div class="fgrid">
+        <label>Cliente<input class="we" value="${(inv.cliente||'').replace(/"/g,'&quot;')}" oninput="facSetField('cliente',this.value)"></label>
+        <label>NIT<input class="we" value="${inv.nit||''}" oninput="facSetField('nit',this.value)"></label>
+        <label>Fecha<input class="we" type="date" value="${isoFecha}" onchange="facSetField('fecha',this.value)"></label>
+        <label>Plazo (días)<input class="we" type="number" value="${inv.plazo||''}" onchange="facSetField('plazo',this.value)"></label>
+        <label>TRM referencia<input class="we" type="number" step="0.01" value="${inv.trm||''}" onchange="facSetField('trm',this.value)"></label>
+      </div>
+      <div class="fsec">Líneas de la factura <button class="mini-add" onclick="facAddLinea()">+ línea</button></div>
+      <table class="ftbl"><thead><tr><th>Código</th><th>Concepto</th><th class="r">USD</th><th>Pass-through</th><th></th></tr></thead><tbody>
+      ${(inv.lineas||[]).map((l,i)=>`<tr><td><input class="we sm" value="${l.cod||''}" oninput="facSetLinea(${i},'cod',this.value)"></td>
+        <td><input class="we" value="${(l.desc||'').replace(/"/g,'&quot;')}" oninput="facSetLinea(${i},'desc',this.value)"></td>
+        <td class="r"><input class="we num" type="number" step="0.01" value="${l.usd||0}" onchange="facSetLinea(${i},'usd',this.value)"></td>
+        <td><label class="chk"><input type="checkbox" ${l.pass?'checked':''} onchange="facSetLinea(${i},'pass',this.checked)"> pass</label></td>
+        <td><button class="act del" onclick="facDelLinea(${i})">×</button></td></tr>`).join('')}
+      <tr class="fttr"><td colspan="2" class="r"><b>Total</b></td><td class="r"><b>US$ ${fmtUSDs(totLin)}</b>${inv.total&&Math.abs(inv.total-totLin)>0.01?` <span style="color:var(--danger)">≠ ${fmtUSDs(inv.total)} declarado</span>`:''}</td><td></td><td></td></tr>
+      </tbody></table>
+      <div class="fsec">Cronograma de cobro del cliente <button class="mini-add" onclick="facAddHito()">+ hito</button> <span class="fpct ${okPct?'ok':'bad'}">Suma: ${totPct}%${okPct?' ✓':' ≠ 100%'}</span></div>
+      <table class="ftbl"><thead><tr><th>Etiqueta</th><th>%</th><th>Trigger</th><th>Fecha manual</th><th>Descripción</th><th></th></tr></thead><tbody>
+      ${(inv.hitos||[]).map((h,i)=>{const iso=h.fecha?(h.fecha instanceof Date?h.fecha.toISOString().slice(0,10):h.fecha):'';
+        return `<tr><td><input class="we sm" value="${h.etiq||''}" oninput="facSetHito(${i},'etiq',this.value)"></td>
+        <td><input class="we num" type="number" style="width:60px" value="${h.pct||0}" onchange="facSetHito(${i},'pct',this.value)"></td>
+        <td><select class="we" onchange="facSetHito(${i},'trigger',this.value)">${trigOpts(h.trigger)}</select></td>
+        <td><input class="we sm" type="date" value="${iso}" ${h.trigger!=='manual'?'disabled':''} onchange="facSetHito(${i},'fecha',this.value)"></td>
+        <td><input class="we" value="${(h.desc||'').replace(/"/g,'&quot;')}" oninput="facSetHito(${i},'desc',this.value)"></td>
+        <td><button class="act del" onclick="facDelHito(${i})">×</button></td></tr>`;}).join('')}
+      </tbody></table>
+    </div></div>`;
+    ftFoot=`<button class="wbtn" onclick="facWizGo(1)">← Cargar otro</button><div style="margin-left:auto;display:flex;gap:8px"><button class="wbtn" ${FWIZ.idx===0?'disabled':''} onclick="FWIZ.idx--;renderFacWiz()">Anterior</button><button class="wbtn" ${FWIZ.idx>=FWIZ.parsed.length-1?'disabled':''} onclick="FWIZ.idx++;renderFacWiz()">Siguiente →</button><button class="wbtn primary" onclick="facWizGo(3)">Vincular →</button></div>`;
+  } else if(FWIZ.step===3){
+    const inv=FWIZ.parsed[FWIZ.idx];
+    if(!inv){body.innerHTML='<div style="padding:26px">Sin facturas</div>';return;}
+    const linked=FWIZ.links[inv.num]||[];
+    const dispEq=EQ.filter(e=>e.derrame).sort((a,b)=>(a.ordenId||'').localeCompare(b.ordenId||'')||(a.derrame||'').localeCompare(b.derrame||''));
+    const byCli={};dispEq.forEach(e=>{const c=e.cliente||'Por asignar';(byCli[c]=byCli[c]||[]).push(e);});
+    body.innerHTML=`<div id="facWizBody"><div class="facnav">
+      ${FWIZ.parsed.map((p,i)=>`<button class="fn-tab ${i===FWIZ.idx?'on':''} ${(FWIZ.links[p.num]||[]).length?'linked':''}" onclick="FWIZ.idx=${i};renderFacWiz()">${p.num||'?'}<small>${(FWIZ.links[p.num]||[]).length||'sin vincular'}</small></button>`).join('')}
+    </div>
+    <div class="linkgrid">
+      <div class="lg-l">
+        <h4>${inv.num} · ${inv.cliente}</h4>
+        <div class="lginfo">Total: <b>US$ ${fmtUSDs((inv.lineas||[]).reduce((s,l)=>s+l.usd,0))}</b> · plazo ${inv.plazo}d · fecha ${inv.fecha?fmtD(inv.fecha):'—'}</div>
+        <div class="lginfo">Vinculado a: ${linked.length?linked.map(d=>{const e=EQ.find(x=>x.derrame===d);return `<span class="linktag">${d}<small>${e?e.proj:''}</small><button onclick="facLink('${inv.num}','${d}')">×</button></span>`;}).join(''):'<span style="color:var(--ink3)">nada aún — selecciona equipos a la derecha</span>'}</div>
+        <div class="lgnote">Política default: 1 factura = 1 equipo. Puedes vincular varios equipos si esta factura cubre más de uno.</div>
+      </div>
+      <div class="lg-r">
+        <div class="lg-filter">Filtrar por cliente: <select onchange="FWIZ._flt=this.value;renderFacWiz()"><option value="">Todos</option>${Object.keys(byCli).map(c=>`<option value="${c}" ${FWIZ._flt===c?'selected':''}>${c}</option>`).join('')}</select></div>
+        ${Object.entries(byCli).filter(([c])=>!FWIZ._flt||c===FWIZ._flt).map(([c,eqs])=>`
+          <div class="lg-cli"><b>${c}</b></div>
+          ${eqs.map(e=>{const already=FACT.some(f=>(f.eqRefs||[]).includes(e.derrame))&&!linked.includes(e.derrame);return `<div class="lg-eq ${linked.includes(e.derrame)?'on':''} ${already?'used':''}" onclick="${already?'':`facLink('${inv.num}','${e.derrame}')`}">
+            <span class="lge-d">${e.derrame}</span>
+            <span class="lge-p">${e.proj}<small>${STAGE[e.st]||e.st} · ${e.mfg} · US$ ${fmtUSDs(consumoEq(e,e.mfg))}</small></span>
+            ${already?'<span class="lge-tag">ya facturado</span>':''}
+            ${linked.includes(e.derrame)?'<span class="lge-tag on">✓ vinculado</span>':''}
+          </div>`;}).join('')}
+        `).join('')}
+      </div>
+    </div></div>`;
+    ftFoot=`<button class="wbtn" onclick="facWizGo(2)">← Revisar</button><div style="margin-left:auto;display:flex;gap:8px"><button class="wbtn" ${FWIZ.idx===0?'disabled':''} onclick="FWIZ.idx--;renderFacWiz()">Anterior</button><button class="wbtn" ${FWIZ.idx>=FWIZ.parsed.length-1?'disabled':''} onclick="FWIZ.idx++;renderFacWiz()">Siguiente →</button><button class="wbtn primary" onclick="facWizGo(4)">Resumen →</button></div>`;
+  } else if(FWIZ.step===4){
+    const totUSD=FWIZ.parsed.reduce((s,i)=>s+(i.lineas||[]).reduce((a,l)=>a+l.usd,0),0);
+    const nLinked=FWIZ.parsed.filter(i=>(FWIZ.links[i.num]||[]).length>0).length;
+    const nUnlinked=FWIZ.parsed.length-nLinked;
+    const desf=FWIZ.parsed.map(i=>{
+      const eqR=FWIZ.links[i.num]||[];
+      if(!eqR.length)return {inv:i,neto:null};
+      let plzCh=0,wCh=0;
+      eqR.forEach(d=>{const e=EQ.find(x=>x.derrame===d);if(e){plzCh+=(CONFIG[e.mfg].dias||60)*e.mfgAmt;wCh+=e.mfgAmt;}});
+      return {inv:i, plazoCli:i.plazo||60, plazoChina:wCh?plzCh/wCh:0, neto:(i.plazo||60)-(wCh?plzCh/wCh:0)};
+    });
+    body.innerHTML=`<div id="facWizBody"><div class="sumhero">
+      <div class="sh-card"><div class="l">Facturas</div><div class="v">${FWIZ.parsed.length}</div></div>
+      <div class="sh-card"><div class="l">Total facturado</div><div class="v">US$ ${fmtUSDs(totUSD)}</div></div>
+      <div class="sh-card ${nUnlinked?'warn':'ok'}"><div class="l">Vinculadas</div><div class="v">${nLinked} / ${FWIZ.parsed.length}</div>${nUnlinked?`<div class="lc" style="color:var(--danger)">${nUnlinked} sin vincular</div>`:''}</div>
+    </div>
+    <div class="sumsec">Desfase de financiación por factura</div>
+    <div class="cfgnote2">Días netos que financias al cliente (plazo cliente − plazo China). Positivo = tú financias al cliente; negativo = China te financia a ti.</div>
+    <table class="stmt"><thead><tr><th>Factura</th><th>Cliente</th><th class="r">Plazo cliente</th><th class="r">Plazo China</th><th class="r">Desfase</th></tr></thead>
+    <tbody>${desf.map(d=>`<tr><td>${d.inv.num}</td><td>${d.inv.cliente}</td><td class="r">${d.plazoCli||'—'}d</td><td class="r">${d.plazoChina?Math.round(d.plazoChina)+'d':'—'}</td><td class="r" style="${d.neto===null?'':d.neto>30?'color:var(--danger);font-weight:600':'color:var(--ok)'}">${d.neto===null?'sin vincular':(d.neto>0?'+':'')+Math.round(d.neto)+'d'}</td></tr>`).join('')}</tbody></table>
+    ${nUnlinked?`<div class="fwarn" style="margin-top:14px">Hay ${nUnlinked} factura(s) sin vincular. Puedes aprobar de todos modos y vincularlas luego.</div>`:''}
+    </div>`;
+    ftFoot=`<button class="wbtn" onclick="facWizGo(3)">← Vincular</button><button class="wbtn primary" style="margin-left:auto" onclick="facWizApprove()">Aprobar y cargar ${FWIZ.parsed.length} factura(s)</button>`;
+  }
+  document.getElementById('reconFoot').innerHTML=ftFoot;
+}
+
+/* ============================================================
+   PERSISTENCIA — integrada al HTML (v0.9)
+   ============================================================ */
+function _rev(v){ return v ? new Date(v) : v; }
+/* Si lo guardado viene de un lector anterior a v0.18, lo decimos en pantalla en vez de mostrar cifras viejas como buenas */
+function avisoLectorViejo(){
+  const n=EQ.filter(e=>e.lector!=='v2'||e.cupoSaldo==null).length;
+  let el=document.getElementById('upgBanner');
+  if(!n){if(el)el.remove();return;}
+  if(!el){el=document.createElement('div');el.id='upgBanner';el.className='upg-banner';const host=document.querySelector('main')||document.body;host.insertBefore(el,host.firstChild);}
+  el.innerHTML='⚠ <b>'+n+' equipo(s)</b> vienen de un lector anterior. Ve a <b>Cargar datos</b>, sube el detailed y aprueba: se reemplazan las cifras y se conservan facturas, pagos, precios y clientes.';
+}
+function hydrateDates(s){
+  (s.ORD||[]).forEach(function(o){ (o.equipos||[]).forEach(function(e){
+    ['bl','etd','eta','vence','prodFin','corte','limitePago'].forEach(function(k){ if(e[k]) e[k]=_rev(e[k]); });
+  });});
+  (s.FACT||[]).forEach(function(f){
+    ['fecha','limite'].forEach(function(k){ if(f[k]) f[k]=_rev(f[k]); });
+    (f.hitos||[]).forEach(function(h){ if(h.fecha) h.fecha=_rev(h.fecha); });
+  });
+  (s.PAGOS||[]).forEach(function(p){ ['fecha','ts'].forEach(function(k){ if(p[k]) p[k]=_rev(p[k]); }); });
+  (s.HIST||[]).forEach(function(h){ if(h.ts) h.ts=_rev(h.ts); });
+  if(s.CONCILIA){ if(s.CONCILIA.ts) s.CONCILIA.ts=_rev(s.CONCILIA.ts); if(s.CONCILIA.tsNuevo) s.CONCILIA.tsNuevo=_rev(s.CONCILIA.tsNuevo); }
+}
+function serializeState(){
+  return JSON.stringify({ v:'1.0', ORD:ORD, FACT:FACT, PAGOS:PAGOS, CONFIG:CONFIG, CLI:CLI, HIST:HIST, CUPO:CUPO, CONCILIA:CONCILIA });
+}
+function applyState(s){
+  if(s.ORD){ ORD.length=0; s.ORD.forEach(function(o){ORD.push(o);}); }
+  if(s.FACT){ FACT.length=0; s.FACT.forEach(function(f){FACT.push(f);}); }
+  if(s.PAGOS){ PAGOS.length=0; s.PAGOS.forEach(function(p){PAGOS.push(p);}); }
+  if(s.CONFIG) Object.assign(CONFIG, s.CONFIG);
+  if(s.CUPO) Object.assign(CUPO, s.CUPO);
+  CONCILIA = s.CONCILIA || null;
+  if(s.CLI){ Object.keys(CLI).forEach(function(k){delete CLI[k];}); Object.assign(CLI, s.CLI); }
+  if(s.HIST){ HIST.length=0; s.HIST.forEach(function(h){HIST.push(h);}); }
+  PID = PAGOS.reduce(function(m,p){ return Math.max(m, p.id||0); }, 0) + 1;
+  hydrateDates(s);
+  EQ.length=0; ORD.flatMap(function(o){ return o.equipos; }).forEach(function(e,i){e._i=i;EQ.push(e);});
+  CLIENTES = Object.keys(CLI);
+  Object.keys(CLI).forEach(function(k){ if(/solenium|sol[ée]/i.test(k) && CLI[k].interno===undefined) CLI[k].interno=true; });
+  if(typeof syncFlags==='function') syncFlags();
+}
+var _saveTimer=null;
+function saveToServer(){
+  if (typeof google==='undefined' || !google.script) return;
+  clearTimeout(_saveTimer);
+  _saveTimer=setTimeout(function(){
+    google.script.run
+      .withFailureHandler(function(err){ if(typeof toast==='function') toast('No se pudo guardar: '+err.message); })
+      .saveState(serializeState());
+  }, 600);
+}
+function loadFromServer(){
+  function pintar(){
+    Object.keys(CLI).forEach(function(k){ if(/solenium|sol[ée]/i.test(k) && CLI[k].interno===undefined) CLI[k].interno=true; });
+    renderHoy();renderLedger();renderClientes();renderConfig();renderPagos();
+    avisoLectorViejo();
+  }
+  if (typeof google==='undefined' || !google.script){ pintar(); return; }
+  google.script.run
+    .withSuccessHandler(function(json){
+      if (json && json.length){
+        try { applyState(JSON.parse(json)); if(typeof toast==='function') toast('Datos cargados del servidor'); }
+        catch(e){ console.error('Estado corrupto:', e); }
+      } else { saveToServer(); }
+      pintar();
+    })
+    .withFailureHandler(function(err){
+      if(typeof toast==='function') toast('Backend no disponible, trabajando en memoria');
+      pintar();
+    })
+    .loadState();
+}
+
+/* ================= INIT ================= */
+/* ---- Arrancar limpio (sin datos de prueba). Pon DEMO=true para ver el ejemplo. ---- */
+const DEMO=false;
+if(!DEMO){ ORD.length=0; EQ.length=0; FACT.length=0; PAGOS.length=0; for(const k in CLI)delete CLI[k]; CLIENTES=Object.keys(CLI); PID=1; }
+/* Arranque único: carga del servidor (o pinta en memoria si no hay backend). NO pintar antes de esto. */
+loadFromServer();
+console.log('%cZentrack Control v1.0','background:#17181A;color:#fff;padding:4px 10px;border-radius:4px;font-weight:700');
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){closePanel();closeRecon();}});
+
+
+
+
 /* =========================================================================
    MOTOR 4 · v0.22
    Todo lo nuevo vive aquí para no tener que volver a pegar Motor1/2/3.
@@ -480,482 +822,4 @@ function gpTomarFac(id){
   toast(`Total del grupo: ${fmtUSDs(antes)} → <b>${fmtUSDs(g.total)}</b>, según ${esc4(f.num)}`);
 }
 
-/* =============== PESTAÑA SINOSURE ===============
-   La hoja de Andrés tal como se ve en el detailed, celda por celda, con el
-   pedido al que apunta cada fórmula al lado. Más las tres decisiones que
-   de verdad se toman con ella: si cabe el próximo pedido, cuándo se libera
-   cupo, y qué hacer con lo que está en el aire. */
-
-/* Reconstruye los renglones de la hoja a partir de lo que ya quedó guardado:
-   cada línea de sinoDetalle es una celda de la hoja apuntando a un pedido. */
-function hojaSino(){
-  const C=CONCILIA; if(!C) return [];
-  const porCelda={};
-  Object.entries(C.sinoDetalle||{}).forEach(([clave,lineas])=>{
-    (lineas||[]).forEach(l=>{
-      const r=porCelda[l.celda]||(porCelda[l.celda]={celda:l.celda,etiqueta:l.etiqueta,
-        total:l.total,ref:l.ref,que:l.que,claves:[],conjunto:l.conjunto});
-      if(r.claves.indexOf(clave)<0) r.claves.push(clave);
-    });
-  });
-  (C.sinoDup||[]).forEach(d=>{porCelda[d.celda]={celda:d.celda,etiqueta:d.etiqueta,total:d.valor,
-    ref:d.ref,que:'',claves:[],dup:true,yaEn:d.yaEn,lado:d.lado,derrames:d.derrames||[]};});
-  (C.sinoSueltosL||[]).forEach(s=>{porCelda[s.celda]={celda:s.celda,etiqueta:s.etiqueta,total:s.valor,
-    ref:null,que:'',claves:[],suelto:true,lado:s.lado};});
-  const filas=Object.values(porCelda).map(r=>{
-    const col=(r.celda.match(/^[A-Z]+/)||['B'])[0], fil=+((r.celda.match(/\d+$/)||[0])[0]);
-    r.col=col; r.fil=fil; r.lado=r.lado||(col==='B'?'Singsun':'Eaglerise');
-    r.eqs=r.claves.map(k=>EQ.find(e=>kOf(e)===k)).filter(Boolean);
-    return r;
-  }).sort((a,b)=>a.fil-b.fil||a.col.localeCompare(b.col));
-
-  /* Andrés parte algunos pedidos en DOS renglones: uno por el anticipo y otro
-     por el balance (CFM 3.4 está en E10 y en E14). Comparar renglón contra
-     renglón marcaría las dos mitades como errores. La comparación se hace
-     contra el pedido completo, que es lo que sinoPorDerrame ya suma. */
-  const mapa=(C.sinoPorDerrame||{});
-  const hermanas={};
-  filas.forEach(r=>{ if(r.dup||r.suelto) return;
-    r.claves.forEach(k=>{ (hermanas[k]=hermanas[k]||[]).push(r.celda); }); });
-  filas.forEach(r=>{
-    if(r.dup||r.suelto){ r.mio=0; r.dif=0; r.cuadra=true; return; }
-    r.hojaPed=r.claves.reduce((s,k)=>s+(mapa[k]||0),0);
-    r.mio=r.eqs.reduce((s,e)=>s+consumoEq(e,e.mfg),0);
-    r.dif=Math.round((r.mio-r.hojaPed)*100)/100;
-    r.cuadra=Math.abs(r.dif)<=2;
-    /* las otras celdas del mismo pedido, para poder decirlo en la fila */
-    const otras=[...new Set(r.claves.flatMap(k=>hermanas[k]||[]))].filter(c=>c!==r.celda);
-    r.hermanas=otras;
-  });
-  return filas;
-}
-/* los pedidos vivos que la hoja no lista: no son renglones, pero sí plata */
-const fueraDeHoja=mfg=>EQ.filter(e=>e.mfg===mfg&&(+e.cupoSaldo||0)>0.5
-  &&((CONCILIA&&CONCILIA.sinoPorDerrame)||{})[kOf(e)]==null);
-
-/* ---- la hoja, con el formato del Excel ---- */
-const money=n=>{const v=+n||0, s=v<0?'-':'';
-  return s+'$'+Math.abs(v).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});};
-let SNSIM={Singsun:'',Eaglerise:''};
-let SNAB={};                               /* qué renglones están abiertos */
-function abrirSino(celda){SNAB[celda]=!SNAB[celda];pintarSino();}
-
-function pintarSino(){
-  const cont=document.getElementById('v-sinosure'); if(!cont) return;
-  if(!EQ.length||!CONCILIA||!CONCILIA.sino){
-    cont.innerHTML=`<div class="g4em"><h3>Sin la hoja Sinosure</h3>
-      <p>Esta pestaña reproduce tu hoja <b>Sinosure</b> tal como la ves en el detailed.
-         Carga el detailed y vuelve.</p>
-      <button class="btn" onclick="verifyOpen()">Cargar datos</button></div>`;
-    return;
-  }
-  const filas=hojaSino(), S=CONCILIA.sino;
-  const ents=[...new Set([...Object.keys((S.cuposPorEntidad||{}).Singsun||{}),
-                          ...Object.keys((S.cuposPorEntidad||{}).Eaglerise||{})])];
-
-  const bloque=(mfg,titulo)=>{
-    const fs=filas.filter(r=>r.lado===mfg);
-    const ce=(S.cuposPorEntidad||{})[mfg]||{};
-    const techo=+S.cupos[mfg]||0;
-    const total=mfg==='Singsun'?S.totalSingsun:S.totalEagle;
-    const disp=mfg==='Singsun'?S.dispSingsun:S.dispEagle;
-    const mio=EQ.filter(e=>e.mfg===mfg).reduce((s,e)=>s+consumoEq(e,e.mfg),0);
-    const fuera=fueraDeHoja(mfg);
-    return `<table class="hoja">
-      <tr class="h"><td class="l">${mfg==='Singsun'?'Cupos':''}</td><td class="v">${titulo}</td></tr>
-      ${ents.map(k=>`<tr><td class="l">${esc4(k)}</td>
-        <td class="v">${ce[k]!=null?money(ce[k]):''}</td></tr>`).join('')}
-      <tr class="sub"><td class="l"></td><td class="v b">${money(techo)}</td></tr>
-      <tr class="esp"><td colspan="2"></td></tr>
-      <tr class="h"><td class="l b">${mfg==='Singsun'?'Consumo':''}</td><td class="v"></td></tr>
-      ${fs.map(r=>renglonSino(r)).join('')}
-      ${fuera.length?`<tr class="esp"><td colspan="2"></td></tr>
-        ${fuera.map(e=>`<tr class="falta" title="No está en la hoja de Andrés">
-          <td class="l">${esc4(e.derrame)} <span class="pen">falta en la hoja</span></td>
-          <td class="v">${money(consumoEq(e,mfg,'andres'))}</td></tr>`).join('')}`:''}
-      <tr class="esp"><td colspan="2"></td></tr>
-      <tr class="tot"><td class="l b">${mfg==='Singsun'?'Consumo total':''}</td>
-        <td class="v b">${money(total)}</td></tr>
-      ${Math.abs(mio-total)>2?`<tr class="nota"><td class="l"></td>
-        <td class="v">el motor cuenta ${money(mio)}</td></tr>`:''}
-      <tr class="esp"><td colspan="2"></td></tr>
-      <tr class="tot"><td class="l b">${mfg==='Singsun'?'Cupo disponible':''}</td>
-        <td class="v b ${disp<0?'neg':''}">${money(disp)}</td></tr>
-    </table>`;
-  };
-
-  const nd=filas.filter(r=>r.dup||r.suelto||!r.cuadra).length
-          +fueraDeHoja('Singsun').length+fueraDeHoja('Eaglerise').length;
-  cont.innerHTML=`
-    <div class="sec" style="display:flex;align-items:baseline;gap:12px;margin-bottom:4px">
-      <h2 style="font-size:16px;font-weight:600">Hoja Sinosure</h2>
-      <div style="font-size:12.5px;color:var(--ink2)">
-        ${nd?`<b style="color:var(--dato-debo)">${nd} renglón(es) por revisar</b> · ábrelos para ver qué pedidos los componen`
-            :'todo conciliado · abre cualquier renglón para ver qué pedidos lo componen'}</div>
-      <div style="flex:1"></div>
-      <button class="btn" onclick="abrirTodoSino()">${Object.values(SNAB).some(Boolean)?'Cerrar todo':'Abrir todo'}</button>
-      <button class="btn" onclick="exportarSino()">Copiar</button>
-    </div>
-    <div class="hojawrap">${bloque('Singsun','Singsun')}${bloque('Eaglerise','Eagle')}</div>
-    <div class="snsims">
-      ${['Singsun','Eaglerise'].map(m=>`<div class="snsim">
-        <label>¿Me cabe un pedido ${m==='Singsun'?'Singsun':'Eagle'} de</label>
-        <input type="number" placeholder="0" value="${SNSIM[m]}" oninput="SNSIM['${m}']=this.value;simSino('${m}')">
-        <label>USD?</label><span id="sim${m}" class="simr">${simTexto(m)}</span></div>`).join('')}
-    </div>
-    ${timelineSino()}`;
-}
-
-/* un renglón de la hoja, abatible */
-function renglonSino(r){
-  const ab=!!SNAB[r.celda];
-  const marca=r.dup?'<span class="pen avi">repite '+esc4(r.yaEn)+'</span>'
-    :r.suelto?'<span class="pen mal">sin pedido</span>'
-    :!r.cuadra?'<span class="pen mal">revisar</span>':'';
-  return `<tr class="cons ${ab?'ab':''} ${r.dup?'dupr':r.suelto?'suelr':!r.cuadra?'difr':''}"
-      onclick="abrirSino('${esc4(r.celda)}')">
-      <td class="l"><span class="chev">${ab?'▾':'▸'}</span>${esc4(r.etiqueta)} ${marca}</td>
-      <td class="v">${money(r.total)}</td></tr>
-    ${ab?`<tr class="det"><td colspan="2">${detalleSino(r)}</td></tr>`:''}`;
-}
-function detalleSino(r){
-  const meta=`<div class="dmeta">${esc4(r.celda)} · ${esc4(r.ref||'escrito a mano')}${r.que?' · '+esc4(r.que):''}
-    ${r.hermanas&&r.hermanas.length?` · se suma con ${r.hermanas.map(esc4).join(', ')}
-      para dar <b>${money(r.hojaPed)}</b> del pedido`:''}</div>`;
-  if(r.dup) return meta+`<div class="dav">Este renglón apunta a la misma celda que <b>${esc4(r.yaEn)}</b>,
-    así que contaría dos veces los mismos ${money(r.total)}.
-    Hoy <b>${CONFIG.contarDupSino?'sí':'no'}</b> suma ·
-    <a href="#" onclick="event.stopPropagation();setDupSino('${CONFIG.contarDupSino?'no':'si'}');pintarSino();return false">cambiarlo</a></div>`;
-  if(r.suelto) return meta+`<div class="dav">Este renglón no cae en ningún pedido del detailed.
-    Puede ser una etiqueta que Andrés escribió distinto, o un pedido que ya no existe.</div>`;
-  if(!r.eqs.length) return meta+`<div class="dav">No se encontró el pedido al que apunta.</div>`;
-  const tot=r.eqs.reduce((s,e)=>s+(+e.cupoMonto||0),0);
-  return meta+`<table class="dt"><thead><tr>
-      <th>Pedido</th><th>Proyecto</th><th>Estado</th>
-      <th class="r">Monto fáb.</th><th class="r">Saldo fáb.</th><th class="r">De este renglón</th>
-    </tr></thead><tbody>
-    ${r.eqs.map(e=>{
-      const parte=r.eqs.length>1?(tot?r.total*((+e.cupoMonto||0)/tot):r.total/r.eqs.length):r.total;
-      return `<tr onclick="event.stopPropagation();openPanel('${e.ordenId}')">
-        <td><b>${esc4(e.derrame)}</b></td><td>${esc4(projOf(e)||'—')}</td>
-        <td><span class="g4tag">${STAGE[e.st]||'—'}</span></td>
-        <td class="r">${money(+e.cupoMonto||0)}</td>
-        <td class="r">${money(+e.cupoSaldo||0)}</td>
-        <td class="r"><b>${money(parte)}</b></td></tr>`;}).join('')}
-    </tbody></table>
-    ${!r.cuadra?`<div class="dav">La hoja le asigna <b>${money(r.hojaPed)}</b> a
-      ${r.eqs.map(e=>esc4(e.derrame)).join(', ')}, y el motor cuenta <b>${money(r.mio)}</b>
-      (${r.dif>0?'+':''}${money(r.dif)}).</div>`:''}`;
-}
-function abrirTodoSino(){
-  const hay=Object.values(SNAB).some(Boolean);
-  SNAB={}; if(!hay) hojaSino().forEach(r=>SNAB[r.celda]=true);
-  pintarSino();
-}
-
-/* --- ¿me cabe? --- */
-function simTexto(mfg){
-  const v=+SNSIM[mfg]||0;
-  const techo=+CUPO[mfg]||0, usado=EQ.filter(e=>e.mfg===mfg).reduce((s,e)=>s+consumoEq(e,e.mfg),0);
-  const libre=techo-usado;
-  if(!v) return `te quedan <b>${fmtUSDs(libre)}</b>`;
-  const queda=libre-v;
-  if(queda>=0) return `<b style="color:var(--ok)">sí cabe</b> · quedarías con ${fmtUSDs(queda)}`;
-  /* qué tendrías que girar primero para que quepa */
-  const cand=EQ.filter(e=>e.mfg===mfg&&consumoEq(e,e.mfg)>0)
-    .map(e=>({e,libera:consumoEq(e,e.mfg),saldo:+e.cupoSaldo||0,
-              f:e.limitePago?new Date(e.limitePago):null}))
-    .sort((a,b)=>b.libera-a.libera);
-  let falta=-queda, girar=0, cuales=[];
-  for(const c of cand){ if(falta<=0) break; cuales.push(c); girar+=c.saldo; falta-=c.libera; }
-  return `<b style="color:var(--danger)">no cabe por ${fmtUSDs(-queda)}</b>`+
-    (cuales.length?` · girando ${fmtUSDs(girar)} de ${cuales.map(c=>esc4(c.e.derrame)).join(', ')} sí cabría`:'');
-}
-function simSino(mfg){const el=document.getElementById('sim'+mfg); if(el) el.innerHTML=simTexto(mfg);}
-
-/* --- cuándo se libera cupo --- */
-function timelineSino(){
-  const hoy=new Date(); hoy.setHours(0,0,0,0);
-  const items=EQ.filter(e=>e.limitePago&&consumoEq(e,e.mfg)>0.5)
-    .map(e=>({e,f:new Date(e.limitePago),libera:consumoEq(e,e.mfg),girar:+e.cupoSaldo||0}))
-    .sort((a,b)=>a.f-b.f);
-  if(!items.length) return '';
-  const acum={Singsun:0,Eaglerise:0};
-  const libre=m=>(+CUPO[m]||0)-EQ.filter(e=>e.mfg===m).reduce((s,e)=>s+consumoEq(e,e.mfg),0);
-  const base={Singsun:libre('Singsun'),Eaglerise:libre('Eaglerise')};
-  return `<div class="sec" style="display:flex;align-items:baseline;gap:12px;margin:30px 0 10px">
-      <h2 style="font-size:16px;font-weight:600">Cuándo se te libera cupo</h2>
-      <div style="font-size:12.5px;color:var(--ink2)">el cupo se suelta el día que gires el saldo de cada pedido</div></div>
-    <div class="tblwrap"><table class="g4t"><thead><tr>
-      <th>Fecha límite</th><th>Pedido</th><th>Fabricante</th>
-      <th class="r">Tienes que girar</th><th class="r">Se libera</th><th class="r">Cupo libre después</th>
-    </tr></thead><tbody>
-      ${items.map(it=>{
-        acum[it.e.mfg]+=it.libera;
-        const d=Math.round((it.f-hoy)/86400000);
-        return `<tr>
-          <td>${fmtD(it.f)}<div class="snm" style="${d<0?'color:var(--danger);font-weight:600':''}">${
-            d<0?`vencida hace ${-d} d`:d===0?'es hoy':`en ${d} días`}</div></td>
-          <td><b>${esc4(it.e.derrame)}</b><div class="snm">${esc4(projOf(it.e)||'')}</div></td>
-          <td>${it.e.mfg}</td>
-          <td class="r">${fmtUSDs(it.girar)}</td>
-          <td class="r">${fmtUSDs(it.libera)}</td>
-          <td class="r"><b>${fmtUSDs(base[it.e.mfg]+acum[it.e.mfg])}</b></td></tr>`;}).join('')}
-    </tbody></table></div>`;
-}
-
-/* El cuadro que le puedes mandar al dueño del detailed */
-function exportarSino(){
-  const filas=hojaSino();
-  const l=['Celda\tLo que dice la hoja\tValor\tFórmula\tPedido\tLo que cuento yo\tDesfase\tObservación'];
-  filas.forEach(r=>l.push([r.celda,r.etiqueta,Math.round(r.total),r.ref||'sin fórmula',
-    r.eqs.map(e=>e.derrame).join(' + ')||'—',
-    r.dup||r.suelto?'':Math.round(r.mio), r.dup||r.suelto?'':(r.cuadra?0:Math.round(r.dif)),
-    r.dup?('repite '+r.yaEn+': cuenta dos veces la misma celda'):
-    r.suelto?'no cae en ningún pedido':
-    ((r.hermanas&&r.hermanas.length?'con '+r.hermanas.join(', ')+' suma '+Math.round(r.hojaPed)+' · ':'')
-      +(r.cuadra?'ok':'no cuadra'))].join('\t')));
-  ['Singsun','Eaglerise'].forEach(m=>fueraDeHoja(m).forEach(e=>
-    l.push(['—',e.derrame,Math.round(consumoEq(e,m,'andres')),'','','','','falta en la hoja'])));
-  const txt=l.join('\n');
-  const ta=document.createElement('textarea'); ta.value=txt;
-  ta.style.position='fixed'; ta.style.opacity='0';
-  document.body.appendChild(ta); ta.select();
-  let ok=false; try{ ok=document.execCommand('copy'); }catch(e){}
-  document.body.removeChild(ta);
-  toast(ok?`Copiada la hoja con <b>${filas.length}</b> renglón(es) y su mapeo · pégala en un correo`
-          :'No se pudo copiar solo · está en la consola del navegador');
-  if(!ok) console.log(txt);
-}
-
-/* --- las pestañas nuevas se pintan al entrar --- */
-document.querySelectorAll('nav.tabs button[data-v="precios"],nav.tabs button[data-v="sinosure"]')
-  .forEach(b=>b.addEventListener('click',()=>{ b.dataset.v==='precios'?pintarPrecios():pintarSino(); }));
-
-console.log('%cMotor4 v0.22 · precios por grupo + Sinosure','background:#FD9C10;color:#17181A;padding:3px 9px;border-radius:4px;font-weight:700');
-
-/* =============== NO DEJAR DOS PRECIOS PELEANDO ===============
-   En "Editar cliente" hay una casilla de precio por pedido. Si ese pedido
-   ya está en un grupo, el grupo manda y lo que se escriba ahí no se usa.
-   En vez de ignorarlo en silencio, se bloquea la casilla y se dice dónde
-   está el precio de verdad. */
-if(typeof renderEditCliente==='function'){
-  const _recOrig=renderEditCliente;
-  renderEditCliente=function(){
-    _recOrig.apply(this,arguments);
-    try{ marcarPreciosDeGrupo(); }catch(e){}
-  };
-}
-function marcarPreciosDeGrupo(){
-  document.querySelectorAll('#editCliBody input.ec-num, .ec-tbl input.ec-num').forEach(inp=>{
-    const oc=inp.getAttribute('onchange')||'';
-    if(oc.indexOf("'precioVenta'")<0) return;
-    const m=oc.match(/setEqField\((\d+)/); if(!m) return;
-    const e=EQ[+m[1]]; if(!e) return;
-    const g=gpDeEq(e); if(!g) return;
-    const td=inp.parentElement; if(!td||td.dataset.gp) return;
-    td.dataset.gp='1';
-    td.innerHTML=`<div style="font-variant-numeric:tabular-nums;font-weight:600">${fmtUSDs(gpParte(g,e))}</div>
-      <small style="display:block;font-size:10px;color:var(--ink3);line-height:1.35">
-        del grupo <b>${esc4(g.nombre||'sin nombre')}</b><br>
-        <a href="#" onclick="navTo('precios');GSEL='${g.id}';pintarPrecios();return false"
-           style="color:var(--accent)">editarlo ahí</a></small>`;
-  });
-}
-
-/* =============== LISTA DE PEDIDOS: PRECIO Y SELECCIÓN DIRECTOS ===============
-   La lista mostraba solo la orden madre y había que abrir un panel para ver
-   los pedidos. Ahora cada orden se abre ahí mismo, con el precio editable en
-   la fila y una casilla para escoger los que van juntos en una factura. */
-let LSEL=new Set();          /* derrames escogidos */
-let LAB=new Set();           /* órdenes abiertas */
-
-if(typeof renderLedger==='function'){
-  renderLedger=function(){
-    const cont=document.getElementById('ledger'); if(!cont) return;
-    let os=ORD.slice();
-    if(typeof filtP!=='undefined'){
-      if(filtP==='Tracker')os=os.filter(o=>o.mfg==='Singsun');
-      else if(filtP==='Shelter')os=os.filter(o=>o.mfg==='Eaglerise');
-      else if(filtP==='vencida')os=os.filter(o=>o.equipos.some(isOver));
-      else if(filtP==='pipeline')os=os.filter(o=>o.equipos.some(e=>!isShipped(e)));
-      else if(filtP==='sinprecio')os=os.filter(o=>o.equipos.some(e=>!(precioVenta(e)>0)));
-    }
-    cont.innerHTML=os.map(o=>{
-      const comp=o.equipos.reduce((s,e)=>s+consumoEq(e,o.mfg),0);
-      const balPend=o.equipos.filter(e=>isShipped(e)).reduce((s,e)=>s+(+e.balSaldo||0),0);
-      const over=o.equipos.some(isOver);
-      const cnt={};o.equipos.forEach(e=>cnt[e.st]=(cnt[e.st]||0)+1);
-      const resumen=Object.entries(cnt).map(([k,v])=>`${v} ${STAGE[k].toLowerCase()}`).join(' · ');
-      const ab=LAB.has(o.id);
-      const todos=o.equipos.every(e=>LSEL.has(e.derrame));
-      const algunos=!todos&&o.equipos.some(e=>LSEL.has(e.derrame));
-      const sinP=o.equipos.filter(e=>!(precioVenta(e)>0)).length;
-      return `<tr class="row ord ${ab?'ab':''}" onclick="abrirOrden('${o.id}')">
-        <td><input type="checkbox" class="lchk" ${todos?'checked':''} ${algunos?'data-ind="1"':''}
-              onclick="event.stopPropagation();selOrden('${o.id}',this.checked)">
-            <span class="chev">${ab?'▾':'▸'}</span><span class="pid">Orden ${o.id}</span></td>
-        <td>${esc4(o.cliente)}<div class="stage" style="color:var(--ink3);font-size:12px">${
-          (function(){const n=nEquipos(o.equipos),t=o.mfg==='Singsun'?'tracker':'shelter';
-            return n+' '+t+(n===1?'':'s')+(n!==o.equipos.length?' en '+o.equipos.length+' pedidos':'');})()}
-          ${sinP?`<span class="g4tag avi" style="margin-left:6px">${sinP} sin precio</span>`:''}</div></td>
-        <td><span class="stage">${resumen}</span></td>
-        <td class="r">${fmtUSD(comp)}</td>
-        <td class="r">${balPend>0?fmtUSD(balPend):'<span style="color:var(--ink3)">—</span>'}${
-          over?' <span style="background:var(--danger-soft);color:var(--danger);font-size:10px;padding:1px 6px;border-radius:4px">vencido</span>':''}</td>
-      </tr>${ab?`<tr class="subrow"><td colspan="5">${tablaPedidos(o)}</td></tr>`:''}`;
-    }).join('');
-    barraSel();
-  };
-}
-function tablaPedidos(o){
-  return `<table class="ptab"><thead><tr>
-      <th style="width:30px"></th><th>Pedido</th><th>Proyecto</th><th>Estado</th>
-      <th class="r">Saldo cupo</th><th class="r" style="width:150px">Precio de venta</th><th style="width:80px"></th>
-    </tr></thead><tbody>
-    ${o.equipos.map(e=>{
-      const i=EQ.indexOf(e), g=gpDeEq(e), pv=precioVenta(e);
-      return `<tr class="${LSEL.has(e.derrame)?'sel':''}">
-        <td><input type="checkbox" class="lchk" ${LSEL.has(e.derrame)?'checked':''}
-              onclick="event.stopPropagation();selPedido('${esc4(e.derrame)}',this.checked)"></td>
-        <td><b>${esc4(e.derrame)}</b></td>
-        <td>${esc4(projOf(e)||'—')}</td>
-        <td><span class="g4tag">${STAGE[e.st]||'—'}</span></td>
-        <td class="r">${fmtUSDs(+e.cupoSaldo||0)}</td>
-        <td class="r">${g
-          ? `<b>${fmtUSDs(pv)}</b><div class="pnota">del grupo <b>${esc4(g.nombre||'sin nombre')}</b> ·
-             <a href="#" onclick="event.stopPropagation();navTo('precios');GSEL='${g.id}';pintarPrecios();return false">abrirlo</a></div>`
-          : `<input class="pinp" type="number" step="any" placeholder="0" value="${e.precioVenta||''}"
-               onclick="event.stopPropagation()"
-               oninput="setPrecioEq(${i},this.value,true)"
-               onchange="setPrecioEq(${i},this.value)">`}</td>
-        <td><button class="btn" style="padding:3px 9px;font-size:11px"
-              onclick="event.stopPropagation();openPanel('${o.id}')">ver</button></td>
-      </tr>`;}).join('')}
-    </tbody></table>`;
-}
-function abrirOrden(id){ LAB.has(id)?LAB.delete(id):LAB.add(id); renderLedger(); }
-let _pt=null;
-/* Mientras se escribe se guarda el número pero NO se repinta la tabla, porque
-   repintar le quitaría el foco al campo a media cifra. El repintado espera a
-   que salgas del campo. Así tampoco se pierde lo escrito si te vas de la pestaña. */
-function setPrecioEq(i,v,escribiendo){
-  const e=EQ[i]; if(!e) return;
-  e.precioVenta=parseFloat(v)||0;
-  clearTimeout(_pt);
-  if(escribiendo){ _pt=setTimeout(()=>{guardar4();refreshAll();},500); return; }
-  guardar4(); refreshAll(); renderLedger();
-}
-function selPedido(d,on){ on?LSEL.add(d):LSEL.delete(d); renderLedger(); }
-function selOrden(id,on){
-  const o=ORD.find(x=>x.id===id); if(!o) return;
-  o.equipos.forEach(e=>on?LSEL.add(e.derrame):LSEL.delete(e.derrame));
-  if(on)LAB.add(id);
-  renderLedger();
-}
-function barraSel(){
-  let bar=document.getElementById('lbar');
-  if(!LSEL.size){ if(bar)bar.remove(); return; }
-  if(!bar){ bar=document.createElement('div'); bar.id='lbar'; bar.className='lbar'; document.body.appendChild(bar); }
-  const eqs=EQ.filter(e=>LSEL.has(e.derrame));
-  const clis=[...new Set(eqs.map(e=>e.cliente))];
-  const suma=eqs.reduce((s,e)=>s+precioVenta(e),0);
-  const yaEn=eqs.filter(e=>gpDeEq(e)).length;
-  bar.innerHTML=`<b>${eqs.length}</b> pedido(s) escogido(s)
-    <span class="m">${clis.length===1?esc4(clis[0]):clis.length+' clientes distintos'}
-      · precio hoy ${fmtUSD(suma)}${yaEn?` · ${yaEn} ya está(n) en un grupo`:''}</span>
-    <span style="flex:1"></span>
-    <button class="btn" onclick="LSEL.clear();renderLedger()">Quitar la selección</button>
-    <button class="btn primary" ${clis.length>1?'disabled title="Escoge pedidos de un solo cliente"':''}
-      onclick="grupoDesdeSeleccion()">Ponerles un precio juntos</button>`;
-}
-/* el atajo que faltaba: de la lista de pedidos a un grupo de precio */
-function grupoDesdeSeleccion(){
-  const eqs=EQ.filter(e=>LSEL.has(e.derrame));
-  if(!eqs.length) return;
-  const cli=eqs[0].cliente;
-  if(eqs.some(e=>e.cliente!==cli)){ toast('Escoge pedidos de un solo cliente'); return; }
-  /* si ya estaban en otro grupo, salen de él */
-  GPRE.forEach(g=>{ g.eqRefs=(g.eqRefs||[]).filter(d=>!LSEL.has(d)); });
-  gpNuevo();
-  const g=GPRE[GPRE.length-1];
-  g.cliente=cli; g.eqRefs=eqs.map(e=>e.derrame);
-  g.nombre=eqs.length+' pedidos de '+cli;
-  g.total=eqs.reduce((s,e)=>s+(+e.precioVenta||0),0);
-  LSEL.clear();
-  guardar4(); refreshAll(); renderLedger();
-  navTo('precios'); GSEL=g.id; pintarPrecios();
-  toast(`Grupo con <b>${eqs.length}</b> pedido(s) · escribe el precio total`);
-}
-
-/* =============== LIMPIEZA v0.23 ===============
-   Tres cosas que quedaron sueltas entre iteraciones. */
-
-/* 1) EL PRECIO DE GRUPO NO LLEGABA AL ESTADO DE CUENTA.
-   Seis sitios del motor leen e.precioVenta directo (la tabla de "estimado ·
-   pendiente facturar", los totales del cliente, la marca de "sin precio"…)
-   y se saltaban el grupo, así que todo seguía diciendo "definir".
-   En vez de parchar seis lecturas, el grupo escribe su parte en el pedido:
-   el grupo manda, y el campo de siempre queda sincronizado. */
-function sincronizarPrecios(){
-  let n=0;
-  GPRE.forEach(g=>{
-    gpEquipos(g).forEach(e=>{
-      const parte=gpParte(g,e);
-      if(Math.abs((+e.precioVenta||0)-parte)>0.005){ e.precioVenta=parte; n++; }
-    });
-  });
-  return n;
-}
-/* se sincroniza después de cualquier cosa que mueva un grupo */
-['gpSet','gpToggle','gpParteSet','gpCuadrar','gpBorrar','gpTomarFac','aplicarFusiones','grupoDesdeSeleccion']
-  .forEach(f=>{ if(typeof window[f]!=='function')return;
-    const orig=window[f];
-    window[f]=function(){ const r=orig.apply(this,arguments); sincronizarPrecios(); return r; };
-  });
-
-/* 2) BOTÓN QUE NO LLEVA A NINGUNA PARTE.
-   "Simular sacar pedidos" apunta a navTo('caja'), y la pestaña Caja no
-   existe: se quitó hace varias iteraciones y el botón se quedó. */
-if(typeof openPanel==='function'){
-  const _opOrig=openPanel;
-  openPanel=function(){
-    _opOrig.apply(this,arguments);
-    try{ limpiarPanel(); }catch(e){}
-  };
-}
-function limpiarPanel(){
-  document.querySelectorAll('#panel .pactions button').forEach(b=>{
-    const oc=b.getAttribute('onclick')||'';
-    if(/navTo\(\s*['"]caja['"]/.test(oc)) b.remove();
-  });
-  /* la palanca de Sinosure vive ahora en su pestaña; aquí solo estorbaba
-     repetida ocho veces. Se deja el dato, se quita el control. */
-  document.querySelectorAll('#panel .sinorow').forEach(row=>{
-    const sel=row.querySelector('select'); if(!sel) return;
-    const v=sel.value;
-    row.innerHTML=`<b>Sinosure</b> <span style="font-size:10.5px;color:var(--ink3)">${
-      v==='si'?'lo cuentas a mano':v==='no'?'lo dejaste fuera':'según la hoja'}</span>`;
-    row.style.cursor='pointer';
-    row.onclick=ev=>{ev.stopPropagation();closePanel();navTo('sinosure');};
-    row.title='Decidirlo en la pestaña Sinosure';
-  });
-}
-
-/* 3) la pestaña Precios ahora avisa si algo quedó a medias */
-const _pintarPreciosOrig=pintarPrecios;
-pintarPrecios=function(){
-  _pintarPreciosOrig.apply(this,arguments);
-  const cont=document.getElementById('v-precios'); if(!cont||!GPRE.length) return;
-  const malos=GPRE.filter(g=>!(+g.total>0)||!(g.eqRefs||[]).length);
-  if(!malos.length) return;
-  const av=document.createElement('div');
-  av.className='g4av'; av.style.margin='14px 0 0';
-  av.innerHTML=`<b>${malos.length} grupo(s) sin terminar:</b> `+
-    malos.map(g=>`${esc4(g.nombre||'sin nombre')} (${!(+g.total>0)?'sin total':'sin pedidos'})`).join(' · ')+
-    `. Mientras les falte eso, sus pedidos no suman al estado de cuenta.`;
-  cont.appendChild(av);
-};
-
-console.log('%cv0.23 · limpieza','background:#2E6E5A;color:#fff;padding:3px 9px;border-radius:4px;font-weight:700');
 </script>
