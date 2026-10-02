@@ -30,7 +30,15 @@ function _marcarAgregados(det){
     let suma=0, hermanos=[];
     for(let n=+m[3], t=0; t<20; n++, t++){
       const cand=(porClave[_bKey(b.mfg,(m[1]||'')+m[2]+'-'+n)]||[]).filter(x=>x!==b&&x.fab.monto>0);
-      if(!cand.length) { if(n>+m[3]) break; else continue; }
+      if(!cand.length){
+        /* Una fila madre SIEMPRE repite su propio número: el "PO#7-5" de 293.699 vive
+           al lado del "PO#7-5" de 70.937, que es el pedido de verdad. Si no existe otro
+           bloque con su mismo número, no es una fila madre, es un pedido cuyo monto
+           coincide de casualidad con la suma de los siguientes (le pasa al CFM3-1 de
+           257.600, que da lo mismo que CFM3-2 + CFM3-3 y sí es un pedido real). */
+        if(n===+m[3]) return;
+        break;
+      }
       const x=cand[0]; suma+=x.fab.monto; hermanos.push(x.key);
       if(hermanos.length>=2 && Math.abs(suma-b.fab.monto)<=Math.max(2,b.fab.monto*0.005)){ b.agregado=hermanos.slice(); return; }
       if(suma>b.fab.monto) return;
@@ -38,8 +46,34 @@ function _marcarAgregados(det){
   }));
 }
 
+/* Dos bloques del MISMO fabricante con la misma designación son pedidos distintos
+   cuando el sufijo de entidad difiere: "PO CFM3-2" (CFM Shelter, Solenium) y
+   "PO CFM3-2 INGEV2" (INGEV2 Shelter) no son el mismo pedido aunque el número
+   coincida. Solo en ese caso se le pega el sufijo a la clave, para no moverle la
+   identidad a los pedidos que no tienen gemelo (y no perder lo que ya está guardado). */
+function _separarGemelos(det){
+  const porDesig={};
+  det.orden.forEach(k=>det.bloques[k].forEach(b=>{
+    const d=_bKey(b.mfg,b.key);(porDesig[d]=porDesig[d]||[]).push(b);}));
+  let hubo=false;
+  Object.values(porDesig).forEach(g=>{
+    if(g.length<2) return;
+    const vars=g.map(b=>_poVar(b.poRaw));
+    if(new Set(vars).size<2) return;          /* mismo nombre: no son gemelos (p.ej. la fila agregada) */
+    g.forEach((b,i)=>{ if(vars[i]){ b.key=b.key+'#'+vars[i].replace(/\s+/g,''); hubo=true; } });
+  });
+  if(!hubo) return;
+  const bloques={}, orden=[];
+  det.orden.forEach(k=>det.bloques[k].forEach(b=>{
+    const nk=_bKey(b.mfg,b.key);
+    if(!bloques[nk]){bloques[nk]=[];orden.push(nk);}
+    bloques[nk].push(b);}));
+  det.bloques=bloques; det.orden=orden;
+}
+
 /* Construye los pedidos desde el detailed */
 function equiposDesdeDetailed(det, sino){
+  _separarGemelos(det);
   _marcarAgregados(det);
   const enSino={};
   if(sino) sino.entradas.forEach(e=>{ if(e.ref) enSino[e.ref.fila]=true; });
@@ -55,9 +89,10 @@ function equiposDesdeDetailed(det, sino){
     const vivo=(cupoSaldo+otrosSaldo)>0.5 || enSino[b.fila];
     if(!mfg || (!cupoMonto && !otrosMonto)){ omitidos.push({poRaw:b.poRaw,fila:b.fila,motivo:'sin fabricante ni montos'}); return; }
     if(!vivo){ omitidos.push({poRaw:b.poRaw,fila:b.fila,motivo:'sin saldo y fuera de la hoja Sinosure · pedido cerrado',monto:cupoMonto}); return; }
-    const mc=b.key.match(/^CFM(\d+)(?:-(\d+))?/);
-    const ordenId = mc? 'CFM'+mc[1] : b.key.replace(/-\d+$/,'');
-    const derrame = mc? 'CFM '+mc[1]+(mc[2]?'-'+mc[2]:'') : b.key;
+    const base=b.key.split('#')[0], ent=b.key.split('#')[1]||'';
+    const mc=base.match(/^CFM(\d+)(?:-(\d+))?/);
+    const ordenId = mc? 'CFM'+mc[1] : base.replace(/-\d+$/,'');
+    const derrame = (mc? 'CFM '+mc[1]+(mc[2]?'-'+mc[2]:'') : base)+(ent?' '+ent:'');
     const prod=(''+(id.prod||'')).replace(/[\r\n]+/g,' ').trim();
     const desc=(''+(id.desc||'')).replace(/[\r\n]+/g,' ').trim();
     const tipo = /tracker/i.test(prod)?'Tracker' : (/shelter/i.test(prod)?'Shelter' : (mfg==='Singsun'?'Tracker':'Shelter'));
@@ -139,7 +174,24 @@ function casarSinosure(equipos, sino, det){
   const filaAClave={}, filaABloque={};
   if(det) det.orden.forEach(k=>det.bloques[k].forEach(b=>b.lineas.forEach(l=>{filaAClave[l.fila]=_bKey(b.mfg,b.key);filaABloque[l.fila]=b;})));
   const porClave={}; equipos.forEach(e=>{const k=_bKey(e.mfg,_poKey(e.derrame));(porClave[k]=porClave[k]||[]).push(e);});
-  const porEtiqueta={}; equipos.forEach(e=>{const k=e.mfg+'|'+_poKey(e.derrame);(porEtiqueta[k]=porEtiqueta[k]||[]).push(e);});
+  const porEtiqueta={}; equipos.forEach(e=>{const k=kOf(e);(porEtiqueta[k]=porEtiqueta[k]||[]).push(e);});
+  /* Casa la etiqueta de un renglón de la hoja contra los pedidos. En orden:
+     1) la designación con su sufijo de entidad ("CFM 3.2 INGEV2");
+     2) la designación sola ("CFM 3.2" → CFM3-2, da igual el punto o el guion);
+     3) el prefijo más largo de la secuencia de números, porque la hoja a veces le
+        agrega la especificación detrás ("PO 15 13.2 3200 m" es el PO#15). */
+  const candEtq=(lado,etq)=>{
+    const out=[], v=_poVarK(etq);
+    if(v) out.push(lado+'|'+_poKey(etq)+v);
+    out.push(lado+'|'+_poKey(etq));
+    const q=_poNums(etq), cfm=/CFM/.test(_poNorm(etq))?'CFM':'';
+    for(let n=q.length-1;n>0;n--) out.push(lado+'|'+cfm+q.slice(0,n).join('-'));
+    return out;
+  };
+  const resuelveEtq=(lado,etq)=>{
+    for(const k of candEtq(lado,etq)){ const g=porEtiqueta[k]; if(g&&g.length) return g; }
+    return [];
+  };
   const tomadosEtq=new Set();
   const asigna=(grupo,ent)=>{
     const totM=grupo.reduce((s,e)=>s+(+e.cupoMonto||0),0);
@@ -157,9 +209,15 @@ function casarSinosure(equipos, sino, det){
   const dupPorDerrame={};
   sino.entradas.forEach(ent=>{
     if(ent.duplicado){                                        /* la misma celda ya se contó */
-      const k=ent.lado+'|'+_poKey(ent.etiqueta);
-      const g=porEtiqueta[k]||[];
+      const g=resuelveEtq(ent.lado,ent.etiqueta);
       ent.derrames=g.map(e=>e.derrame);
+      /* Si existe un pedido con la misma designación pero otro sufijo de entidad,
+         lo más probable es que la fórmula esté apuntando a la fila equivocada:
+         Andrés rotuló el renglón pensando en el gemelo. Se lo decimos. */
+      ent.gemelo=null;
+      if(det) det.orden.forEach(k2=>det.bloques[k2].forEach(bl=>{
+        if(bl.mfg===ent.lado && bl.key.split('#')[0]===_poKey(ent.etiqueta) && bl.key.indexOf('#')>0)
+          ent.gemelo={poRaw:bl.poRaw, fila:bl.fila};}));
       const tot=g.reduce((s,e)=>s+(+e.cupoMonto||0),0);
       g.forEach(e=>{dupPorDerrame[kOf(e)]=(dupPorDerrame[kOf(e)]||0)+(tot?ent.valor*((+e.cupoMonto||0)/tot):ent.valor/g.length);});
       duplicados.push(ent); return; }
@@ -183,8 +241,7 @@ function casarSinosure(equipos, sino, det){
       }
     }
     if((!grupo||!grupo.length)){
-      const k=ent.lado+'|'+_poKey(ent.etiqueta);
-      grupo=(porEtiqueta[k]||[]).filter(e=>!tomadosEtq.has(e)); via='etiqueta';
+      grupo=resuelveEtq(ent.lado,ent.etiqueta).filter(e=>!tomadosEtq.has(e)); via='etiqueta';
       if(grupo.length) grupo.forEach(e=>tomadosEtq.add(e));
     }
     if(!grupo||!grupo.length){ sueltos.push(ent); return; }
@@ -216,7 +273,7 @@ function aplicarSinosure(equipos, det, sino){
   }).sort((a,b)=>(a.base?1:0)-(b.base?1:0)||(''+a.derrame).localeCompare(''+b.derrame,undefined,{numeric:true}));
   return {filas, sinConfirmar,
     duplicados:cas.duplicados.map(d=>({celda:d.celda,etiqueta:d.etiqueta,valor:d.valor,lado:d.lado,
-      ref:d.ref?d.ref.hoja+'!'+d.ref.addr:null,yaEn:d.duplicado,derrames:d.derrames||null})),
+      ref:d.ref?d.ref.hoja+'!'+d.ref.addr:null,yaEn:d.duplicado,derrames:d.derrames||null,gemelo:d.gemelo||null})),
     sueltos:cas.sueltos.map(d=>({celda:d.celda,etiqueta:d.etiqueta,valor:d.valor,lado:d.lado})),
     sinoPorDerrame:cas.mapa, sinoDetalle:cas.detalle, sinoDupPorDerrame:cas.dupPorDerrame,
     sino, ranuras:det.ranuras, posicional:det.posicional};
@@ -419,7 +476,7 @@ document.getElementById('reportFile').addEventListener('change',function(ev){
   };
   rd.readAsArrayBuffer(f);
 });
-function kOf(x){return x.mfg+'|'+_poKey(x.derrame);}
+function kOf(x){return x.mfg+'|'+_poKey(x.derrame)+_poVarK(x.derrame);}
 function prevDe(){const m={};EQ.forEach(e=>{const k=kOf(e);const p=m[k]||(m[k]={exists:true,st:e.st,cupoMonto:0,cupoSaldo:0,totalSaldo:0,mfg:e.mfg,cliente:e.cliente,proj:e.proj,legacy:false});
   p.cupoMonto+=(+(e.cupoMonto!=null?e.cupoMonto:e.mfgAmt)||0);p.cupoSaldo+=consumoEq(e,e.mfg);p.totalSaldo+=(+e.totalSaldo||0);if(e.lector!=='v2')p.legacy=true;});return m;}
 function wizGo(s){WIZ.step=s;renderWiz();}
@@ -511,7 +568,7 @@ function renderWizReceive(){
   const sum=(mfg,f)=>WIZ.work.filter(w=>w.mfg===mfg).reduce((s,w)=>s+(+w[f]||0),0);
   const C=WIZ.concilia;
   const lineMfg=mfg=>{const O=sum(mfg,'cupoSaldo'),U=sum(mfg,'totalSaldo');
-    const cupo=C?WIZ.work.filter(w=>w.mfg===mfg).reduce((s,w)=>s+((C.sinoPorDerrame[w.derrame]||0)),0):null;
+    const cupo=C?WIZ.work.filter(w=>w.mfg===mfg).reduce((s,w)=>s+((C.sinoPorDerrame[kOf(w)]||0)),0):null;
     const decl=C&&C.sino?(mfg==='Singsun'?C.sino.totalSingsun:C.sino.totalEagle):null;
     return `<div class="rl-line"><span>${mfg==='Singsun'?'Trackers · Singsun':'Shelters · Eaglerise'}</span><span class="num">saldo al fabricante ${fmtUSDs(O)} · saldo total a China <b>${fmtUSDs(U)}</b>${cupo!=null?` · cupo Sinosure <b>${fmtUSDs(cupo)}</b>`:''}${decl!=null&&Math.abs(decl-(cupo||0))>2?` <span style="color:var(--dato-debo)">(la hoja suma ${fmtUSDs(decl)})</span>`:''}</span></div>`;};
   document.getElementById('reconBody').innerHTML=`
@@ -557,7 +614,7 @@ function renderConcilia(c){
       <td style="font-size:11.5px;color:var(--ink3)">${f.celdas}${f.que?' · '+f.que:''}</td></tr>`).join('')}
     </tbody></table>
     ${(c.sinConfirmar||[]).length?`<div class="cfgnote2" style="margin-top:8px;color:var(--dato-debo)"><b>Sin cupo asignado</b> (están en el Summary pero la hoja Sinosure no los lista, así que no consumen): ${c.sinConfirmar.map(x=>x.derrame+' '+fmtUSDs(x.monto)).join(' · ')}</div>`:''}
-    ${(c.duplicados||[]).length?`<div class="cfgnote2" style="color:var(--dato-vencido)"><b>Renglones repetidos</b> en la hoja Sinosure: ${c.duplicados.map(d=>d.celda+' apunta a '+d.ref+', ya contado en '+d.yaEn+' ('+fmtUSDs(d.valor)+')').join(' · ')}</div>`:''}
+    ${(c.duplicados||[]).length?`<div class="cfgnote2" style="color:var(--dato-vencido)"><b>Referencia repetida</b> en la hoja Sinosure: ${c.duplicados.map(d=>d.celda+' apunta a '+d.ref+', que ya se contó en '+d.yaEn+' ('+fmtUSDs(d.valor)+')'+(d.gemelo?'. Existe un pedido distinto con el mismo número, '+d.gemelo.poRaw+' (fila '+d.gemelo.fila+'): si era ese, la fórmula debería apuntar a esa fila':'')).join(' · ')}</div>`:''}
     ${(c.sueltos||[]).length?`<div class="cfgnote2">Renglones de la hoja Sinosure que no caen en ningún pedido: ${c.sueltos.map(x=>x.celda+' "'+x.etiqueta+'" '+fmtUSDs(x.valor)).join(' · ')}</div>`:''}`;
 }
 /* Paso 2 */
@@ -706,6 +763,12 @@ function wizApprove(){
     filas:WIZ.concilia.filas||[], omitidos:WIZ.omitidos||[], agregados:WIZ.agregados||[],
     orDifs:WIZ.orDifs||[], ranuras:WIZ.concilia.ranuras, posicional:WIZ.concilia.posicional
   } : (CONCILIA?{...CONCILIA, viejo:true, tsNuevo:new Date()}:null);
+  /* El techo del cupo lo declara la propia hoja Sinosure del detailed (el bloque de
+     "Cupos" de arriba). Antes se quedaba con lo que estuviera escrito a mano en
+     Ajustes, y el Tablero reportaba disponible de más. Manda la hoja. */
+  if(CONCILIA && CONCILIA.sino && CONCILIA.sino.cupos){
+    Object.entries(CONCILIA.sino.cupos).forEach(([m,v])=>{ if(+v>0) CUPO[m]=+v; });
+  }
   closeRecon();toast('ORDER REPORT cargado'+(WIZ.concilia?' y cruzado con el detailed':'')+' · facturas, pagos y precios conservados');
   refreshAll();renderLedger();renderHistCargas();
   if(typeof saveToServer==='function')saveToServer();

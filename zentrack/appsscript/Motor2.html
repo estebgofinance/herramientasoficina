@@ -219,12 +219,28 @@ function parseProjects(desc,n){desc=(''+(desc||'')).trim();if(!desc||/^Orden\s/.
 const _sheet=(wb,name)=>{const t=name.toLowerCase().replace(/\s+/g,' ').trim();const n=wb.SheetNames.find(s=>s.toLowerCase().replace(/\s+/g,' ').trim()===t);return n?wb.Sheets[n]:null;};
 /* Llave de pedido: "PO#7-2"→"7-2", "Pedido 7.2"→"7-2", "PO CFM3-2 INGEV2"→"CFM3-2",
    "PO12 SOLARIS INGEV"→"12", "PO#10\nINGEV1\nMARIANGOLA"→"10", "CFM 2.3"→"CFM2-3" */
+function _poNorm(s){return (''+(s==null?'':s)).toUpperCase().replace(/[\r\n]+/g,' ').replace(/\s+/g,' ').trim();}
+/* La designación del pedido. El Summary la escribe con guion ("PO#7-2", "PO CFM3-2")
+   y la hoja Sinosure con punto ("Pedido 7.2", "CFM 3.2"): es el mismo pedido, el
+   separador no significa nada. Lo que identifica al pedido es la secuencia de números. */
 function _poKey(s){
-  s=(''+(s==null?'':s)).toUpperCase().replace(/[\r\n]+/g,' ').replace(/\s+/g,' ').trim();
-  const m=s.match(/^(?:PO|PEDIDO|ORDEN)?\s*#?\s*(CFM)?\s*#?\s*(\d+)\s*(?:[.\-]\s*(\d+))?\s*([A-Z])?(?![\w.])/);
-  if(!m||!m[2]) return s.replace(/\s+/g,'');
+  const t=_poNorm(s);
+  const m=t.match(/^(?:PO|PEDIDO|ORDEN)?\s*#?\s*(CFM)?\s*#?\s*(\d+)\s*(?:[.\-]\s*(\d+))?\s*([A-Z])?(?![\w.])/);
+  if(!m||!m[2]) return t.replace(/\s+/g,'');
   return (m[1]||'')+m[2]+(m[3]?'-'+m[3]:'')+(m[4]||'');
 }
+/* Toda la secuencia de números del string, en orden. Sirve para casar una etiqueta
+   que trae de más la especificación ("PO 15 13.2 3200 m" es el PO#15). */
+function _poNums(s){return (_poNorm(s).match(/\d+/g)||[]).map(n=>''+(+n));}
+/* El sufijo de entidad: lo que queda después de la designación. Es lo que distingue
+   "PO CFM3-2" (Solenium) de "PO CFM3-2 INGEV2", que son dos pedidos diferentes. */
+function _poVar(s){
+  const t=_poNorm(s);
+  const m=t.match(/^(?:PO|PEDIDO|ORDEN)?\s*#?\s*(?:CFM)?\s*#?\s*\d+\s*(?:[.\-]\s*\d+)?\s*[A-Z]?(?![\w.])/);
+  if(!m) return '';
+  return t.slice(m[0].length).replace(/[^A-Z0-9]+/g,' ').trim();
+}
+const _poVarK=s=>{const v=_poVar(s);return v?'#'+v.replace(/\s+/g,''):'';};
 /* Un pedido vive en el par fabricante+llave: el PO#7-2 de Singsun (tracker) y el PO#7-2 de
    Eaglerise (shelter viejo) son dos pedidos distintos y no se pueden mezclar. */
 const _bKey=(mfg,k)=>(mfg||'?')+'|'+k;
