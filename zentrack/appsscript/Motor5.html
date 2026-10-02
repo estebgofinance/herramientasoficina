@@ -878,4 +878,134 @@ pintarSino=function(){
     +'<div class="sn-cols">'+_snBloque('Singsun','Trackers · Singsun')+_snBloque('Eaglerise','Shelters · Eaglerise')+'</div>';
 };
 
+/* ===================================================================
+   1) QUE DERRAMAR UN PEDIDO NO ME MANDE AL PRINCIPIO DE LA LISTA
+   splitRow() llama a renderWiz(), que reconstruye #reconBody entero.
+   El rescate de scroll que ya existía dentro de renderWizEditBody leía
+   un #wizEditBody recién creado, así que siempre encontraba 0.
+   Ahora el scroll se guarda ANTES de que el DOM viejo desaparezca.
+   =================================================================== */
+let _WIZSC=0;
+function _wizScGuarda(){
+  const sc=document.querySelector('#wizEditBody .vscroll');
+  if(sc) _WIZSC=sc.scrollTop;
+}
+function _wizScPone(){
+  const sc=document.querySelector('#wizEditBody .vscroll');
+  if(sc&&_WIZSC) sc.scrollTop=_WIZSC;
+}
+const _rwEditAntes=renderWizEdit;
+renderWizEdit=function(){ _wizScGuarda(); _rwEditAntes.apply(this,arguments); _wizScPone(); };
+const _rwBodyAntes=renderWizEditBody;
+renderWizEditBody=function(){ _wizScGuarda(); _rwBodyAntes.apply(this,arguments); _wizScPone(); };
+/* al derramar o unir, además dejamos la fila tocada a la vista */
+function _wizVerFila(derrame){
+  setTimeout(function(){
+    const t=document.querySelector('#wizEditBody [data-der="'+derrame+'"]');
+    if(t&&t.scrollIntoView) t.scrollIntoView({block:'center'});
+  },0);
+}
+const _splitAntes=splitRow;
+splitRow=function(i){ const w=W(i); const d=w?w.derrame:null; _wizScGuarda(); _splitAntes.apply(this,arguments); if(d)_wizVerFila(d+'A'); };
+const _unSplitAntes=unSplit;
+unSplit=function(gid){ _wizScGuarda(); _unSplitAntes.apply(this,arguments); };
+const _delAntes=(typeof deleteRow==='function')?deleteRow:null;
+if(_delAntes) deleteRow=function(){ _wizScGuarda(); _delAntes.apply(this,arguments); };
+
+/* ===================================================================
+   2) PASO "COMPARAR": SOLO LOS PEDIDOS QUE CAMBIARON
+   Antes era una fila por CADA CAMBIO, así que 30 pedidos daban 69 filas
+   y no se entendía nada. Ahora es una fila por PEDIDO, y solo salen los
+   que tienen algo distinto frente a lo que ya tenías cargado. Además se
+   detectan los que DESAPARECIERON del archivo nuevo, que antes no se
+   reportaban en ninguna parte.
+   =================================================================== */
+let WDIF='cambios';
+function wdifFiltro(f){ WDIF=f; renderWizDiff(); }
+function _wizDesaparecidos(){
+  const hay={}; (WIZ.work||[]).forEach(function(w){ hay[kOf(w)]=true; });
+  const out=[];
+  Object.keys(WIZ.prev||{}).forEach(function(k){
+    const p=WIZ.prev[k];
+    if(!p||!p.exists||hay[k]) return;
+    out.push({clave:k,p:p});
+  });
+  return out;
+}
+renderWizDiff=function(){
+  /* una entrada por pedido, con TODOS sus cambios adentro */
+  const porPed=[];
+  (WIZ.work||[]).forEach(function(w){
+    const cs=_cambiosW(w);
+    if(!cs.length) return;
+    porPed.push({w:w, cambios:cs,
+      nuevo:cs.some(function(c){return c.tipo==='nuevo';}),
+      susp:cs.some(function(c){return c.susp;})});
+  });
+  const idos=_wizDesaparecidos();
+  const nuevos=porPed.filter(function(x){return x.nuevo;});
+  const cambiados=porPed.filter(function(x){return !x.nuevo;});
+  const susp=porPed.filter(function(x){return x.susp;});
+  const total=(WIZ.work||[]).length;
+
+  let lista;
+  if(WDIF==='nuevos') lista=nuevos;
+  else if(WDIF==='susp') lista=susp;
+  else if(WDIF==='idos') lista=[];
+  else lista=cambiados.concat(nuevos);
+  lista=lista.slice().sort(function(a,b){return (b.susp?1:0)-(a.susp?1:0);});
+
+  const tag={nuevo:'Nuevo',estado:'Estado',monto:'Monto',saldo:'Saldo',fabricante:'Fabricante'};
+  const ajuste=function(w,c){
+    if(c.tipo==='monto')  return '<input class="we num" type="number" value="'+w.cupoMonto+'" onchange="setW('+w._i+',\'cupoMonto\',this.value);renderWizDiff()">';
+    if(c.tipo==='saldo')  return '<input class="we num" type="number" value="'+w.cupoSaldo+'" onchange="setW('+w._i+',\'cupoSaldo\',this.value);renderWizDiff()">';
+    if(c.tipo==='estado') return stageSel(w._i,w.st);
+    return '';
+  };
+  const fila=function(x){
+    const w=x.w;
+    const cs=x.cambios.map(function(c){
+      return '<div class="wd-c">'
+        +'<span class="vtag '+(c.susp?'exc':(c.tipo==='nuevo'?'nuevo':'chg'))+'">'+(tag[c.tipo]||c.tipo)+'</span>'
+        +'<span class="wd-d">'+c.det+'</span>'
+        +(c.susp?'<span class="wd-w">⚠ '+c.reason+'</span>':'')
+        +'<span class="wd-aj">'+ajuste(w,c)+'</span></div>';
+    }).join('');
+    return '<tr class="'+(x.susp?'v-exc':(x.nuevo?'v-nuevo':''))+'">'
+      +'<td class="wd-po"><b>'+(w.derrame||w.ordenId)+'</b><small>orden '+w.ordenId+' · '+(w.mfg==='Singsun'?'tracker':'shelter')+'</small></td>'
+      +'<td class="wd-pr">'+(/^Orden\s/.test(w.proj||'')?'<span style="color:var(--ink3)">(sin proyecto)</span>':(w.proj||''))+'</td>'
+      +'<td class="wd-cs">'+cs+'</td></tr>';
+  };
+  const filaIda=function(x){
+    const p=x.p;
+    return '<tr class="v-exc"><td class="wd-po"><b>'+x.clave.split('|')[1]+'</b><small>'+(p.mfg==='Singsun'?'tracker':'shelter')+'</small></td>'
+      +'<td class="wd-pr">'+(p.proj||'<span style="color:var(--ink3)">(sin proyecto)</span>')+'</td>'
+      +'<td class="wd-cs"><div class="wd-c"><span class="vtag exc">Desapareció</span>'
+      +'<span class="wd-d">estaba cargado con saldo <b>'+fmtUSDs(p.saldoReal!=null?p.saldoReal:(p.cupoSaldo||0))+'</b> y no viene en este archivo</span>'
+      +'<span class="wd-w">⚠ si apruebas, se va de la herramienta</span></div></td></tr>';
+  };
+
+  const chip=function(f,txt,n){
+    return '<button class="chip '+(WDIF===f?'on':'')+'" onclick="wdifFiltro(\''+f+'\')">'+txt+(n!=null?' <b>'+n+'</b>':'')+'</button>';
+  };
+  const cuerpo = WDIF==='idos'
+    ? (idos.length?idos.map(filaIda).join(''):'<tr><td colspan="3" class="wd-vacio">Ninguno desapareció</td></tr>')
+    : (lista.length?lista.map(fila).join(''):'<tr><td colspan="3" class="wd-vacio">Ningún pedido cambió frente a lo que ya tenías</td></tr>');
+
+  document.getElementById('reconBody').innerHTML=''
+    +'<div class="wizhint">De los <b>'+total+'</b> pedidos del archivo, <b>'+porPed.length+'</b> traen algo distinto a lo que ya tenías cargado. '
+      +'Los demás llegaron iguales y no hay nada que mirar.'
+      +(susp.length?' <b style="color:var(--danger)">'+susp.length+' con algo raro</b> — suelen ser typos de Andrés.':'')
+      +'</div>'
+    +'<div class="filters wd-f">'
+      + chip('cambios','Con cambios',cambiados.length+nuevos.length)
+      + chip('susp','Sospechosos',susp.length)
+      + chip('nuevos','Nuevos',nuevos.length)
+      + chip('idos','Desaparecidos',idos.length)
+    +'</div>'
+    +'<div class="vscroll"><table class="vtable wd"><thead><tr>'
+      +'<th>Pedido</th><th>Proyecto</th><th>Qué cambió</th>'
+    +'</tr></thead><tbody>'+cuerpo+'</tbody></table></div>';
+};
+
 </script>

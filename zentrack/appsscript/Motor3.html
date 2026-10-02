@@ -477,8 +477,13 @@ document.getElementById('reportFile').addEventListener('change',function(ev){
   rd.readAsArrayBuffer(f);
 });
 function kOf(x){return x.mfg+'|'+_poKey(x.derrame)+_poVarK(x.derrame);}
-function prevDe(){const m={};EQ.forEach(e=>{const k=kOf(e);const p=m[k]||(m[k]={exists:true,st:e.st,cupoMonto:0,cupoSaldo:0,totalSaldo:0,mfg:e.mfg,cliente:e.cliente,proj:e.proj,legacy:false});
-  p.cupoMonto+=(+(e.cupoMonto!=null?e.cupoMonto:e.mfgAmt)||0);p.cupoSaldo+=consumoEq(e,e.mfg);p.totalSaldo+=(+e.totalSaldo||0);if(e.lector!=='v2')p.legacy=true;});return m;}
+function prevDe(){const m={};EQ.forEach(e=>{const k=kOf(e);const p=m[k]||(m[k]={exists:true,st:e.st,cupoMonto:0,cupoSaldo:0,saldoReal:0,totalSaldo:0,mfg:e.mfg,cliente:e.cliente,proj:e.proj,legacy:false});
+  p.cupoMonto+=(+(e.cupoMonto!=null?e.cupoMonto:e.mfgAmt)||0);p.cupoSaldo+=consumoEq(e,e.mfg);
+  /* cupoSaldo guarda el CONSUMO de cupo, que no es el saldo. Para comparar contra el
+     archivo nuevo hace falta el saldo de verdad, o un pedido en modo "monto completo"
+     parece haber cambiado cuando lo único distinto es cómo lo contamos. */
+  p.saldoReal+=(+e.cupoSaldo||0);
+  p.totalSaldo+=(+e.totalSaldo||0);if(e.lector!=='v2')p.legacy=true;});return m;}
 function wizGo(s){WIZ.step=s;renderWiz();}
 function W(i){return WIZ.work.find(w=>w._i==i);}
 function setW(i,f,val){const w=W(i);if(!w)return;
@@ -641,7 +646,7 @@ function renderWizEditBody(){
     html+=`<tr class="vord"><td colspan="14"><span class="ord-lbl">Orden ${oid} · ${eqs[0].mfg==='Singsun'?'Trackers':'Shelters'}</span><span class="ord-cli">Cliente <select onchange="setOrdCliente('${oid}',this.value)">${cliOpts(base)}</select></span><span class="ord-note">las filas con cliente distinto conservan su valor</span></td></tr>`;
     eqs.forEach(w=>{const fl=wizFlag(w),badP=!(''+w.proj).trim()?'bad':'';
       const cliMark=w._cliCustom?' custom':'';
-      html+=`<tr><td><span class="vtag ${fl.t}" title="${fl.txt}">${fl.t==='ok'?'✓':fl.t==='exc'?'!':fl.t==='nuevo'?'+':'·'}</span></td>
+      html+=`<tr data-der="${w.derrame||''}"><td><span class="vtag ${fl.t}" title="${fl.txt}">${fl.t==='ok'?'✓':fl.t==='exc'?'!':fl.t==='nuevo'?'+':'·'}</span></td>
         <td><input class="we derfld" value="${w.derrame}" oninput="setW(${w._i},'derrame',this.value)"></td>
         <td class="qtycell" title="${(w.qtyRaw?'El detailed dice: &quot;'+(''+w.qtyRaw).replace(/"/g,'')+'&quot;. ':'')+(w.qty>1?w.qty+' equipos en una sola fila: usa ⇔ para partirlo por proyecto':'')}">${w.qty||1}${w.qty>1?'<small style="display:block;font-size:9px;color:var(--dato-debo);font-weight:700">partir</small>':''}</td>
         <td><input class="we projfld ${badP}" value="${(''+w.proj).replace(/"/g,'&quot;')}" oninput="setW(${w._i},'proj',this.value)"></td>
@@ -663,7 +668,8 @@ function _cambiosW(w){const p=WIZ.prev[kOf(w)];const out=[];
   if(!p||!p.exists){out.push({tipo:'nuevo',susp:false,det:'Aparece por primera vez'});return out;}
   if(p.st!==w.st){const retro=RANK[w.st]<RANK[p.st];out.push({tipo:'estado',susp:retro,reason:'retroceso de estado',det:`${STAGE[p.st]} → <b>${STAGE[w.st]}</b>`});}
   if(!p.legacy && Math.abs(p.cupoMonto-(+w.cupoMonto||0))>1){const jump=p.cupoMonto>0&&Math.abs(w.cupoMonto-p.cupoMonto)/p.cupoMonto>0.4;out.push({tipo:'monto',susp:jump,reason:'salto de magnitud',det:`monto cupo ${fmtUSDs(p.cupoMonto)} → <b>${fmtUSDs(w.cupoMonto)}</b>`});}
-  if(Math.abs(p.cupoSaldo-(+w.cupoSaldo||0))>1){const sube=(+w.cupoSaldo||0)>p.cupoSaldo+1&&!p.legacy;out.push({tipo:'saldo',susp:sube,reason:'el saldo con China subió',det:`saldo cupo ${fmtUSDs(p.cupoSaldo)} → <b>${fmtUSDs(w.cupoSaldo)}</b>${p.legacy?' <small>(el anterior venía de una versión vieja del lector)</small>':''}`});}
+  const pSaldo=(p.saldoReal!=null?p.saldoReal:p.cupoSaldo);
+  if(Math.abs(pSaldo-(+w.cupoSaldo||0))>1){const sube=(+w.cupoSaldo||0)>pSaldo+1&&!p.legacy;out.push({tipo:'saldo',susp:sube,reason:'el saldo con China subió',det:`saldo cupo ${fmtUSDs(pSaldo)} → <b>${fmtUSDs(w.cupoSaldo)}</b>${p.legacy?' <small>(el anterior venía de una versión vieja del lector)</small>':''}`});}
   if(p.mfg!==w.mfg)out.push({tipo:'fabricante',susp:true,reason:'cambio de fabricante',det:`${p.mfg} → <b>${w.mfg}</b>`});
   return out;}
 function renderWizDiff(){const diffs=[];

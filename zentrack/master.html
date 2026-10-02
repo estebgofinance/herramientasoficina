@@ -1263,6 +1263,21 @@ tr.sn-eq.sn-p td{background:#FFFBF2}
   :root:not([data-theme="light"]) .sn-chip.on{background:#1B332B;color:#A6D9C5}
   :root:not([data-theme="light"]) .sn-chip.pend{background:#2E2415;color:#F0D9A8}
 }
+
+/* --- paso Comparar: una fila por pedido --- */
+.wd-f{margin:10px 0 12px}
+table.wd td{vertical-align:top;padding:9px 10px}
+.wd-po{white-space:nowrap;width:1%}
+.wd-po b{font-variant-numeric:tabular-nums}
+.wd-po small{display:block;font-size:10px;color:var(--ink3);font-weight:400;margin-top:2px}
+.wd-pr{color:var(--ink2);font-size:12px;max-width:220px}
+.wd-cs{font-size:12px}
+.wd-c{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:3px 0}
+.wd-c+.wd-c{border-top:1px dashed var(--line);margin-top:3px;padding-top:6px}
+.wd-d{color:var(--ink2)}
+.wd-w{font-size:10.5px;color:#B3261E;font-weight:600}
+.wd-aj{margin-left:auto}
+.wd-vacio{color:var(--ink3);padding:18px 10px!important;text-align:center}
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script>if(window["pdfjsLib"]){pdfjsLib.GlobalWorkerOptions.workerSrc="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";}</script>
@@ -3299,8 +3314,13 @@ document.getElementById('reportFile').addEventListener('change',function(ev){
   rd.readAsArrayBuffer(f);
 });
 function kOf(x){return x.mfg+'|'+_poKey(x.derrame)+_poVarK(x.derrame);}
-function prevDe(){const m={};EQ.forEach(e=>{const k=kOf(e);const p=m[k]||(m[k]={exists:true,st:e.st,cupoMonto:0,cupoSaldo:0,totalSaldo:0,mfg:e.mfg,cliente:e.cliente,proj:e.proj,legacy:false});
-  p.cupoMonto+=(+(e.cupoMonto!=null?e.cupoMonto:e.mfgAmt)||0);p.cupoSaldo+=consumoEq(e,e.mfg);p.totalSaldo+=(+e.totalSaldo||0);if(e.lector!=='v2')p.legacy=true;});return m;}
+function prevDe(){const m={};EQ.forEach(e=>{const k=kOf(e);const p=m[k]||(m[k]={exists:true,st:e.st,cupoMonto:0,cupoSaldo:0,saldoReal:0,totalSaldo:0,mfg:e.mfg,cliente:e.cliente,proj:e.proj,legacy:false});
+  p.cupoMonto+=(+(e.cupoMonto!=null?e.cupoMonto:e.mfgAmt)||0);p.cupoSaldo+=consumoEq(e,e.mfg);
+  /* cupoSaldo guarda el CONSUMO de cupo, que no es el saldo. Para comparar contra el
+     archivo nuevo hace falta el saldo de verdad, o un pedido en modo "monto completo"
+     parece haber cambiado cuando lo único distinto es cómo lo contamos. */
+  p.saldoReal+=(+e.cupoSaldo||0);
+  p.totalSaldo+=(+e.totalSaldo||0);if(e.lector!=='v2')p.legacy=true;});return m;}
 function wizGo(s){WIZ.step=s;renderWiz();}
 function W(i){return WIZ.work.find(w=>w._i==i);}
 function setW(i,f,val){const w=W(i);if(!w)return;
@@ -3463,7 +3483,7 @@ function renderWizEditBody(){
     html+=`<tr class="vord"><td colspan="14"><span class="ord-lbl">Orden ${oid} · ${eqs[0].mfg==='Singsun'?'Trackers':'Shelters'}</span><span class="ord-cli">Cliente <select onchange="setOrdCliente('${oid}',this.value)">${cliOpts(base)}</select></span><span class="ord-note">las filas con cliente distinto conservan su valor</span></td></tr>`;
     eqs.forEach(w=>{const fl=wizFlag(w),badP=!(''+w.proj).trim()?'bad':'';
       const cliMark=w._cliCustom?' custom':'';
-      html+=`<tr><td><span class="vtag ${fl.t}" title="${fl.txt}">${fl.t==='ok'?'✓':fl.t==='exc'?'!':fl.t==='nuevo'?'+':'·'}</span></td>
+      html+=`<tr data-der="${w.derrame||''}"><td><span class="vtag ${fl.t}" title="${fl.txt}">${fl.t==='ok'?'✓':fl.t==='exc'?'!':fl.t==='nuevo'?'+':'·'}</span></td>
         <td><input class="we derfld" value="${w.derrame}" oninput="setW(${w._i},'derrame',this.value)"></td>
         <td class="qtycell" title="${(w.qtyRaw?'El detailed dice: &quot;'+(''+w.qtyRaw).replace(/"/g,'')+'&quot;. ':'')+(w.qty>1?w.qty+' equipos en una sola fila: usa ⇔ para partirlo por proyecto':'')}">${w.qty||1}${w.qty>1?'<small style="display:block;font-size:9px;color:var(--dato-debo);font-weight:700">partir</small>':''}</td>
         <td><input class="we projfld ${badP}" value="${(''+w.proj).replace(/"/g,'&quot;')}" oninput="setW(${w._i},'proj',this.value)"></td>
@@ -3485,7 +3505,8 @@ function _cambiosW(w){const p=WIZ.prev[kOf(w)];const out=[];
   if(!p||!p.exists){out.push({tipo:'nuevo',susp:false,det:'Aparece por primera vez'});return out;}
   if(p.st!==w.st){const retro=RANK[w.st]<RANK[p.st];out.push({tipo:'estado',susp:retro,reason:'retroceso de estado',det:`${STAGE[p.st]} → <b>${STAGE[w.st]}</b>`});}
   if(!p.legacy && Math.abs(p.cupoMonto-(+w.cupoMonto||0))>1){const jump=p.cupoMonto>0&&Math.abs(w.cupoMonto-p.cupoMonto)/p.cupoMonto>0.4;out.push({tipo:'monto',susp:jump,reason:'salto de magnitud',det:`monto cupo ${fmtUSDs(p.cupoMonto)} → <b>${fmtUSDs(w.cupoMonto)}</b>`});}
-  if(Math.abs(p.cupoSaldo-(+w.cupoSaldo||0))>1){const sube=(+w.cupoSaldo||0)>p.cupoSaldo+1&&!p.legacy;out.push({tipo:'saldo',susp:sube,reason:'el saldo con China subió',det:`saldo cupo ${fmtUSDs(p.cupoSaldo)} → <b>${fmtUSDs(w.cupoSaldo)}</b>${p.legacy?' <small>(el anterior venía de una versión vieja del lector)</small>':''}`});}
+  const pSaldo=(p.saldoReal!=null?p.saldoReal:p.cupoSaldo);
+  if(Math.abs(pSaldo-(+w.cupoSaldo||0))>1){const sube=(+w.cupoSaldo||0)>pSaldo+1&&!p.legacy;out.push({tipo:'saldo',susp:sube,reason:'el saldo con China subió',det:`saldo cupo ${fmtUSDs(pSaldo)} → <b>${fmtUSDs(w.cupoSaldo)}</b>${p.legacy?' <small>(el anterior venía de una versión vieja del lector)</small>':''}`});}
   if(p.mfg!==w.mfg)out.push({tipo:'fabricante',susp:true,reason:'cambio de fabricante',det:`${p.mfg} → <b>${w.mfg}</b>`});
   return out;}
 function renderWizDiff(){const diffs=[];
@@ -5298,6 +5319,136 @@ pintarSino=function(){
         +'</div>'
       : '')
     +'<div class="sn-cols">'+_snBloque('Singsun','Trackers · Singsun')+_snBloque('Eaglerise','Shelters · Eaglerise')+'</div>';
+};
+
+/* ===================================================================
+   1) QUE DERRAMAR UN PEDIDO NO ME MANDE AL PRINCIPIO DE LA LISTA
+   splitRow() llama a renderWiz(), que reconstruye #reconBody entero.
+   El rescate de scroll que ya existía dentro de renderWizEditBody leía
+   un #wizEditBody recién creado, así que siempre encontraba 0.
+   Ahora el scroll se guarda ANTES de que el DOM viejo desaparezca.
+   =================================================================== */
+let _WIZSC=0;
+function _wizScGuarda(){
+  const sc=document.querySelector('#wizEditBody .vscroll');
+  if(sc) _WIZSC=sc.scrollTop;
+}
+function _wizScPone(){
+  const sc=document.querySelector('#wizEditBody .vscroll');
+  if(sc&&_WIZSC) sc.scrollTop=_WIZSC;
+}
+const _rwEditAntes=renderWizEdit;
+renderWizEdit=function(){ _wizScGuarda(); _rwEditAntes.apply(this,arguments); _wizScPone(); };
+const _rwBodyAntes=renderWizEditBody;
+renderWizEditBody=function(){ _wizScGuarda(); _rwBodyAntes.apply(this,arguments); _wizScPone(); };
+/* al derramar o unir, además dejamos la fila tocada a la vista */
+function _wizVerFila(derrame){
+  setTimeout(function(){
+    const t=document.querySelector('#wizEditBody [data-der="'+derrame+'"]');
+    if(t&&t.scrollIntoView) t.scrollIntoView({block:'center'});
+  },0);
+}
+const _splitAntes=splitRow;
+splitRow=function(i){ const w=W(i); const d=w?w.derrame:null; _wizScGuarda(); _splitAntes.apply(this,arguments); if(d)_wizVerFila(d+'A'); };
+const _unSplitAntes=unSplit;
+unSplit=function(gid){ _wizScGuarda(); _unSplitAntes.apply(this,arguments); };
+const _delAntes=(typeof deleteRow==='function')?deleteRow:null;
+if(_delAntes) deleteRow=function(){ _wizScGuarda(); _delAntes.apply(this,arguments); };
+
+/* ===================================================================
+   2) PASO "COMPARAR": SOLO LOS PEDIDOS QUE CAMBIARON
+   Antes era una fila por CADA CAMBIO, así que 30 pedidos daban 69 filas
+   y no se entendía nada. Ahora es una fila por PEDIDO, y solo salen los
+   que tienen algo distinto frente a lo que ya tenías cargado. Además se
+   detectan los que DESAPARECIERON del archivo nuevo, que antes no se
+   reportaban en ninguna parte.
+   =================================================================== */
+let WDIF='cambios';
+function wdifFiltro(f){ WDIF=f; renderWizDiff(); }
+function _wizDesaparecidos(){
+  const hay={}; (WIZ.work||[]).forEach(function(w){ hay[kOf(w)]=true; });
+  const out=[];
+  Object.keys(WIZ.prev||{}).forEach(function(k){
+    const p=WIZ.prev[k];
+    if(!p||!p.exists||hay[k]) return;
+    out.push({clave:k,p:p});
+  });
+  return out;
+}
+renderWizDiff=function(){
+  /* una entrada por pedido, con TODOS sus cambios adentro */
+  const porPed=[];
+  (WIZ.work||[]).forEach(function(w){
+    const cs=_cambiosW(w);
+    if(!cs.length) return;
+    porPed.push({w:w, cambios:cs,
+      nuevo:cs.some(function(c){return c.tipo==='nuevo';}),
+      susp:cs.some(function(c){return c.susp;})});
+  });
+  const idos=_wizDesaparecidos();
+  const nuevos=porPed.filter(function(x){return x.nuevo;});
+  const cambiados=porPed.filter(function(x){return !x.nuevo;});
+  const susp=porPed.filter(function(x){return x.susp;});
+  const total=(WIZ.work||[]).length;
+
+  let lista;
+  if(WDIF==='nuevos') lista=nuevos;
+  else if(WDIF==='susp') lista=susp;
+  else if(WDIF==='idos') lista=[];
+  else lista=cambiados.concat(nuevos);
+  lista=lista.slice().sort(function(a,b){return (b.susp?1:0)-(a.susp?1:0);});
+
+  const tag={nuevo:'Nuevo',estado:'Estado',monto:'Monto',saldo:'Saldo',fabricante:'Fabricante'};
+  const ajuste=function(w,c){
+    if(c.tipo==='monto')  return '<input class="we num" type="number" value="'+w.cupoMonto+'" onchange="setW('+w._i+',\'cupoMonto\',this.value);renderWizDiff()">';
+    if(c.tipo==='saldo')  return '<input class="we num" type="number" value="'+w.cupoSaldo+'" onchange="setW('+w._i+',\'cupoSaldo\',this.value);renderWizDiff()">';
+    if(c.tipo==='estado') return stageSel(w._i,w.st);
+    return '';
+  };
+  const fila=function(x){
+    const w=x.w;
+    const cs=x.cambios.map(function(c){
+      return '<div class="wd-c">'
+        +'<span class="vtag '+(c.susp?'exc':(c.tipo==='nuevo'?'nuevo':'chg'))+'">'+(tag[c.tipo]||c.tipo)+'</span>'
+        +'<span class="wd-d">'+c.det+'</span>'
+        +(c.susp?'<span class="wd-w">⚠ '+c.reason+'</span>':'')
+        +'<span class="wd-aj">'+ajuste(w,c)+'</span></div>';
+    }).join('');
+    return '<tr class="'+(x.susp?'v-exc':(x.nuevo?'v-nuevo':''))+'">'
+      +'<td class="wd-po"><b>'+(w.derrame||w.ordenId)+'</b><small>orden '+w.ordenId+' · '+(w.mfg==='Singsun'?'tracker':'shelter')+'</small></td>'
+      +'<td class="wd-pr">'+(/^Orden\s/.test(w.proj||'')?'<span style="color:var(--ink3)">(sin proyecto)</span>':(w.proj||''))+'</td>'
+      +'<td class="wd-cs">'+cs+'</td></tr>';
+  };
+  const filaIda=function(x){
+    const p=x.p;
+    return '<tr class="v-exc"><td class="wd-po"><b>'+x.clave.split('|')[1]+'</b><small>'+(p.mfg==='Singsun'?'tracker':'shelter')+'</small></td>'
+      +'<td class="wd-pr">'+(p.proj||'<span style="color:var(--ink3)">(sin proyecto)</span>')+'</td>'
+      +'<td class="wd-cs"><div class="wd-c"><span class="vtag exc">Desapareció</span>'
+      +'<span class="wd-d">estaba cargado con saldo <b>'+fmtUSDs(p.saldoReal!=null?p.saldoReal:(p.cupoSaldo||0))+'</b> y no viene en este archivo</span>'
+      +'<span class="wd-w">⚠ si apruebas, se va de la herramienta</span></div></td></tr>';
+  };
+
+  const chip=function(f,txt,n){
+    return '<button class="chip '+(WDIF===f?'on':'')+'" onclick="wdifFiltro(\''+f+'\')">'+txt+(n!=null?' <b>'+n+'</b>':'')+'</button>';
+  };
+  const cuerpo = WDIF==='idos'
+    ? (idos.length?idos.map(filaIda).join(''):'<tr><td colspan="3" class="wd-vacio">Ninguno desapareció</td></tr>')
+    : (lista.length?lista.map(fila).join(''):'<tr><td colspan="3" class="wd-vacio">Ningún pedido cambió frente a lo que ya tenías</td></tr>');
+
+  document.getElementById('reconBody').innerHTML=''
+    +'<div class="wizhint">De los <b>'+total+'</b> pedidos del archivo, <b>'+porPed.length+'</b> traen algo distinto a lo que ya tenías cargado. '
+      +'Los demás llegaron iguales y no hay nada que mirar.'
+      +(susp.length?' <b style="color:var(--danger)">'+susp.length+' con algo raro</b> — suelen ser typos de Andrés.':'')
+      +'</div>'
+    +'<div class="filters wd-f">'
+      + chip('cambios','Con cambios',cambiados.length+nuevos.length)
+      + chip('susp','Sospechosos',susp.length)
+      + chip('nuevos','Nuevos',nuevos.length)
+      + chip('idos','Desaparecidos',idos.length)
+    +'</div>'
+    +'<div class="vscroll"><table class="vtable wd"><thead><tr>'
+      +'<th>Pedido</th><th>Proyecto</th><th>Qué cambió</th>'
+    +'</tr></thead><tbody>'+cuerpo+'</tbody></table></div>';
 };
 </script>
 </body>
