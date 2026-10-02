@@ -500,4 +500,382 @@ pintarPrecios=function(){
 
 
 
+/* ===================================================================
+   CAPA SINOSURE MANUAL (v1.1)
+   Lo de Sinosure es TUYO. El motor ya no decide:
+     · una carga nueva solo puede AGREGAR pedidos a la bandeja de "sin
+       clasificar"; lo que ya clasificaste no se toca NUNCA;
+     · el techo se pone en Ajustes y ninguna carga lo pisa;
+     · la hoja Sinosure del detailed, si la cargas, queda guardada solo
+       para poder compararla al lado — nunca como fuente.
+   Se engancha reasignando funciones que ya existen, sin tocar lo de antes.
+   =================================================================== */
+let SINO={ped:{},sembrado:false};
+
+/* Cada pedido tiene un modo. Eso son las palancas:
+     'saldo' → consume lo que todavía le debes a la fábrica (se libera al pagar)
+     'monto' → consume el pedido completo mientras siga vivo
+     'fijo'  → el número que tú escribas, menos lo que hayas girado desde entonces
+     'fuera' → no entra al cupo
+     null    → sin clasificar, está en la bandeja y no consume */
+const SINO_MODOS=[['saldo','Saldo por pagar'],['monto','Monto completo'],['fijo','Monto fijo'],['fuera','No entra']];
+const sinoReg=e=>SINO.ped[kOf(e)]||null;
+function sinoSet(clave,campo,valor){
+  const r=SINO.ped[clave]||(SINO.ped[clave]={modo:null,fijo:0,nota:'',sug:null});
+  r[campo]=(campo==='fijo')?(+valor||0):valor;
+  if(campo==='modo'&&valor==='fijo'&&!(+r.fijo>0)){
+    const e=EQ.find(x=>kOf(x)===clave); if(e) r.fijo=Math.round(+e.cupoSaldo||0);
+  }
+}
+function sinoSug(e){ const r=sinoReg(e); return r&&r.sug!=null?r.sug:null; }
+
+/* ---- el consumo ahora sale de TU decisión, no del archivo ---- */
+const _consumoAnterior=consumoEq;
+consumoEq=function(e,mfg,regla){
+  mfg=mfg||e.mfg;
+  const r=SINO.ped[kOf(e)];
+  if(!r||!r.modo||r.modo==='fuera') return 0;
+  const O=(e.cupoSaldo!=null)?(+e.cupoSaldo||0):((e.antSaldo||0)+(e.balSaldo||0));
+  const M=(e.cupoMonto!=null)?(+e.cupoMonto||0):(+e.mfgAmt||0);
+  if(O<=0.5) return 0;
+  if(r.modo==='monto') return M;
+  if(r.modo==='fijo'){
+    const girado=Math.max(0,(+e.cupoSaldo0||0)-O);
+    return Math.max(0,(+r.fijo||0)-girado);
+  }
+  return O;
+};
+
+/* ---- siembra: UNA sola vez, con lo que el motor ya había leído ---- */
+function sinoSembrar(){
+  if(SINO.sembrado) return 0;
+  const hoja=(CONCILIA&&CONCILIA.sinoPorDerrame)||{};
+  let n=0;
+  EQ.forEach(e=>{
+    const k=kOf(e);
+    if(SINO.ped[k]) return;
+    const O=Math.round(+e.cupoSaldo||0), M=Math.round(+e.cupoMonto||e.mfgAmt||0);
+    const d=hoja[k];
+    let modo=null, fijo=0;
+    if(e.sinoManual==='no') modo='fuera';
+    else if(d!=null){
+      const v=Math.round(d);
+      if(Math.abs(v-O)<=2) modo='saldo';
+      else if(Math.abs(v-M)<=2) modo='monto';
+      else { modo='fijo'; fijo=v; }
+    }
+    else if(e.sinoManual==='si') modo=isShipped(e)?'saldo':'monto';
+    SINO.ped[k]={modo:modo,fijo:fijo,nota:'',sug:d!=null?Math.round(d):null};
+    n++;
+  });
+  SINO.sembrado=true;
+  return n;
+}
+/* ---- carga nueva: solo AGREGA lo que no existía ---- */
+function sinoMerge(){
+  if(!SINO.sembrado) return sinoSembrar();
+  const hoja=(CONCILIA&&CONCILIA.sinoPorDerrame)||{};
+  let n=0;
+  EQ.forEach(e=>{
+    const k=kOf(e);
+    if(SINO.ped[k]){
+      const d=hoja[k]; if(d!=null) SINO.ped[k].sug=Math.round(d);
+      return;
+    }
+    const d=hoja[k];
+    SINO.ped[k]={modo:null,fijo:0,nota:'',sug:d!=null?Math.round(d):null};
+    n++;
+  });
+  return n;
+}
+const sinoPendientes=()=>EQ.filter(function(e){var r=SINO.ped[kOf(e)];return !r||!r.modo;});
+
+/* ---- que SINO viva en la Hoja junto con todo lo demás ---- */
+const _serAntesSino=serializeState;
+serializeState=function(){
+  const o=JSON.parse(_serAntesSino.apply(this,arguments));
+  o.SINO=SINO;
+  return JSON.stringify(o);
+};
+const _appAntesSino=applyState;
+applyState=function(s){
+  _appAntesSino.apply(this,arguments);
+  if(s.SINO&&s.SINO.ped){ SINO={ped:s.SINO.ped,sembrado:!!s.SINO.sembrado}; sinoMerge(); }
+  else { SINO={ped:{},sembrado:false}; sinoSembrar(); }
+};
+
+/* ---- después de aprobar una carga, los pedidos nuevos entran a la bandeja ---- */
+const _apruebaAntesSino=wizApprove;
+wizApprove=function(){
+  _apruebaAntesSino.apply(this,arguments);
+  const n=sinoMerge();
+  /* la siembra tiene que ocurrir ANTES de repintar, o el tablero muestra 0% de cupo usado */
+  refreshAll(); renderLedger();
+  if(n) toast(n+' pedido(s) nuevo(s) esperando en <b>Sinosure</b> · lo que ya clasificaste quedó intacto');
+  if(typeof saveToServer==='function') saveToServer();
+};
+
+/* ===================================================================
+   ARREGLO DEL FOCO EN LA PESTAÑA PRECIOS
+   El problema: gpSet() llamaba a refreshAll() en cada tecla, y refreshAll
+   está enganchado para repintar Precios. O sea que al escribir una letra se
+   reconstruía la pestaña entera y el input donde estabas escribiendo dejaba
+   de existir: por eso te sacaba y tocaba volver a hacer clic. Encima mandaba
+   un guardado a la Hoja por cada tecla.
+   La solución: mientras escribes solo se toca el estado y se refrescan los
+   números a mano, sin repintar. El repintado y el guardado ocurren cuando
+   sales del campo o medio segundo después de la última tecla.
+   =================================================================== */
+let _gpT=null;
+function _gpGuardarLuego(){
+  clearTimeout(_gpT);
+  _gpT=setTimeout(function(){ guardar4(); },600);
+}
+/* refresca solo los números que dependen del grupo, sin tocar el DOM donde se escribe */
+function _gpNums(id){
+  const g=gpDe(id); if(!g) return;
+  document.querySelectorAll('[data-gpnum="'+id+'"]').forEach(function(n){
+    const e=EQ.find(function(x){return x.derrame===n.getAttribute('data-gpeq');});
+    if(e) n.textContent=fmtUSDs(gpParte(g,e));
+  });
+  const t=document.querySelector('[data-gptot="'+id+'"]');
+  if(t) t.textContent=fmtUSDs(+g.total||0);
+}
+const _gpSetAntes=gpSet;
+gpSet=function(id,f,v,recarga){
+  /* los campos de texto y el total se escriben letra por letra: no repintar */
+  if(!recarga && (f==='nombre'||f==='nota'||f==='total')){
+    const g=gpDe(id); if(!g) return;
+    g[f]=(f==='total')?(+v||0):v;
+    if(f==='total'){ _gpNums(id); sincronizarPrecios(); }
+    _gpGuardarLuego();
+    return;
+  }
+  return _gpSetAntes.apply(this,arguments);
+};
+const _gpParteSetAntes=(typeof gpParteSet==='function')?gpParteSet:null;
+if(_gpParteSetAntes){
+  gpParteSet=function(id,derrame,v){
+    const g=gpDe(id); if(!g) return;
+    g.partes=g.partes||{}; g.partes[derrame]=(+v||0);
+    sincronizarPrecios(); _gpNums(id); _gpGuardarLuego();
+  };
+}
+/* al salir del campo sí se repinta todo, una sola vez */
+document.addEventListener('blur',function(ev){
+  const t=ev.target;
+  if(!t||!t.closest||!t.closest('#v-precios')) return;
+  if(t.tagName!=='INPUT'&&t.tagName!=='TEXTAREA') return;
+  clearTimeout(_gpT); guardar4();
+  refreshAll();
+},true);
+/* el buscador de la pestaña ya no necesita el parche de setTimeout */
+const _pintarAntesFoco=pintarPrecios;
+pintarPrecios=function(){
+  const a=document.activeElement;
+  const id=a&&a.closest&&a.closest('#v-precios')?a.getAttribute('data-foco'):null;
+  _pintarAntesFoco.apply(this,arguments);
+  if(id){
+    const n=document.querySelector('#v-precios [data-foco="'+id+'"]');
+    if(n&&n.focus){ n.focus(); if(n.setSelectionRange&&n.value!=null){ try{n.setSelectionRange(n.value.length,n.value.length);}catch(e){} } }
+  }
+};
+
+/* ===================================================================
+   TABLERO · PRÓXIMOS A VENCER
+   Una sola tabla, ordenada por fecha, que junta las dos cosas que
+   importan: lo que hay que girarle a China y cuánto cupo de Sinosure
+   te libera ese giro. Reemplaza el bloque de texto que había abajo.
+   =================================================================== */
+let VENC_TODOS=false;
+function vencFilas(){
+  const hoy=TODAY.getTime(), DIA=864e5;
+  return EQ.map(function(e){
+    const saldo=(+e.cupoSaldo||0)+(+e.otrosSaldo||0);
+    if(saldo<=0.5) return null;
+    const f=e.limitePago||e.vence||null;
+    const dias=f?Math.round((new Date(f).getTime()-hoy)/DIA):null;
+    return {e:e, saldo:saldo, cupoSaldo:+e.cupoSaldo||0, fecha:f, dias:dias,
+            libera:consumoEq(e,e.mfg), antFalta:(!e.antPaid&&(+e.antSaldo||0)>0.5)?(+e.antSaldo||0):0};
+  }).filter(Boolean).sort(function(a,b){
+    if(a.fecha&&b.fecha) return new Date(a.fecha)-new Date(b.fecha);
+    if(a.fecha) return -1; if(b.fecha) return 1;
+    return b.saldo-a.saldo;
+  });
+}
+function renderVenc(){
+  const box=document.getElementById('vencBox'); if(!box) return;
+  const todas=vencFilas();
+  if(!todas.length){ box.innerHTML=''; return; }
+  const filas=VENC_TODOS?todas:todas.slice(0,8);
+  const venc=todas.filter(function(r){return r.dias!=null&&r.dias<0;});
+  const totVenc=venc.reduce(function(a,r){return a+r.saldo;},0);
+  const cel=function(r){
+    const e=r.e;
+    const cuando=r.fecha
+      ? (r.dias<0?'<b class="vz-mal">vencido hace '+Math.abs(r.dias)+' d</b>'
+        : r.dias<=15?'<b class="vz-ya">en '+r.dias+' d</b>'
+        : 'en '+r.dias+' d')
+      : '<span class="vz-gris">sin fecha</span>';
+    return '<tr'+(r.dias!=null&&r.dias<0?' class="vz-r"':'')+'>'
+      +'<td class="vz-po"><b>'+(e.derrame||e.ordenId)+'</b><small>'+(e.mfg==='Singsun'?'tracker':'shelter')+'</small></td>'
+      +'<td>'+(nombreEq(e)||'')+'<small>'+(e.cliente||'')+'</small></td>'
+      +'<td class="vz-n">'+fmtUSDs(r.saldo)+(r.antFalta?'<small class="vz-ant">falta anticipo '+fmtUSDs(r.antFalta)+'</small>':'')+'</td>'
+      +'<td class="vz-f">'+(r.fecha?fmtD(r.fecha):'—')+'<small>'+cuando+'</small></td>'
+      +'<td class="vz-n">'+(r.libera>0?fmtUSDs(r.libera):'<span class="vz-gris">—</span>')+'</td>'
+      +'<td class="vz-a"><button class="vz-b" onclick="openPanel(\''+e.ordenId+'\')">ver</button></td></tr>';
+  };
+  box.innerHTML=''
+    +'<div class="vz-head">'
+    +  '<h3>Próximos a vencer</h3>'
+    +  (venc.length?'<span class="vz-chip mal">'+venc.length+' vencido(s) · '+fmtUSDs(totVenc)+'</span>':'<span class="vz-chip ok">nada vencido</span>')
+    +  '<div class="vz-sp"></div>'
+    +  (todas.length>8?'<button class="vz-b" onclick="VENC_TODOS=!VENC_TODOS;renderVenc()">'+(VENC_TODOS?'Ver solo los 8 primeros':'Ver los '+todas.length)+'</button>':'')
+    +'</div>'
+    +'<table class="vz"><thead><tr>'
+    +'<th>Pedido</th><th>Proyecto</th><th class="vz-n">Le debes a China</th><th>Límite de pago</th>'
+    +'<th class="vz-n">Cupo que libera</th><th></th></tr></thead><tbody>'
+    + filas.map(cel).join('')
+    +'</tbody></table>'
+    +'<div class="vz-pie">El cupo que libera es lo que ese pedido está consumiendo hoy de Sinosure según cómo lo tengas clasificado en la pestaña Sinosure.</div>';
+}
+const _refAntesVenc=refreshAll;
+refreshAll=function(){ _refAntesVenc.apply(this,arguments); try{renderVenc();}catch(e){} };
+
+/* ===================================================================
+   PESTAÑA SINOSURE · DERROTERO
+   Se acabó el listado de mil renglones. Ahora:
+     · arriba, el techo de cada fabricante, EDITABLE por ti;
+     · la bandeja de los pedidos que todavía no has clasificado;
+     · y el derrotero: una fila por orden madre, plegada. La abres y ahí
+       sí están sus pedidos, cada uno con su palanca.
+   =================================================================== */
+let SNAB2={};                       /* qué órdenes están abiertas */
+let SNVER='todo';                   /* filtro: todo | dentro | fuera | pend */
+let SNCMP=false;                    /* mostrar la columna "Andrés dice" */
+
+function snToggle(id){ SNAB2[id]=!SNAB2[id]; pintarSino(); }
+function snFiltro(f){ SNVER=f; pintarSino(); }
+function snCmp(){ SNCMP=!SNCMP; pintarSino(); }
+function snSet(clave,campo,valor){ sinoSet(clave,campo,valor); refreshAll(); renderLedger(); guardar4(); }
+/* poner toda una orden en el mismo modo, de un golpe */
+function snOrden(ordenId,mfg,modo){
+  EQ.forEach(function(e){ if(e.ordenId===ordenId&&e.mfg===mfg) sinoSet(kOf(e),'modo',modo); });
+  refreshAll(); renderLedger(); guardar4();
+}
+function snTecho(mfg,v){ CUPO[mfg]=Math.max(0,+v||0); refreshAll(); renderLedger(); guardar4(); }
+
+function _snGrupos(mfg){
+  const porOrd={};
+  EQ.filter(function(e){return e.mfg===mfg;}).forEach(function(e){
+    (porOrd[e.ordenId]=porOrd[e.ordenId]||[]).push(e);
+  });
+  return Object.keys(porOrd).sort().map(function(id){
+    const eqs=porOrd[id];
+    const cons=eqs.reduce(function(a,e){return a+consumoEq(e,mfg);},0);
+    const saldo=eqs.reduce(function(a,e){return a+(+e.cupoSaldo||0);},0);
+    const pend=eqs.filter(function(e){var r=SINO.ped[kOf(e)];return !r||!r.modo;}).length;
+    const fuera=eqs.filter(function(e){var r=SINO.ped[kOf(e)];return r&&r.modo==='fuera';}).length;
+    const sug=eqs.reduce(function(a,e){var v=sinoSug(e);return a+(v||0);},0);
+    return {id:id,mfg:mfg,eqs:eqs,cons:cons,saldo:saldo,pend:pend,fuera:fuera,sug:sug};
+  }).filter(function(g){
+    if(SNVER==='pend')   return g.pend>0;
+    if(SNVER==='dentro') return g.cons>0;
+    if(SNVER==='fuera')  return g.fuera>0;
+    return true;
+  });
+}
+
+function _snFilaEq(e){
+  const k=kOf(e), r=SINO.ped[k]||{modo:null,fijo:0,nota:'',sug:null};
+  const cons=consumoEq(e,e.mfg);
+  const sel='<select class="sn-sel '+(r.modo==='fuera'?'off':r.modo?'on':'pend')+'" '
+    +'onchange="snSet(\''+k+'\',\'modo\',this.value)">'
+    +'<option value="">Sin clasificar</option>'
+    +SINO_MODOS.map(function(m){return '<option value="'+m[0]+'"'+(r.modo===m[0]?' selected':'')+'>'+m[1]+'</option>';}).join('')
+    +'</select>';
+  const fijo=r.modo==='fijo'
+    ? '<input class="sn-fijo" type="number" step="1" value="'+(+r.fijo||0)+'" data-foco="fj-'+k+'" '
+      +'onchange="snSet(\''+k+'\',\'fijo\',this.value)">'
+    : '';
+  const dif=(SNCMP&&r.sug!=null&&Math.abs(r.sug-cons)>2)
+    ? '<small class="sn-dif">'+(r.sug>cons?'+':'')+fmtUSDs(r.sug-cons)+'</small>' : '';
+  return '<tr class="sn-eq'+(!r.modo?' sn-p':'')+'">'
+    +'<td class="sn-po">'+(e.derrame||'')+'</td>'
+    +'<td class="sn-pr">'+(nombreEq(e)||'')+'</td>'
+    +'<td class="sn-n">'+fmtUSDs(+e.cupoSaldo||0)+'</td>'
+    +'<td class="sn-m">'+sel+fijo+'</td>'
+    +'<td class="sn-n"><b>'+(cons>0?fmtUSDs(cons):'—')+'</b></td>'
+    +(SNCMP?'<td class="sn-n sn-sug">'+(r.sug!=null?fmtUSDs(r.sug):'—')+dif+'</td>':'')
+    +'<td class="sn-no"><input class="sn-nota" value="'+esc4(r.nota||'')+'" placeholder="nota" '
+      +'data-foco="nt-'+k+'" onchange="snSet(\''+k+'\',\'nota\',this.value)"></td>'
+    +'</tr>';
+}
+
+function _snBloque(mfg,titulo){
+  const techo=+CUPO[mfg]||0, usado=cargaViva(mfg), disp=techo-usado;
+  const pct=techo>0?Math.min(100,Math.round(usado/techo*100)):0;
+  const gs=_snGrupos(mfg);
+  const filas=gs.map(function(g){
+    const ab=!!SNAB2[mfg+'|'+g.id];
+    const est=g.pend?'<span class="sn-chip pend">'+g.pend+' sin clasificar</span>'
+      :g.cons>0?'<span class="sn-chip on">en el cupo</span>'
+      :'<span class="sn-chip off">fuera</span>';
+    return '<tbody class="sn-g'+(ab?' ab':'')+'">'
+      +'<tr class="sn-h" onclick="snToggle(\''+mfg+'|'+g.id+'\')">'
+      +'<td class="sn-ar">'+(ab?'▾':'▸')+'</td>'
+      +'<td class="sn-on"><b>Orden '+g.id+'</b><small>'+g.eqs.length+' pedido(s)</small></td>'
+      +'<td class="sn-n">'+fmtUSDs(g.saldo)+'</td>'
+      +'<td class="sn-e">'+est+'</td>'
+      +'<td class="sn-n"><b>'+fmtUSDs(g.cons)+'</b></td>'
+      +(SNCMP?'<td class="sn-n sn-sug">'+(g.sug?fmtUSDs(g.sug):'—')+'</td>':'')
+      +'<td class="sn-b" onclick="event.stopPropagation()">'
+        +'<button class="sn-mini" title="Toda la orden al saldo por pagar" onclick="snOrden(\''+g.id+'\',\''+mfg+'\',\'saldo\')">saldo</button>'
+        +'<button class="sn-mini" title="Toda la orden al monto completo" onclick="snOrden(\''+g.id+'\',\''+mfg+'\',\'monto\')">monto</button>'
+        +'<button class="sn-mini off" title="Sacar toda la orden del cupo" onclick="snOrden(\''+g.id+'\',\''+mfg+'\',\'fuera\')">fuera</button>'
+      +'</td></tr>'
+      + (ab?g.eqs.map(_snFilaEq).join(''):'')
+      +'</tbody>';
+  }).join('');
+  return '<div class="sn-col">'
+    +'<div class="sn-card'+(disp<0?' mal':'')+'">'
+      +'<div class="sn-t">'+titulo+'</div>'
+      +'<div class="sn-techo">Tu cupo <input type="number" step="1000" value="'+techo+'" data-foco="tc-'+mfg+'" onchange="snTecho(\''+mfg+'\',this.value)"></div>'
+      +'<div class="sn-bar"><i style="width:'+pct+'%" class="'+(disp<0?'mal':'')+'"></i></div>'
+      +'<div class="sn-r"><span>Usado</span><b>'+fmtUSDs(usado)+'</b></div>'
+      +'<div class="sn-r"><span>'+(disp<0?'Sobregirado':'Disponible')+'</span><b class="'+(disp<0?'mal':'ok')+'">'+fmtUSDs(Math.abs(disp))+'</b></div>'
+    +'</div>'
+    +'<table class="sn">'
+      +'<thead><tr><th></th><th>Orden</th><th class="sn-n">Saldo China</th><th>Estado</th>'
+      +'<th class="sn-n">Consume</th>'+(SNCMP?'<th class="sn-n">Andrés dice</th>':'')+'<th></th></tr></thead>'
+      +(filas||'<tbody><tr><td colspan="7" class="sn-vacio">Nada en este filtro</td></tr></tbody>')
+    +'</table></div>';
+}
+
+pintarSino=function(){
+  const cont=document.getElementById('v-sinosure'); if(!cont) return;
+  const pend=sinoPendientes();
+  const hayHoja=!!(CONCILIA&&CONCILIA.sinoPorDerrame&&Object.keys(CONCILIA.sinoPorDerrame).length);
+  cont.innerHTML=''
+    +'<div class="sn-top">'
+      +'<h2 class="title" style="margin:0">Sinosure</h2>'
+      +'<div class="sn-sp"></div>'
+      +'<div class="seg sn-f">'
+        +['todo|Todo','pend|Sin clasificar','dentro|En el cupo','fuera|Fuera'].map(function(x){
+          var a=x.split('|');
+          return '<button class="'+(SNVER===a[0]?'on':'')+'" onclick="snFiltro(\''+a[0]+'\')">'+a[1]+'</button>';}).join('')
+      +'</div>'
+      +(hayHoja?'<button class="vz-b" onclick="snCmp()">'+(SNCMP?'Ocultar':'Comparar con')+' la hoja de Andrés</button>':'')
+    +'</div>'
+    +'<div class="sn-sub">El cupo lo armas tú. Cada pedido tiene su palanca y lo que decidas se queda: '
+      +'una carga nueva solo agrega los pedidos que no existían, nunca toca lo que ya clasificaste.</div>'
+    +(pend.length
+      ? '<div class="sn-band"><b>'+pend.length+' pedido(s) sin clasificar</b> · no están consumiendo cupo hasta que les digas qué son: '
+        +pend.slice(0,12).map(function(e){return '<span class="sn-bp">'+(e.derrame||'')+' · '+fmtUSDs(+e.cupoSaldo||0)+'</span>';}).join('')
+        +(pend.length>12?' <span class="sn-bp">+'+(pend.length-12)+' más</span>':'')
+        +'</div>'
+      : '')
+    +'<div class="sn-cols">'+_snBloque('Singsun','Trackers · Singsun')+_snBloque('Eaglerise','Shelters · Eaglerise')+'</div>';
+};
+
 </script>

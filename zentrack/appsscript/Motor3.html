@@ -763,12 +763,8 @@ function wizApprove(){
     filas:WIZ.concilia.filas||[], omitidos:WIZ.omitidos||[], agregados:WIZ.agregados||[],
     orDifs:WIZ.orDifs||[], ranuras:WIZ.concilia.ranuras, posicional:WIZ.concilia.posicional
   } : (CONCILIA?{...CONCILIA, viejo:true, tsNuevo:new Date()}:null);
-  /* El techo del cupo lo declara la propia hoja Sinosure del detailed (el bloque de
-     "Cupos" de arriba). Antes se quedaba con lo que estuviera escrito a mano en
-     Ajustes, y el Tablero reportaba disponible de más. Manda la hoja. */
-  if(CONCILIA && CONCILIA.sino && CONCILIA.sino.cupos){
-    Object.entries(CONCILIA.sino.cupos).forEach(([m,v])=>{ if(+v>0) CUPO[m]=+v; });
-  }
+  /* El techo del cupo es TUYO: se pone en Ajustes y ninguna carga lo pisa.
+     La hoja Sinosure del detailed solo se guarda para poder compararla. */
   closeRecon();toast('ORDER REPORT cargado'+(WIZ.concilia?' y cruzado con el detailed':'')+' · facturas, pagos y precios conservados');
   refreshAll();renderLedger();renderHistCargas();
   if(typeof saveToServer==='function')saveToServer();

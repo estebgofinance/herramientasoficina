@@ -1149,6 +1149,120 @@ table.dt tbody tr:last-child td{border-bottom:none}
 .snsel.si{border-color:#B7D4C9;background:#E7F1EC} .snsel.no{border-color:#f0c4c0;background:#fdeceb}
 .snfil{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;align-items:center}
 
+/* --- tabla de próximos a vencer (Tablero) --- */
+#vencBox{margin-top:26px}
+.vz-head{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.vz-head h3{font-size:15px;font-weight:600;margin:0}
+.vz-sp{flex:1}
+.vz-chip{font-size:11px;font-weight:600;padding:3px 9px;border-radius:999px;letter-spacing:.01em}
+.vz-chip.mal{background:#FBEAE8;color:#8C1D18}
+.vz-chip.ok{background:#E7F1EC;color:#1F5141}
+.vz-b{font-size:11.5px;padding:4px 10px;border:1px solid var(--line);background:var(--card);
+  color:var(--ink2);border-radius:7px;cursor:pointer}
+.vz-b:hover{background:var(--hover);color:var(--ink)}
+table.vz{width:100%;border-collapse:collapse;font-size:12.5px}
+table.vz th{text-align:left;font-weight:600;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--ink3);padding:0 10px 7px;border-bottom:1px solid var(--line)}
+table.vz td{padding:9px 10px;border-bottom:1px solid var(--line2,var(--line));vertical-align:top}
+table.vz tbody tr:hover{background:var(--hover)}
+table.vz tr.vz-r td{background:#FDF4F3}
+table.vz small{display:block;font-size:10.5px;color:var(--ink3);font-weight:400;margin-top:2px}
+.vz-n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.vz-n small{text-align:right}
+.vz-po b{font-variant-numeric:tabular-nums}
+.vz-f{white-space:nowrap}
+.vz-a{text-align:right;width:1%}
+.vz-mal{color:#B3261E}
+.vz-ya{color:#8a5300}
+.vz-gris{color:var(--ink3)}
+.vz-ant{color:#8a5300!important}
+.vz-pie{margin-top:9px;font-size:11px;color:var(--ink3)}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]) table.vz tr.vz-r td{background:#2A1A18}
+  :root:not([data-theme="light"]) .vz-chip.mal{background:#43201D;color:#F2B8B5}
+  :root:not([data-theme="light"]) .vz-chip.ok{background:#1B332B;color:#A6D9C5}
+}
+:root[data-theme="dark"] table.vz tr.vz-r td{background:#2A1A18}
+:root[data-theme="dark"] .vz-chip.mal{background:#43201D;color:#F2B8B5}
+:root[data-theme="dark"] .vz-chip.ok{background:#1B332B;color:#A6D9C5}
+@media(max-width:820px){
+  table.vz th:nth-child(2),table.vz td:nth-child(2){display:none}
+  #vencBox{overflow-x:auto}
+}
+
+
+/* --- pestaña Sinosure · derrotero --- */
+.sn-top{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:4px}
+.sn-sp{flex:1}
+.seg.sn-f button{font-size:11.5px;padding:5px 11px}
+.sn-sub{font-size:12px;color:var(--ink3);margin-bottom:14px;max-width:760px}
+.sn-band{background:#FFF6E6;border:1px solid #F0D9A8;color:#6B4A00;border-radius:10px;
+  padding:10px 13px;font-size:12px;margin-bottom:16px;line-height:1.9}
+.sn-bp{display:inline-block;background:#fff;border:1px solid #EBD7AC;border-radius:999px;
+  padding:1px 8px;margin-left:5px;font-variant-numeric:tabular-nums;font-size:11px}
+.sn-cols{display:grid;grid-template-columns:1fr 1fr;gap:22px;align-items:start}
+.sn-card{border:1px solid var(--line);border-radius:12px;padding:13px 15px;margin-bottom:12px;background:var(--card)}
+.sn-card.mal{border-color:#E8B4B0;background:#FDF4F3}
+.sn-t{font-size:13px;font-weight:600;margin-bottom:9px}
+.sn-techo{display:flex;align-items:center;gap:8px;font-size:11.5px;color:var(--ink3);margin-bottom:9px}
+.sn-techo input{width:116px;padding:5px 8px;border:1px solid var(--line);border-radius:7px;
+  background:var(--bg);color:var(--ink);font:inherit;font-size:12.5px;font-variant-numeric:tabular-nums;text-align:right}
+.sn-bar{height:6px;border-radius:3px;background:var(--line);overflow:hidden;margin-bottom:10px}
+.sn-bar i{display:block;height:100%;background:#5E646C}
+.sn-bar i.mal{background:#B3261E}
+.sn-r{display:flex;justify-content:space-between;font-size:12px;padding:2px 0}
+.sn-r span{color:var(--ink3)}
+.sn-r b{font-variant-numeric:tabular-nums}
+.sn-r b.mal{color:#B3261E}
+.sn-r b.ok{color:#1F5141}
+table.sn{width:100%;border-collapse:collapse;font-size:12px}
+table.sn th{text-align:left;font-weight:600;font-size:10px;letter-spacing:.05em;text-transform:uppercase;
+  color:var(--ink3);padding:0 7px 6px;border-bottom:1px solid var(--line)}
+table.sn td{padding:7px;border-bottom:1px solid var(--line)}
+tr.sn-h{cursor:pointer}
+tr.sn-h:hover td{background:var(--hover)}
+tbody.sn-g.ab tr.sn-h td{background:var(--hover)}
+.sn-ar{width:1%;color:var(--ink3);font-size:10px}
+.sn-on small{display:block;font-size:10px;color:var(--ink3);font-weight:400}
+.sn-n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.sn-sug{color:var(--ink3)}
+.sn-dif{display:block;font-size:10px;color:#8a5300}
+.sn-b{text-align:right;white-space:nowrap;width:1%}
+.sn-mini{font-size:10px;padding:2px 7px;margin-left:3px;border:1px solid var(--line);
+  background:var(--card);color:var(--ink2);border-radius:5px;cursor:pointer}
+.sn-mini:hover{background:var(--ink);color:var(--card)}
+.sn-mini.off:hover{background:#B3261E;border-color:#B3261E;color:#fff}
+tr.sn-eq td{background:var(--bg);font-size:11.5px}
+tr.sn-eq.sn-p td{background:#FFFBF2}
+.sn-po{font-weight:600;font-variant-numeric:tabular-nums;padding-left:22px!important;white-space:nowrap;width:1%}
+.sn-pr{color:var(--ink2)}
+.sn-sel{font:inherit;font-size:11px;padding:3px 6px;border-radius:6px;border:1px solid var(--line);
+  background:var(--card);color:var(--ink)}
+.sn-sel.on{border-color:#9CC3B4;background:#F2F8F5}
+.sn-sel.off{border-color:#E0B9B5;background:#FDF4F3;color:#8C1D18}
+.sn-sel.pend{border-color:#E8C98C;background:#FFF8EA}
+.sn-fijo{width:84px;margin-left:5px;font:inherit;font-size:11px;padding:3px 6px;text-align:right;
+  border:1px solid var(--line);border-radius:6px;background:var(--card);color:var(--ink);font-variant-numeric:tabular-nums}
+.sn-nota{width:100%;min-width:70px;font:inherit;font-size:11px;padding:3px 6px;border:1px solid transparent;
+  border-radius:6px;background:transparent;color:var(--ink2)}
+.sn-nota:hover,.sn-nota:focus{border-color:var(--line);background:var(--card)}
+.sn-chip{font-size:10px;font-weight:600;padding:2px 7px;border-radius:999px}
+.sn-chip.on{background:#E7F1EC;color:#1F5141}
+.sn-chip.off{background:#F0F1F2;color:var(--ink3)}
+.sn-chip.pend{background:#FFF1D6;color:#6B4A00}
+.sn-vacio{color:var(--ink3);padding:16px 7px!important;text-align:center}
+@media(max-width:1100px){.sn-cols{grid-template-columns:1fr}}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]) .sn-band{background:#2E2415;border-color:#5C4A24;color:#F0D9A8}
+  :root:not([data-theme="light"]) .sn-bp{background:#1E1A12;border-color:#5C4A24}
+  :root:not([data-theme="light"]) .sn-card.mal{background:#2A1A18;border-color:#5C3330}
+  :root:not([data-theme="light"]) tr.sn-eq.sn-p td{background:#241E12}
+  :root:not([data-theme="light"]) .sn-sel.on{background:#18302A;border-color:#2F5F4E}
+  :root:not([data-theme="light"]) .sn-sel.off{background:#2A1A18;border-color:#5C3330;color:#F2B8B5}
+  :root:not([data-theme="light"]) .sn-sel.pend{background:#2E2415;border-color:#5C4A24}
+  :root:not([data-theme="light"]) .sn-chip.on{background:#1B332B;color:#A6D9C5}
+  :root:not([data-theme="light"]) .sn-chip.pend{background:#2E2415;color:#F0D9A8}
+}
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script>if(window["pdfjsLib"]){pdfjsLib.GlobalWorkerOptions.workerSrc="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";}</script>
@@ -1159,7 +1273,7 @@ table.dt tbody tr:last-child td{border-bottom:none}
     <button class="loadbtn" onclick="verifyOpen()"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" style="width:14px;height:14px"><path d="M8 2v8M5 7l3 3 3-3M3 13h10"/></svg> Cargar datos</button>
     <button class="loadbtn" style="margin-left:6px;background:#0d9488;color:#fff;border-color:#0d9488" onclick="facWizOpen()"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" style="width:14px;height:14px"><path d="M4 2h6l3 3v9H4V2zM10 2v3h3"/></svg> Cargar facturas</button>
     <div class="corte">
-      <b>v1.0</b> · 1 oct 2026 · precios por grupo · hoja Sinosure · cupo pedido por pedido<br><span style="color:var(--ink3)">si arriba a la derecha no dice v1.0, tu navegador está mostrando la versión vieja: Ctrl+Shift+R</span>
+      <b id="verTag">v1.1</b>
     </div>
   </header>
 
@@ -1205,12 +1319,12 @@ table.dt tbody tr:last-child td{border-bottom:none}
         </div>
       </div>
       <div class="tm-legend" id="tmLegend"></div>
+      <div id="vencBox"></div>
     </section>
 
     <!-- ============ PEDIDOS ============ -->
     <section class="view" id="v-pedidos">
       <h2 class="title">Órdenes y pedidos</h2>
-      <div class="sub">La orden madre es el pedido completo que montamos a fábrica; cada pedido que se saca de ella es una fila del ORDER REPORT (7-2, 7-3, CFM 3-4…). Abre una orden para ver, pedido por pedido, el saldo del cupo, los otros componentes y lo que te debe el cliente.</div>
 
       <div class="filters" id="filters">
         <button class="chip on" data-f="todos">Todas</button>
@@ -1219,7 +1333,6 @@ table.dt tbody tr:last-child td{border-bottom:none}
         <button class="chip" data-f="pipeline">Con equipos sin embarcar</button>
         <button class="chip" data-f="vencida">Balance a China vencido</button>
         <button class="chip" data-f="sinprecio">Sin precio</button>
-        <button class="chip" data-f="sincupo">Sin decidir en Sinosure</button>
       </div>
 
       <table class="ledger">
@@ -3472,12 +3585,8 @@ function wizApprove(){
     filas:WIZ.concilia.filas||[], omitidos:WIZ.omitidos||[], agregados:WIZ.agregados||[],
     orDifs:WIZ.orDifs||[], ranuras:WIZ.concilia.ranuras, posicional:WIZ.concilia.posicional
   } : (CONCILIA?{...CONCILIA, viejo:true, tsNuevo:new Date()}:null);
-  /* El techo del cupo lo declara la propia hoja Sinosure del detailed (el bloque de
-     "Cupos" de arriba). Antes se quedaba con lo que estuviera escrito a mano en
-     Ajustes, y el Tablero reportaba disponible de más. Manda la hoja. */
-  if(CONCILIA && CONCILIA.sino && CONCILIA.sino.cupos){
-    Object.entries(CONCILIA.sino.cupos).forEach(([m,v])=>{ if(+v>0) CUPO[m]=+v; });
-  }
+  /* El techo del cupo es TUYO: se pone en Ajustes y ninguna carga lo pisa.
+     La hoja Sinosure del detailed solo se guarda para poder compararla. */
   closeRecon();toast('ORDER REPORT cargado'+(WIZ.concilia?' y cruzado con el detailed':'')+' · facturas, pagos y precios conservados');
   refreshAll();renderLedger();renderHistCargas();
   if(typeof saveToServer==='function')saveToServer();
@@ -3618,7 +3727,8 @@ function genEC(cli,fmt){
     const body=rows.map(f=>`<h3 style="margin-top:24px">Factura ${f.num} · ${fmtD(f.fecha)} · plazo ${f.plazo}d · TRM ref ${f.trmRef}</h3>
       <table><thead><tr><th>Concepto</th><th style="text-align:right">USD</th></tr></thead><tbody>${f.lineas.map(l=>`<tr><td>${l.desc}${l.pass?' <em>(pass-through)</em>':''}</td><td style="text-align:right">${fmtUSDs(l.usd)}</td></tr>`).join('')}<tr style="font-weight:700"><td>Total factura</td><td style="text-align:right">${fmtUSDs(f.total)}</td></tr></tbody></table>
       <table style="margin-top:8px"><thead><tr><th>Hito</th><th>Fecha</th><th style="text-align:right">Monto</th><th style="text-align:right">Saldo</th></tr></thead><tbody>${f.hitosR.map(h=>`<tr><td>${h.etiq} ${h.pct}%</td><td>${h.fecha?fmtD(h.fecha):'—'}</td><td style="text-align:right">${fmtUSDs(h.monto)}</td><td style="text-align:right">${h.pend>0.01?fmtUSDs(h.pend):'pagado'}</td></tr>`).join('')}</tbody></table>`).join('');
-    w.document.write(`<html><head><title>EC ${cli}</title><style>body{font-family:Arial,sans-serif;color:#17181A;padding:32px}h2{margin:0}p{color:#666;margin:4px 0 20px}h3{color:#17181A;margin:20px 0 6px;font-size:14px}table{border-collapse:collapse;width:100%;font-size:11px;margin-bottom:8px}th,td{border-bottom:1px solid #ddd;padding:6px 8px;text-align:left}th{background:#f4f5f6;font-size:10px;text-transform:uppercase}.tot{font-weight:700;font-size:15px;margin-top:18px}em{color:#999;font-style:italic}</style></head><body><h2>Zentrack · Estado de cuenta</h2><p>${cli} · corte ${fmtD(TODAY)} · USD</p>${body}<p class="tot">Saldo total: US$ ${fmtUSDs(usdSal)}</p></body></html>`);
+    w.document.write(`<html><head><title>EC ${cli}</title><style>body{font-family:Arial,sans-serif;color:#17181A;padding:32px}h2{margin:0}p{color:#666;margin:4px 0 20px}h3{color:#17181A;margin:20px 0 6px;font-size:14px}table{border-collapse:collapse;width:100%;font-size:11px;margin-bottom:8px}th,td{border-bottom:1px solid #ddd;padding:6px 8px;text-align:left}th{background:#f4f5f6;font-size:10px;text-transform:uppercase}.tot{font-weight:700;font-size:15px;margin-top:18px}em{color:#999;font-style:italic}
+</style></head><body><h2>Zentrack · Estado de cuenta</h2><p>${cli} · corte ${fmtD(TODAY)} · USD</p>${body}<p class="tot">Saldo total: US$ ${fmtUSDs(usdSal)}</p></body></html>`);
     w.document.close();setTimeout(()=>w.print(),300);
   }
 }
@@ -4811,6 +4921,384 @@ pintarPrecios=function(){
 
 
 
+
+/* ===================================================================
+   CAPA SINOSURE MANUAL (v1.1)
+   Lo de Sinosure es TUYO. El motor ya no decide:
+     · una carga nueva solo puede AGREGAR pedidos a la bandeja de "sin
+       clasificar"; lo que ya clasificaste no se toca NUNCA;
+     · el techo se pone en Ajustes y ninguna carga lo pisa;
+     · la hoja Sinosure del detailed, si la cargas, queda guardada solo
+       para poder compararla al lado — nunca como fuente.
+   Se engancha reasignando funciones que ya existen, sin tocar lo de antes.
+   =================================================================== */
+let SINO={ped:{},sembrado:false};
+
+/* Cada pedido tiene un modo. Eso son las palancas:
+     'saldo' → consume lo que todavía le debes a la fábrica (se libera al pagar)
+     'monto' → consume el pedido completo mientras siga vivo
+     'fijo'  → el número que tú escribas, menos lo que hayas girado desde entonces
+     'fuera' → no entra al cupo
+     null    → sin clasificar, está en la bandeja y no consume */
+const SINO_MODOS=[['saldo','Saldo por pagar'],['monto','Monto completo'],['fijo','Monto fijo'],['fuera','No entra']];
+const sinoReg=e=>SINO.ped[kOf(e)]||null;
+function sinoSet(clave,campo,valor){
+  const r=SINO.ped[clave]||(SINO.ped[clave]={modo:null,fijo:0,nota:'',sug:null});
+  r[campo]=(campo==='fijo')?(+valor||0):valor;
+  if(campo==='modo'&&valor==='fijo'&&!(+r.fijo>0)){
+    const e=EQ.find(x=>kOf(x)===clave); if(e) r.fijo=Math.round(+e.cupoSaldo||0);
+  }
+}
+function sinoSug(e){ const r=sinoReg(e); return r&&r.sug!=null?r.sug:null; }
+
+/* ---- el consumo ahora sale de TU decisión, no del archivo ---- */
+const _consumoAnterior=consumoEq;
+consumoEq=function(e,mfg,regla){
+  mfg=mfg||e.mfg;
+  const r=SINO.ped[kOf(e)];
+  if(!r||!r.modo||r.modo==='fuera') return 0;
+  const O=(e.cupoSaldo!=null)?(+e.cupoSaldo||0):((e.antSaldo||0)+(e.balSaldo||0));
+  const M=(e.cupoMonto!=null)?(+e.cupoMonto||0):(+e.mfgAmt||0);
+  if(O<=0.5) return 0;
+  if(r.modo==='monto') return M;
+  if(r.modo==='fijo'){
+    const girado=Math.max(0,(+e.cupoSaldo0||0)-O);
+    return Math.max(0,(+r.fijo||0)-girado);
+  }
+  return O;
+};
+
+/* ---- siembra: UNA sola vez, con lo que el motor ya había leído ---- */
+function sinoSembrar(){
+  if(SINO.sembrado) return 0;
+  const hoja=(CONCILIA&&CONCILIA.sinoPorDerrame)||{};
+  let n=0;
+  EQ.forEach(e=>{
+    const k=kOf(e);
+    if(SINO.ped[k]) return;
+    const O=Math.round(+e.cupoSaldo||0), M=Math.round(+e.cupoMonto||e.mfgAmt||0);
+    const d=hoja[k];
+    let modo=null, fijo=0;
+    if(e.sinoManual==='no') modo='fuera';
+    else if(d!=null){
+      const v=Math.round(d);
+      if(Math.abs(v-O)<=2) modo='saldo';
+      else if(Math.abs(v-M)<=2) modo='monto';
+      else { modo='fijo'; fijo=v; }
+    }
+    else if(e.sinoManual==='si') modo=isShipped(e)?'saldo':'monto';
+    SINO.ped[k]={modo:modo,fijo:fijo,nota:'',sug:d!=null?Math.round(d):null};
+    n++;
+  });
+  SINO.sembrado=true;
+  return n;
+}
+/* ---- carga nueva: solo AGREGA lo que no existía ---- */
+function sinoMerge(){
+  if(!SINO.sembrado) return sinoSembrar();
+  const hoja=(CONCILIA&&CONCILIA.sinoPorDerrame)||{};
+  let n=0;
+  EQ.forEach(e=>{
+    const k=kOf(e);
+    if(SINO.ped[k]){
+      const d=hoja[k]; if(d!=null) SINO.ped[k].sug=Math.round(d);
+      return;
+    }
+    const d=hoja[k];
+    SINO.ped[k]={modo:null,fijo:0,nota:'',sug:d!=null?Math.round(d):null};
+    n++;
+  });
+  return n;
+}
+const sinoPendientes=()=>EQ.filter(function(e){var r=SINO.ped[kOf(e)];return !r||!r.modo;});
+
+/* ---- que SINO viva en la Hoja junto con todo lo demás ---- */
+const _serAntesSino=serializeState;
+serializeState=function(){
+  const o=JSON.parse(_serAntesSino.apply(this,arguments));
+  o.SINO=SINO;
+  return JSON.stringify(o);
+};
+const _appAntesSino=applyState;
+applyState=function(s){
+  _appAntesSino.apply(this,arguments);
+  if(s.SINO&&s.SINO.ped){ SINO={ped:s.SINO.ped,sembrado:!!s.SINO.sembrado}; sinoMerge(); }
+  else { SINO={ped:{},sembrado:false}; sinoSembrar(); }
+};
+
+/* ---- después de aprobar una carga, los pedidos nuevos entran a la bandeja ---- */
+const _apruebaAntesSino=wizApprove;
+wizApprove=function(){
+  _apruebaAntesSino.apply(this,arguments);
+  const n=sinoMerge();
+  /* la siembra tiene que ocurrir ANTES de repintar, o el tablero muestra 0% de cupo usado */
+  refreshAll(); renderLedger();
+  if(n) toast(n+' pedido(s) nuevo(s) esperando en <b>Sinosure</b> · lo que ya clasificaste quedó intacto');
+  if(typeof saveToServer==='function') saveToServer();
+};
+
+/* ===================================================================
+   ARREGLO DEL FOCO EN LA PESTAÑA PRECIOS
+   El problema: gpSet() llamaba a refreshAll() en cada tecla, y refreshAll
+   está enganchado para repintar Precios. O sea que al escribir una letra se
+   reconstruía la pestaña entera y el input donde estabas escribiendo dejaba
+   de existir: por eso te sacaba y tocaba volver a hacer clic. Encima mandaba
+   un guardado a la Hoja por cada tecla.
+   La solución: mientras escribes solo se toca el estado y se refrescan los
+   números a mano, sin repintar. El repintado y el guardado ocurren cuando
+   sales del campo o medio segundo después de la última tecla.
+   =================================================================== */
+let _gpT=null;
+function _gpGuardarLuego(){
+  clearTimeout(_gpT);
+  _gpT=setTimeout(function(){ guardar4(); },600);
+}
+/* refresca solo los números que dependen del grupo, sin tocar el DOM donde se escribe */
+function _gpNums(id){
+  const g=gpDe(id); if(!g) return;
+  document.querySelectorAll('[data-gpnum="'+id+'"]').forEach(function(n){
+    const e=EQ.find(function(x){return x.derrame===n.getAttribute('data-gpeq');});
+    if(e) n.textContent=fmtUSDs(gpParte(g,e));
+  });
+  const t=document.querySelector('[data-gptot="'+id+'"]');
+  if(t) t.textContent=fmtUSDs(+g.total||0);
+}
+const _gpSetAntes=gpSet;
+gpSet=function(id,f,v,recarga){
+  /* los campos de texto y el total se escriben letra por letra: no repintar */
+  if(!recarga && (f==='nombre'||f==='nota'||f==='total')){
+    const g=gpDe(id); if(!g) return;
+    g[f]=(f==='total')?(+v||0):v;
+    if(f==='total'){ _gpNums(id); sincronizarPrecios(); }
+    _gpGuardarLuego();
+    return;
+  }
+  return _gpSetAntes.apply(this,arguments);
+};
+const _gpParteSetAntes=(typeof gpParteSet==='function')?gpParteSet:null;
+if(_gpParteSetAntes){
+  gpParteSet=function(id,derrame,v){
+    const g=gpDe(id); if(!g) return;
+    g.partes=g.partes||{}; g.partes[derrame]=(+v||0);
+    sincronizarPrecios(); _gpNums(id); _gpGuardarLuego();
+  };
+}
+/* al salir del campo sí se repinta todo, una sola vez */
+document.addEventListener('blur',function(ev){
+  const t=ev.target;
+  if(!t||!t.closest||!t.closest('#v-precios')) return;
+  if(t.tagName!=='INPUT'&&t.tagName!=='TEXTAREA') return;
+  clearTimeout(_gpT); guardar4();
+  refreshAll();
+},true);
+/* el buscador de la pestaña ya no necesita el parche de setTimeout */
+const _pintarAntesFoco=pintarPrecios;
+pintarPrecios=function(){
+  const a=document.activeElement;
+  const id=a&&a.closest&&a.closest('#v-precios')?a.getAttribute('data-foco'):null;
+  _pintarAntesFoco.apply(this,arguments);
+  if(id){
+    const n=document.querySelector('#v-precios [data-foco="'+id+'"]');
+    if(n&&n.focus){ n.focus(); if(n.setSelectionRange&&n.value!=null){ try{n.setSelectionRange(n.value.length,n.value.length);}catch(e){} } }
+  }
+};
+
+/* ===================================================================
+   TABLERO · PRÓXIMOS A VENCER
+   Una sola tabla, ordenada por fecha, que junta las dos cosas que
+   importan: lo que hay que girarle a China y cuánto cupo de Sinosure
+   te libera ese giro. Reemplaza el bloque de texto que había abajo.
+   =================================================================== */
+let VENC_TODOS=false;
+function vencFilas(){
+  const hoy=TODAY.getTime(), DIA=864e5;
+  return EQ.map(function(e){
+    const saldo=(+e.cupoSaldo||0)+(+e.otrosSaldo||0);
+    if(saldo<=0.5) return null;
+    const f=e.limitePago||e.vence||null;
+    const dias=f?Math.round((new Date(f).getTime()-hoy)/DIA):null;
+    return {e:e, saldo:saldo, cupoSaldo:+e.cupoSaldo||0, fecha:f, dias:dias,
+            libera:consumoEq(e,e.mfg), antFalta:(!e.antPaid&&(+e.antSaldo||0)>0.5)?(+e.antSaldo||0):0};
+  }).filter(Boolean).sort(function(a,b){
+    if(a.fecha&&b.fecha) return new Date(a.fecha)-new Date(b.fecha);
+    if(a.fecha) return -1; if(b.fecha) return 1;
+    return b.saldo-a.saldo;
+  });
+}
+function renderVenc(){
+  const box=document.getElementById('vencBox'); if(!box) return;
+  const todas=vencFilas();
+  if(!todas.length){ box.innerHTML=''; return; }
+  const filas=VENC_TODOS?todas:todas.slice(0,8);
+  const venc=todas.filter(function(r){return r.dias!=null&&r.dias<0;});
+  const totVenc=venc.reduce(function(a,r){return a+r.saldo;},0);
+  const cel=function(r){
+    const e=r.e;
+    const cuando=r.fecha
+      ? (r.dias<0?'<b class="vz-mal">vencido hace '+Math.abs(r.dias)+' d</b>'
+        : r.dias<=15?'<b class="vz-ya">en '+r.dias+' d</b>'
+        : 'en '+r.dias+' d')
+      : '<span class="vz-gris">sin fecha</span>';
+    return '<tr'+(r.dias!=null&&r.dias<0?' class="vz-r"':'')+'>'
+      +'<td class="vz-po"><b>'+(e.derrame||e.ordenId)+'</b><small>'+(e.mfg==='Singsun'?'tracker':'shelter')+'</small></td>'
+      +'<td>'+(nombreEq(e)||'')+'<small>'+(e.cliente||'')+'</small></td>'
+      +'<td class="vz-n">'+fmtUSDs(r.saldo)+(r.antFalta?'<small class="vz-ant">falta anticipo '+fmtUSDs(r.antFalta)+'</small>':'')+'</td>'
+      +'<td class="vz-f">'+(r.fecha?fmtD(r.fecha):'—')+'<small>'+cuando+'</small></td>'
+      +'<td class="vz-n">'+(r.libera>0?fmtUSDs(r.libera):'<span class="vz-gris">—</span>')+'</td>'
+      +'<td class="vz-a"><button class="vz-b" onclick="openPanel(\''+e.ordenId+'\')">ver</button></td></tr>';
+  };
+  box.innerHTML=''
+    +'<div class="vz-head">'
+    +  '<h3>Próximos a vencer</h3>'
+    +  (venc.length?'<span class="vz-chip mal">'+venc.length+' vencido(s) · '+fmtUSDs(totVenc)+'</span>':'<span class="vz-chip ok">nada vencido</span>')
+    +  '<div class="vz-sp"></div>'
+    +  (todas.length>8?'<button class="vz-b" onclick="VENC_TODOS=!VENC_TODOS;renderVenc()">'+(VENC_TODOS?'Ver solo los 8 primeros':'Ver los '+todas.length)+'</button>':'')
+    +'</div>'
+    +'<table class="vz"><thead><tr>'
+    +'<th>Pedido</th><th>Proyecto</th><th class="vz-n">Le debes a China</th><th>Límite de pago</th>'
+    +'<th class="vz-n">Cupo que libera</th><th></th></tr></thead><tbody>'
+    + filas.map(cel).join('')
+    +'</tbody></table>'
+    +'<div class="vz-pie">El cupo que libera es lo que ese pedido está consumiendo hoy de Sinosure según cómo lo tengas clasificado en la pestaña Sinosure.</div>';
+}
+const _refAntesVenc=refreshAll;
+refreshAll=function(){ _refAntesVenc.apply(this,arguments); try{renderVenc();}catch(e){} };
+
+/* ===================================================================
+   PESTAÑA SINOSURE · DERROTERO
+   Se acabó el listado de mil renglones. Ahora:
+     · arriba, el techo de cada fabricante, EDITABLE por ti;
+     · la bandeja de los pedidos que todavía no has clasificado;
+     · y el derrotero: una fila por orden madre, plegada. La abres y ahí
+       sí están sus pedidos, cada uno con su palanca.
+   =================================================================== */
+let SNAB2={};                       /* qué órdenes están abiertas */
+let SNVER='todo';                   /* filtro: todo | dentro | fuera | pend */
+let SNCMP=false;                    /* mostrar la columna "Andrés dice" */
+
+function snToggle(id){ SNAB2[id]=!SNAB2[id]; pintarSino(); }
+function snFiltro(f){ SNVER=f; pintarSino(); }
+function snCmp(){ SNCMP=!SNCMP; pintarSino(); }
+function snSet(clave,campo,valor){ sinoSet(clave,campo,valor); refreshAll(); renderLedger(); guardar4(); }
+/* poner toda una orden en el mismo modo, de un golpe */
+function snOrden(ordenId,mfg,modo){
+  EQ.forEach(function(e){ if(e.ordenId===ordenId&&e.mfg===mfg) sinoSet(kOf(e),'modo',modo); });
+  refreshAll(); renderLedger(); guardar4();
+}
+function snTecho(mfg,v){ CUPO[mfg]=Math.max(0,+v||0); refreshAll(); renderLedger(); guardar4(); }
+
+function _snGrupos(mfg){
+  const porOrd={};
+  EQ.filter(function(e){return e.mfg===mfg;}).forEach(function(e){
+    (porOrd[e.ordenId]=porOrd[e.ordenId]||[]).push(e);
+  });
+  return Object.keys(porOrd).sort().map(function(id){
+    const eqs=porOrd[id];
+    const cons=eqs.reduce(function(a,e){return a+consumoEq(e,mfg);},0);
+    const saldo=eqs.reduce(function(a,e){return a+(+e.cupoSaldo||0);},0);
+    const pend=eqs.filter(function(e){var r=SINO.ped[kOf(e)];return !r||!r.modo;}).length;
+    const fuera=eqs.filter(function(e){var r=SINO.ped[kOf(e)];return r&&r.modo==='fuera';}).length;
+    const sug=eqs.reduce(function(a,e){var v=sinoSug(e);return a+(v||0);},0);
+    return {id:id,mfg:mfg,eqs:eqs,cons:cons,saldo:saldo,pend:pend,fuera:fuera,sug:sug};
+  }).filter(function(g){
+    if(SNVER==='pend')   return g.pend>0;
+    if(SNVER==='dentro') return g.cons>0;
+    if(SNVER==='fuera')  return g.fuera>0;
+    return true;
+  });
+}
+
+function _snFilaEq(e){
+  const k=kOf(e), r=SINO.ped[k]||{modo:null,fijo:0,nota:'',sug:null};
+  const cons=consumoEq(e,e.mfg);
+  const sel='<select class="sn-sel '+(r.modo==='fuera'?'off':r.modo?'on':'pend')+'" '
+    +'onchange="snSet(\''+k+'\',\'modo\',this.value)">'
+    +'<option value="">Sin clasificar</option>'
+    +SINO_MODOS.map(function(m){return '<option value="'+m[0]+'"'+(r.modo===m[0]?' selected':'')+'>'+m[1]+'</option>';}).join('')
+    +'</select>';
+  const fijo=r.modo==='fijo'
+    ? '<input class="sn-fijo" type="number" step="1" value="'+(+r.fijo||0)+'" data-foco="fj-'+k+'" '
+      +'onchange="snSet(\''+k+'\',\'fijo\',this.value)">'
+    : '';
+  const dif=(SNCMP&&r.sug!=null&&Math.abs(r.sug-cons)>2)
+    ? '<small class="sn-dif">'+(r.sug>cons?'+':'')+fmtUSDs(r.sug-cons)+'</small>' : '';
+  return '<tr class="sn-eq'+(!r.modo?' sn-p':'')+'">'
+    +'<td class="sn-po">'+(e.derrame||'')+'</td>'
+    +'<td class="sn-pr">'+(nombreEq(e)||'')+'</td>'
+    +'<td class="sn-n">'+fmtUSDs(+e.cupoSaldo||0)+'</td>'
+    +'<td class="sn-m">'+sel+fijo+'</td>'
+    +'<td class="sn-n"><b>'+(cons>0?fmtUSDs(cons):'—')+'</b></td>'
+    +(SNCMP?'<td class="sn-n sn-sug">'+(r.sug!=null?fmtUSDs(r.sug):'—')+dif+'</td>':'')
+    +'<td class="sn-no"><input class="sn-nota" value="'+esc4(r.nota||'')+'" placeholder="nota" '
+      +'data-foco="nt-'+k+'" onchange="snSet(\''+k+'\',\'nota\',this.value)"></td>'
+    +'</tr>';
+}
+
+function _snBloque(mfg,titulo){
+  const techo=+CUPO[mfg]||0, usado=cargaViva(mfg), disp=techo-usado;
+  const pct=techo>0?Math.min(100,Math.round(usado/techo*100)):0;
+  const gs=_snGrupos(mfg);
+  const filas=gs.map(function(g){
+    const ab=!!SNAB2[mfg+'|'+g.id];
+    const est=g.pend?'<span class="sn-chip pend">'+g.pend+' sin clasificar</span>'
+      :g.cons>0?'<span class="sn-chip on">en el cupo</span>'
+      :'<span class="sn-chip off">fuera</span>';
+    return '<tbody class="sn-g'+(ab?' ab':'')+'">'
+      +'<tr class="sn-h" onclick="snToggle(\''+mfg+'|'+g.id+'\')">'
+      +'<td class="sn-ar">'+(ab?'▾':'▸')+'</td>'
+      +'<td class="sn-on"><b>Orden '+g.id+'</b><small>'+g.eqs.length+' pedido(s)</small></td>'
+      +'<td class="sn-n">'+fmtUSDs(g.saldo)+'</td>'
+      +'<td class="sn-e">'+est+'</td>'
+      +'<td class="sn-n"><b>'+fmtUSDs(g.cons)+'</b></td>'
+      +(SNCMP?'<td class="sn-n sn-sug">'+(g.sug?fmtUSDs(g.sug):'—')+'</td>':'')
+      +'<td class="sn-b" onclick="event.stopPropagation()">'
+        +'<button class="sn-mini" title="Toda la orden al saldo por pagar" onclick="snOrden(\''+g.id+'\',\''+mfg+'\',\'saldo\')">saldo</button>'
+        +'<button class="sn-mini" title="Toda la orden al monto completo" onclick="snOrden(\''+g.id+'\',\''+mfg+'\',\'monto\')">monto</button>'
+        +'<button class="sn-mini off" title="Sacar toda la orden del cupo" onclick="snOrden(\''+g.id+'\',\''+mfg+'\',\'fuera\')">fuera</button>'
+      +'</td></tr>'
+      + (ab?g.eqs.map(_snFilaEq).join(''):'')
+      +'</tbody>';
+  }).join('');
+  return '<div class="sn-col">'
+    +'<div class="sn-card'+(disp<0?' mal':'')+'">'
+      +'<div class="sn-t">'+titulo+'</div>'
+      +'<div class="sn-techo">Tu cupo <input type="number" step="1000" value="'+techo+'" data-foco="tc-'+mfg+'" onchange="snTecho(\''+mfg+'\',this.value)"></div>'
+      +'<div class="sn-bar"><i style="width:'+pct+'%" class="'+(disp<0?'mal':'')+'"></i></div>'
+      +'<div class="sn-r"><span>Usado</span><b>'+fmtUSDs(usado)+'</b></div>'
+      +'<div class="sn-r"><span>'+(disp<0?'Sobregirado':'Disponible')+'</span><b class="'+(disp<0?'mal':'ok')+'">'+fmtUSDs(Math.abs(disp))+'</b></div>'
+    +'</div>'
+    +'<table class="sn">'
+      +'<thead><tr><th></th><th>Orden</th><th class="sn-n">Saldo China</th><th>Estado</th>'
+      +'<th class="sn-n">Consume</th>'+(SNCMP?'<th class="sn-n">Andrés dice</th>':'')+'<th></th></tr></thead>'
+      +(filas||'<tbody><tr><td colspan="7" class="sn-vacio">Nada en este filtro</td></tr></tbody>')
+    +'</table></div>';
+}
+
+pintarSino=function(){
+  const cont=document.getElementById('v-sinosure'); if(!cont) return;
+  const pend=sinoPendientes();
+  const hayHoja=!!(CONCILIA&&CONCILIA.sinoPorDerrame&&Object.keys(CONCILIA.sinoPorDerrame).length);
+  cont.innerHTML=''
+    +'<div class="sn-top">'
+      +'<h2 class="title" style="margin:0">Sinosure</h2>'
+      +'<div class="sn-sp"></div>'
+      +'<div class="seg sn-f">'
+        +['todo|Todo','pend|Sin clasificar','dentro|En el cupo','fuera|Fuera'].map(function(x){
+          var a=x.split('|');
+          return '<button class="'+(SNVER===a[0]?'on':'')+'" onclick="snFiltro(\''+a[0]+'\')">'+a[1]+'</button>';}).join('')
+      +'</div>'
+      +(hayHoja?'<button class="vz-b" onclick="snCmp()">'+(SNCMP?'Ocultar':'Comparar con')+' la hoja de Andrés</button>':'')
+    +'</div>'
+    +'<div class="sn-sub">El cupo lo armas tú. Cada pedido tiene su palanca y lo que decidas se queda: '
+      +'una carga nueva solo agrega los pedidos que no existían, nunca toca lo que ya clasificaste.</div>'
+    +(pend.length
+      ? '<div class="sn-band"><b>'+pend.length+' pedido(s) sin clasificar</b> · no están consumiendo cupo hasta que les digas qué son: '
+        +pend.slice(0,12).map(function(e){return '<span class="sn-bp">'+(e.derrame||'')+' · '+fmtUSDs(+e.cupoSaldo||0)+'</span>';}).join('')
+        +(pend.length>12?' <span class="sn-bp">+'+(pend.length-12)+' más</span>':'')
+        +'</div>'
+      : '')
+    +'<div class="sn-cols">'+_snBloque('Singsun','Trackers · Singsun')+_snBloque('Eaglerise','Shelters · Eaglerise')+'</div>';
+};
 </script>
 </body>
 </html>

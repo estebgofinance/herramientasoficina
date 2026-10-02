@@ -18,7 +18,7 @@
     <button class="loadbtn" onclick="verifyOpen()"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" style="width:14px;height:14px"><path d="M8 2v8M5 7l3 3 3-3M3 13h10"/></svg> Cargar datos</button>
     <button class="loadbtn" style="margin-left:6px;background:#0d9488;color:#fff;border-color:#0d9488" onclick="facWizOpen()"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" style="width:14px;height:14px"><path d="M4 2h6l3 3v9H4V2zM10 2v3h3"/></svg> Cargar facturas</button>
     <div class="corte">
-      <b>v1.0</b> · 1 oct 2026 · precios por grupo · hoja Sinosure · cupo pedido por pedido<br><span style="color:var(--ink3)">si arriba a la derecha no dice v1.0, tu navegador está mostrando la versión vieja: Ctrl+Shift+R</span>
+      <b id="verTag">v1.1</b>
     </div>
   </header>
 
@@ -64,12 +64,12 @@
         </div>
       </div>
       <div class="tm-legend" id="tmLegend"></div>
+      <div id="vencBox"></div>
     </section>
 
     <!-- ============ PEDIDOS ============ -->
     <section class="view" id="v-pedidos">
       <h2 class="title">Órdenes y pedidos</h2>
-      <div class="sub">La orden madre es el pedido completo que montamos a fábrica; cada pedido que se saca de ella es una fila del ORDER REPORT (7-2, 7-3, CFM 3-4…). Abre una orden para ver, pedido por pedido, el saldo del cupo, los otros componentes y lo que te debe el cliente.</div>
 
       <div class="filters" id="filters">
         <button class="chip on" data-f="todos">Todas</button>
@@ -78,7 +78,6 @@
         <button class="chip" data-f="pipeline">Con equipos sin embarcar</button>
         <button class="chip" data-f="vencida">Balance a China vencido</button>
         <button class="chip" data-f="sinprecio">Sin precio</button>
-        <button class="chip" data-f="sincupo">Sin decidir en Sinosure</button>
       </div>
 
       <table class="ledger">
