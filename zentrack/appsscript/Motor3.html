@@ -71,12 +71,41 @@ function _separarGemelos(det){
   det.bloques=bloques; det.orden=orden;
 }
 
+/* Un renglón de la hoja cuya fórmula repite una celda ya contada NO siempre es un
+   error de copia. Cuando existe otro pedido con la misma designación y distinto
+   sufijo de entidad ("PO CFM3-2" de Solenium y "PO CFM3-2 INGEV2"), lo que pasó es
+   que Andrés rotuló el renglón pensando en el gemelo y dejó pegada la fórmula vieja.
+   En ese caso el renglón NO se descarta: se le atribuye al gemelo y ese pedido entra
+   a la lista para que tú decidas qué hace con el cupo. */
+function _gemelosDeDup(det,sino){
+  const out={};
+  if(!det||!sino||!sino.entradas) return out;
+  const bloques=[];
+  det.orden.forEach(k=>det.bloques[k].forEach(b=>bloques.push(b)));
+  const tomadas={};
+  sino.entradas.forEach(e=>{ if(e.ref&&!e.duplicado) tomadas[e.ref.fila]=true; });
+  sino.entradas.forEach(e=>{
+    if(!e.duplicado) return;
+    const des=_poKey(e.etiqueta);
+    const cand=bloques.filter(b=>b.mfg===e.lado
+      && b.key.split('#')[0]===des
+      && !tomadas[b.fila]
+      && !b.agregado);
+    if(cand.length===1){ out[e.celda]=cand[0]; tomadas[cand[0].fila]=true; }
+  });
+  return out;
+}
+
 /* Construye los pedidos desde el detailed */
 function equiposDesdeDetailed(det, sino){
   _separarGemelos(det);
   _marcarAgregados(det);
   const enSino={};
   if(sino) sino.entradas.forEach(e=>{ if(e.ref) enSino[e.ref.fila]=true; });
+  /* el gemelo de un renglón duplicado queda VIVO aunque no tenga saldo:
+     si no, el pedido se omitiría como cerrado y el renglón se perdería igual */
+  const _gd=_gemelosDeDup(det,sino);
+  Object.keys(_gd).forEach(function(c){ enSino[_gd[c].fila]=true; });
   const equipos=[], omitidos=[], agregados=[]; let idx=0;
   det.orden.forEach(k=>det.bloques[k].forEach(b=>{
     if(b.agregado){ agregados.push({poRaw:b.poRaw,fila:b.fila,monto:b.fab.monto,cubre:b.agregado}); return; }
@@ -168,12 +197,14 @@ function parseSimplificado(wb){
    Con la fórmula sabemos la fila exacta del Summary, y por la fila, el pedido.
    Solo cuando un renglón no trae fórmula se cae a emparejar por la etiqueta. */
 function casarSinosure(equipos, sino, det){
-  const mapa={}, sueltos=[], duplicados=[], detalle={};
-  if(!sino) return {mapa,sueltos,duplicados,detalle};
+  const mapa={}, sueltos=[], duplicados=[], reatribuidos=[], detalle={};
+  if(!sino) return {mapa,sueltos,duplicados,reatribuidos,detalle};
+  const _GEMDUP=_gemelosDeDup(det,sino);
   /* fila del Summary → pedido: la fila de cada línea del bloque (fabricante y proveedores) */
   const filaAClave={}, filaABloque={};
   if(det) det.orden.forEach(k=>det.bloques[k].forEach(b=>b.lineas.forEach(l=>{filaAClave[l.fila]=_bKey(b.mfg,b.key);filaABloque[l.fila]=b;})));
-  const porClave={}; equipos.forEach(e=>{const k=_bKey(e.mfg,_poKey(e.derrame));(porClave[k]=porClave[k]||[]).push(e);});
+  /* la clave lleva el sufijo de entidad: si no, los gemelos se mezclan otra vez */
+  const porClave={}; equipos.forEach(e=>{const k=kOf(e);(porClave[k]=porClave[k]||[]).push(e);});
   const porEtiqueta={}; equipos.forEach(e=>{const k=kOf(e);(porEtiqueta[k]=porEtiqueta[k]||[]).push(e);});
   /* Casa la etiqueta de un renglón de la hoja contra los pedidos. En orden:
      1) la designación con su sufijo de entidad ("CFM 3.2 INGEV2");
@@ -208,7 +239,19 @@ function casarSinosure(equipos, sino, det){
   };
   const dupPorDerrame={};
   sino.entradas.forEach(ent=>{
-    if(ent.duplicado){                                        /* la misma celda ya se contó */
+    if(ent.duplicado){
+      /* ¿hay un pedido gemelo al que este renglón le corresponde de verdad? */
+      const gb=_GEMDUP[ent.celda];
+      if(gb){
+        const grupo=(porClave[_bKey(gb.mfg,gb.key)]||[]).slice();
+        if(grupo.length){
+          ent.via='gemelo'; ent.reatribuido={poRaw:gb.poRaw,fila:gb.fila};
+          ent.derrames=grupo.map(x=>x.derrame);
+          reatribuidos.push(ent);
+          asigna(grupo,ent);
+          return;
+        }
+      }
       const g=resuelveEtq(ent.lado,ent.etiqueta);
       ent.derrames=g.map(e=>e.derrame);
       /* Si existe un pedido con la misma designación pero otro sufijo de entidad,
@@ -250,7 +293,7 @@ function casarSinosure(equipos, sino, det){
   });
   Object.keys(mapa).forEach(d=>{detalle[d]=mapa[d].lineas;});
   const plano={}; Object.keys(mapa).forEach(d=>{plano[d]=mapa[d].sino;});
-  return {mapa:plano, detalle, sueltos, duplicados, dupPorDerrame};
+  return {mapa:plano, detalle, sueltos, duplicados, reatribuidos, dupPorDerrame};
 }
 
 /* ---------- Cruce con la hoja Sinosure del propio detailed ----------
@@ -272,6 +315,8 @@ function aplicarSinosure(equipos, det, sino){
       que:[...new Set(lin.map(l=>l.que))].join(' + ')};
   }).sort((a,b)=>(a.base?1:0)-(b.base?1:0)||(''+a.derrame).localeCompare(''+b.derrame,undefined,{numeric:true}));
   return {filas, sinConfirmar,
+    reatribuidos:(cas.reatribuidos||[]).map(d=>({celda:d.celda,etiqueta:d.etiqueta,valor:d.valor,lado:d.lado,
+      ref:d.ref?d.ref.hoja+'!'+d.ref.addr:null,aPedido:d.derrames||[],gemelo:d.reatribuido||null})),
     duplicados:cas.duplicados.map(d=>({celda:d.celda,etiqueta:d.etiqueta,valor:d.valor,lado:d.lado,
       ref:d.ref?d.ref.hoja+'!'+d.ref.addr:null,yaEn:d.duplicado,derrames:d.derrames||null,gemelo:d.gemelo||null})),
     sueltos:cas.sueltos.map(d=>({celda:d.celda,etiqueta:d.etiqueta,valor:d.valor,lado:d.lado})),
@@ -619,6 +664,7 @@ function renderConcilia(c){
       <td style="font-size:11.5px;color:var(--ink3)">${f.celdas}${f.que?' · '+f.que:''}</td></tr>`).join('')}
     </tbody></table>
     ${(c.sinConfirmar||[]).length?`<div class="cfgnote2" style="margin-top:8px;color:var(--dato-debo)"><b>Sin cupo asignado</b> (están en el Summary pero la hoja Sinosure no los lista, así que no consumen): ${c.sinConfirmar.map(x=>x.derrame+' '+fmtUSDs(x.monto)).join(' · ')}</div>`:''}
+    ${(c.reatribuidos||[]).length?`<div class="cfgnote2" style="color:#6B4A00"><b>Renglón reasignado al pedido gemelo</b>: ${c.reatribuidos.map(d=>d.celda+' "'+d.etiqueta+'" ('+fmtUSDs(d.valor)+') apunta a '+d.ref+', que ya se contó en otro renglón; como existe '+(d.gemelo?d.gemelo.poRaw+' (fila '+d.gemelo.fila+')':'un pedido gemelo')+', el renglón se le atribuyó a ÉL en vez de descartarlo. Revísalo en la pestaña Sinosure: el monto sale de la fórmula de Andrés, no del saldo propio de ese pedido').join(' · ')}</div>`:''}
     ${(c.duplicados||[]).length?`<div class="cfgnote2" style="color:var(--dato-vencido)"><b>Referencia repetida</b> en la hoja Sinosure: ${c.duplicados.map(d=>d.celda+' apunta a '+d.ref+', que ya se contó en '+d.yaEn+' ('+fmtUSDs(d.valor)+')'+(d.gemelo?'. Existe un pedido distinto con el mismo número, '+d.gemelo.poRaw+' (fila '+d.gemelo.fila+'): si era ese, la fórmula debería apuntar a esa fila':'')).join(' · ')}</div>`:''}
     ${(c.sueltos||[]).length?`<div class="cfgnote2">Renglones de la hoja Sinosure que no caen en ningún pedido: ${c.sueltos.map(x=>x.celda+' "'+x.etiqueta+'" '+fmtUSDs(x.valor)).join(' · ')}</div>`:''}`;
 }

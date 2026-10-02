@@ -48,7 +48,7 @@ const T=(c,m)=>{if(c){ok++;console.log('  OK   '+m);}else{mal++;console.log('  F
   await p.setInputFiles('#reportFile','DET.xlsx'); await p.waitForTimeout(1900);
   const paso1=await p.evaluate(()=>document.getElementById('reconBody').innerText);
   T(/cupo Sinosure 1,413,028/.test(paso1),'el paso 1 ya muestra el cupo de los trackers (antes decía 0)');
-  T(/cupo Sinosure 1,362,612/.test(paso1),'y el de los shelters');
+  T(/cupo Sinosure 1,465,652/.test(paso1),'y el de los shelters, con el renglon gemelo ya reasignado');
   T(!/= CFM3-2 \+ CFM3-3/.test(paso1),'el CFM3-1 no se confunde con la suma de CFM3-2 + CFM3-3');
   T(/PO#7-5 \(293,699 = 7-5 \+ 7-6 \+ 7-7 \+ 7-8 \+ 7-9\)/.test(paso1),'la fila madre de verdad (PO#7-5) sí se sigue detectando');
   T(/fila 98/.test(paso1),'el renglón repetido nombra el pedido gemelo y su fila');
@@ -62,7 +62,7 @@ const T=(c,m)=>{if(c){ok++;console.log('  OK   '+m);}else{mal++;console.log('  F
       sueltos:CONCILIA.sinoSueltosL.length};
   });
   T(Math.abs(r.S-1413028)<=2,'trackers: el motor da '+r.S+', la hoja dice 1,413,028 (±2 por redondeo)');
-  T(r.E===1362612,'shelters: el motor da 1,362,612 (la hoja suma 1,465,652 por la referencia repetida)');
+  T(r.E===1465652,'shelters: el motor da 1,465,652, igual que la hoja (el renglon repetido se le atribuye al gemelo)');
   T(r.cupo.Singsun===1750000&&r.cupo.Eaglerise===1750000,'el techo es MIO: la carga NO pisa lo que puse en Ajustes');
   T(r.hoja&&r.hoja.Singsun===1300000,'pero la hoja queda guardada para poder compararla');
   T(r.claves.includes('Eaglerise|CFM3-1'),'el CFM3-1 sigue siendo un pedido vivo');

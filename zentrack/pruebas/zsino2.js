@@ -19,9 +19,9 @@ let ok=0,mal=0;const T=(c,m)=>{if(c){ok++;console.log('  OK   '+m);}else{mal++;c
     S:Math.round(cargaViva('Singsun')), E:Math.round(cargaViva('Eaglerise')),
   }));
   console.log('   modos:',JSON.stringify(s1.modos));
-  T(s1.sembrado&&s1.n===30,'quedaron los 30 pedidos sembrados');
+  T(s1.sembrado&&s1.n===31,'quedaron los 31 pedidos sembrados (30 + el gemelo INGEV2)');
   T(Math.abs(s1.S-1413028)<=2,'Singsun arranca en '+s1.S+', la hoja dice 1,413,028 (±2 por redondeo)');
-  T(s1.E===1362612,'Eaglerise arranca en 1,362,612');
+  T(s1.E===1465652,'Eaglerise arranca en 1,465,652, el total de la hoja');
 
   console.log('\n— el techo es MIO, ninguna carga lo pisa —');
   await p.evaluate(()=>{setCupo('Singsun',1750000);setCupo('Eaglerise',1750000);});
@@ -29,7 +29,7 @@ let ok=0,mal=0;const T=(c,m)=>{if(c){ok++;console.log('  OK   '+m);}else{mal++;c
   await p.evaluate(()=>{wizGo(4);wizApprove();}); await p.waitForTimeout(1300);
   const s2=await p.evaluate(()=>({cupo:CUPO,n:Object.keys(SINO.ped).length,S:Math.round(cargaViva('Singsun'))}));
   T(s2.cupo.Singsun===1750000&&s2.cupo.Eaglerise===1750000,'el techo que puse a mano sobrevivio la recarga');
-  T(s2.n===30,'la recarga no duplico ni borro pedidos');
+  T(s2.n===31,'la recarga no duplico ni borro pedidos');
 
   console.log('\n— mis decisiones sobreviven una recarga —');
   await p.evaluate(()=>{
@@ -55,7 +55,7 @@ let ok=0,mal=0;const T=(c,m)=>{if(c){ok++;console.log('  OK   '+m);}else{mal++;c
   await p.waitForTimeout(400);
   const s3=await p.evaluate(()=>({n:Object.keys(SINO.ped).length,r:SINO.ped['Singsun|7-2'],
     S:Math.round(cargaViva('Singsun')),cupo:CUPO}));
-  T(s3.n===30&&s3.r.fijo===99999,'al recargar la herramienta esta todo igual');
+  T(s3.n===31&&s3.r.fijo===99999,'al recargar la herramienta esta todo igual');
   T(s3.cupo.Singsun===1750000,'y el techo tambien');
 
   console.log('\n— la pestaña de Precios ya no me saca del campo —');

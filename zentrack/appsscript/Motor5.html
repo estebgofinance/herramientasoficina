@@ -537,12 +537,15 @@ consumoEq=function(e,mfg,regla){
   if(!r||!r.modo||r.modo==='fuera') return 0;
   const O=(e.cupoSaldo!=null)?(+e.cupoSaldo||0):((e.antSaldo||0)+(e.balSaldo||0));
   const M=(e.cupoMonto!=null)?(+e.cupoMonto||0):(+e.mfgAmt||0);
-  if(O<=0.5) return 0;
-  if(r.modo==='monto') return M;
+  /* "monto fijo" es una decisión explícita tuya y manda sobre todo lo demás,
+     incluso si el pedido figura pagado: es la palanca para los casos en que la
+     hoja de Andrés dice una cosa y el detailed otra. */
   if(r.modo==='fijo'){
     const girado=Math.max(0,(+e.cupoSaldo0||0)-O);
     return Math.max(0,(+r.fijo||0)-girado);
   }
+  if(O<=0.5) return 0;
+  if(r.modo==='monto') return M;
   return O;
 };
 
