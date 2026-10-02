@@ -1011,4 +1011,158 @@ renderWizDiff=function(){
     +'</tr></thead><tbody>'+cuerpo+'</tbody></table></div>';
 };
 
+/* ===================================================================
+   LO QUE YO HICE A MANO (v1.4)
+   El trabajo manual no vivía en ninguna parte: el derrame de un pedido,
+   el nombre de proyecto que escribiste y el cliente que asignaste se
+   armaban sobre WIZ.work, y WIZ.work se reconstruye del archivo en cada
+   carga. Por eso cada order report te obligaba a rehacer todo.
+   Ahora se guarda en MIO y se vuelve a aplicar solo, antes de que veas
+   nada. Resultado: al cargar el mismo archivo otra vez, no hay nada que
+   rehacer y el paso Comparar sale vacío.
+   =================================================================== */
+let MIO={split:{},proj:{},cli:{}};
+
+/* ---- lo que guardo ---- */
+function mioRecordarSplit(baseClave,partes){ MIO.split[baseClave]={partes:partes}; }
+function mioOlvidarSplit(baseClave){ delete MIO.split[baseClave]; }
+function mioNombre(clave,proj){ if(proj&&(''+proj).trim()) MIO.proj[clave]=(''+proj).trim(); }
+function mioCliente(clave,cli){ if(cli&&cli!=='Por asignar') MIO.cli[clave]=cli; }
+
+/* ---- reconstruir un derrame sobre la fila que trae el archivo nuevo ---- */
+const _SUF='ABCDEFGHIJKLMNOP'.split('');
+function _mioParte(w,k,n,gid,orig){
+  const x=Object.assign({},w);
+  x.derrame=(w.derrame||'')+_SUF[k]; x.qty=1; x._splitGroup=gid; x._splitOrig=(k===0?orig:null);
+  _MONEY.forEach(function(f){
+    const v=+w[f]||0, q=Math.round(v/n);
+    x[f]=(k===n-1)?Math.round(v-q*(n-1)):q;
+  });
+  if(w.otrosDesglose) x.otrosDesglose=w.otrosDesglose.map(function(d){return Object.assign({},d,{monto:d.monto/n,pagado:d.pagado/n,saldo:d.saldo/n});});
+  if(w.pagosChina)    x.pagosChina   =w.pagosChina.map(function(d){return Object.assign({},d,{monto:Math.round(d.monto/n)});});
+  return x;
+}
+/* Vuelve a aplicar TODO lo manual sobre lo que acaba de traer el archivo. */
+function mioReaplicar(){
+  if(!WIZ.work||!WIZ.work.length) return {derrames:0,nombres:0};
+  let nd=0,nn=0;
+  /* 1) los derrames */
+  const salida=[];
+  WIZ.work.forEach(function(w){
+    const rec=MIO.split[kOf(w)];
+    if(!rec||!rec.partes||rec.partes.length<2||w._splitGroup){ salida.push(w); return; }
+    const n=rec.partes.length;
+    const gid='sp'+Date.now()+'-'+Math.floor(Math.random()*1000);
+    const orig=JSON.parse(JSON.stringify(w));
+    for(let k=0;k<n;k++){
+      const x=_mioParte(w,k,n,gid,orig);
+      const pr=rec.partes[k]||{};
+      if(pr.proj) x.proj=pr.proj;
+      if(pr.cliente&&pr.cliente!=='Por asignar'){ x.cliente=pr.cliente; x._cliCustom=true; }
+      salida.push(x);
+    }
+    nd++;
+  });
+  WIZ.work=salida; WIZ.work.forEach(function(x,j){x._i=j;});
+  /* 2) los nombres y clientes que escribí, incluso si el archivo trae otra cosa */
+  WIZ.work.forEach(function(w){
+    const k=kOf(w);
+    if(MIO.proj[k] && MIO.proj[k]!==w.proj){ w.proj=MIO.proj[k]; w._projMio=true; nn++; }
+    if(MIO.cli[k] && (!w.cliente||w.cliente==='Por asignar'||MIO.cli[k]!==w.cliente)){ w.cliente=MIO.cli[k]; w._cliCustom=true; }
+  });
+  return {derrames:nd,nombres:nn};
+}
+
+/* ---- enganches: registrar lo que hagas en el asistente ---- */
+const _splitAntesMio=splitRow;
+splitRow=function(i){
+  const w=W(i); const base=w?kOf(w):null;
+  _splitAntesMio.apply(this,arguments);
+  if(base){
+    const partes=WIZ.work.filter(function(x){return x._splitGroup&&(''+x.derrame).indexOf(w.derrame)===0;})
+      .map(function(x){return {proj:x.proj,cliente:x.cliente};});
+    if(partes.length>1) mioRecordarSplit(base,partes);
+  }
+};
+const _unSplitAntesMio=unSplit;
+unSplit=function(gid){
+  const items=(WIZ.work||[]).filter(function(w){return w._splitGroup===gid;});
+  const base=items.length?kOf({mfg:items[0].mfg,derrame:(''+items[0].derrame).replace(/[A-P]$/,'')}):null;
+  _unSplitAntesMio.apply(this,arguments);
+  if(base) mioOlvidarSplit(base);
+};
+/* cada vez que escribes un proyecto o eliges un cliente en el paso 2, queda registrado */
+const _setWAntesMio=setW;
+setW=function(i,f,val){
+  _setWAntesMio.apply(this,arguments);
+  const w=W(i); if(!w) return;
+  if(f==='proj') mioNombre(kOf(w),val);
+  if(f==='cliente') mioCliente(kOf(w),val);
+};
+const _setOrdCliAntesMio=(typeof setOrdCliente==='function')?setOrdCliente:null;
+if(_setOrdCliAntesMio) setOrdCliente=function(oid,v){
+  _setOrdCliAntesMio.apply(this,arguments);
+  (WIZ.work||[]).forEach(function(w){ if(w.ordenId===oid) mioCliente(kOf(w),v); });
+};
+
+/* ---- al cargar un archivo, reaplicar ANTES de que veas nada ---- */
+const _cargarDetAntesMio=cargarDetailed;
+cargarDetailed=function(wb,nombre){
+  const r=_cargarDetAntesMio.apply(this,arguments);
+  if(r!==false){
+    const x=mioReaplicar();
+    if(x.derrames||x.nombres){
+      WIZ.prev=prevDe(); validateWiz(); renderWiz();
+      toast('Te devolví lo tuyo: '+(x.derrames?x.derrames+' pedido(s) derramado(s) como los tenías':'')
+        +(x.derrames&&x.nombres?' · ':'')+(x.nombres?x.nombres+' nombre(s) de proyecto':''));
+    }
+  }
+  return r;
+};
+
+/* ---- que MIO viva en la Hoja ---- */
+const _serAntesMio=serializeState;
+serializeState=function(){
+  const o=JSON.parse(_serAntesMio.apply(this,arguments));
+  o.MIO=MIO; return JSON.stringify(o);
+};
+const _appAntesMio=applyState;
+applyState=function(s){
+  _appAntesMio.apply(this,arguments);
+  MIO=(s.MIO&&s.MIO.split)?{split:s.MIO.split||{},proj:s.MIO.proj||{},cli:s.MIO.cli||{}}
+                          :{split:{},proj:{},cli:{}};
+  if(!s.MIO) mioSembrar();          /* estado viejo: deducir lo manual de lo ya cargado */
+};
+/* Si vienes de una versión anterior, lo que ya tenías derramado y nombrado se
+   deduce de ORD y queda registrado, para no perderlo en la próxima carga. */
+function mioSembrar(){
+  const grupos={};
+  EQ.forEach(function(e){
+    if(e._splitGroup){ (grupos[e._splitGroup]=grupos[e._splitGroup]||[]).push(e); }
+    if(e.proj&&!/^(Orden|Pedido)\s/.test(e.proj)) MIO.proj[kOf(e)]=e.proj;
+    if(e.cliente&&e.cliente!=='Por asignar') MIO.cli[kOf(e)]=e.cliente;
+  });
+  Object.keys(grupos).forEach(function(g){
+    const items=grupos[g].slice().sort(function(a,b){return (''+a.derrame).localeCompare(''+b.derrame);});
+    const base=kOf({mfg:items[0].mfg,derrame:(''+items[0].derrame).replace(/[A-P]$/,'')});
+    MIO.split[base]={partes:items.map(function(x){return {proj:x.proj,cliente:x.cliente};})};
+  });
+}
+const _apruebaAntesMio=wizApprove;
+wizApprove=function(){
+  /* lo que quedó en pantalla al aprobar ES lo tuyo: se registra */
+  const grupos={};
+  (WIZ.work||[]).forEach(function(w){
+    if(w._splitGroup) (grupos[w._splitGroup]=grupos[w._splitGroup]||[]).push(w);
+    if(w.proj&&!/^(Orden|Pedido)\s/.test(w.proj)) MIO.proj[kOf(w)]=w.proj;
+    if(w.cliente&&w.cliente!=='Por asignar') MIO.cli[kOf(w)]=w.cliente;
+  });
+  Object.keys(grupos).forEach(function(g){
+    const items=grupos[g].slice().sort(function(a,b){return (''+a.derrame).localeCompare(''+b.derrame);});
+    const base=kOf({mfg:items[0].mfg,derrame:(''+items[0].derrame).replace(/[A-P]$/,'')});
+    MIO.split[base]={partes:items.map(function(x){return {proj:x.proj,cliente:x.cliente};})};
+  });
+  return _apruebaAntesMio.apply(this,arguments);
+};
+
 </script>
