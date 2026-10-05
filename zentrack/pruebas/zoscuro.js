@@ -1,0 +1,21 @@
+const {chromium}=require('playwright-core');const fs=require('fs');
+(async()=>{
+  const b=await chromium.launch({executablePath:'/opt/pw-browsers/chromium'});
+  const p=await b.newPage({viewport:{width:1400,height:900},colorScheme:'dark'});
+  p.on('dialog',d=>d.accept()); const errs=[]; p.on('pageerror',e=>errs.push(''+e));
+  await p.route('**/*',r=>{const u=r.request().url();
+    if(u.includes('xlsx.full.min.js'))return r.fulfill({body:fs.readFileSync(require.resolve('xlsx/dist/xlsx.full.min.js'),'utf8'),contentType:'text/javascript'});
+    if(u.startsWith('http'))return r.fulfill({body:'',contentType:'text/javascript'});return r.continue();});
+  await p.goto('file://'+__dirname+'/ASM4.html'); await p.waitForTimeout(450);
+  await p.evaluate(()=>verifyOpen()); await p.setInputFiles('#reportFile',['DET3.xlsx','OR2.xlsx']);
+  await p.waitForFunction(()=>WIZ&&WIZ.loaded&&WIZ.work&&WIZ.work.length>0,null,{timeout:60000});
+  await p.evaluate(()=>{wizGo(2);wizApprove();});
+  await p.evaluate(()=>{navTo('precios');}); await p.waitForTimeout(300);
+  await p.evaluate(()=>{const c=document.querySelectorAll('#v-precios input[type=checkbox]');for(let i=1;i<4&&i<c.length;i++)c[i].click();}); await p.waitForTimeout(300);
+  await p.screenshot({path:'os_precios.png'});
+  const est=await p.evaluate(()=>[...document.querySelectorAll('select')].filter(x=>x.offsetParent).slice(0,40).map(x=>{const c=getComputedStyle(x);return c.backgroundColor+'|'+c.color;}));
+  console.log([...new Set(est)]);
+  await p.evaluate(()=>navTo('sinosure')); await p.waitForTimeout(300); await p.evaluate(()=>{const t=[...document.querySelectorAll('#v-sinosure tr')].find(r=>/Orden 11/.test(r.textContent));if(t)t.click();}); await p.waitForTimeout(300); await p.screenshot({path:'os_sino.png'});
+  await p.evaluate(()=>openPanel(ORD[0].id)); await p.waitForTimeout(300); await p.screenshot({path:'os_panel.png'});
+  console.log('errores',errs); await b.close();
+})();

@@ -9,7 +9,13 @@
   --danger:#B3261E; --danger-soft:#F8E7E5;
   --ok:#2E6E5A;
   --band:rgba(179,38,30,.06);
+  /* tokens que usan las pestañas nuevas (Sinosure, Precios y clientes): antes no existían y quedaban transparentes */
+  --card:#FFFFFF; --line:#CDD1D6; --line2:#CDD1D6; --hover:#F4F5F6; --bg:#F4F5F6;
+  color-scheme:light;
 }
+/* menús desplegables siempre claros y legibles, también con Windows en modo oscuro */
+select{color-scheme:light}
+option,optgroup{background:#FFFFFF;color:#17181A}
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%}
 body{
@@ -893,9 +899,4 @@ table.stmt td.l{font-variant-numeric:normal}
 /* v0.18 · conciliación ORDER REPORT ↔ detailed (bloque completo) */
 .cc-wrap{border:1px solid var(--rule);border-radius:8px;overflow:hidden;margin-top:8px}
 .cc-row{border-top:1px solid var(--rule)}
-.cc-row:first-child{border-top:none}
-.cc-row>summary{list-style:none;cursor:pointer;display:grid;grid-template-columns:150px 1fr auto;gap:10px;align-items:center;padding:8px 12px;font-size:12.5px}
-.cc-row>summary::-webkit-details-marker{display:none}
-.cc-row.dif>summary{background:var(--danger-soft)}
-.cc-po b{display:block;font-size:13px}.cc-po small{color:var(--ink3);font-size:11px}
 </style>
