@@ -59,11 +59,11 @@ let ok=0,mal=0;const T=(c,m)=>{if(c){ok++;console.log('  OK   '+m);}else{mal++;c
   T(s3.cupo.Singsun===1750000,'y el techo tambien');
 
   console.log('\n— la pestaña de Precios ya no me saca del campo —');
-  await p.evaluate(()=>{navTo('precios');});
+  await p.evaluate(()=>{navTo('precios');PCADV=true;pintarPrecios();});
   await p.waitForTimeout(500);
   await p.evaluate(()=>{ if(!GPRE.length) gpNuevo(); });
   await p.waitForTimeout(400);
-  const sel='#v-precios input[placeholder="Factura Mompox"]';
+  const sel='#v-precios .pc-adv input[placeholder="Factura Mompox"]';
   const hay=await p.$(sel);
   if(hay){
     await p.click(sel);

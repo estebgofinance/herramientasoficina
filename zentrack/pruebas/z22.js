@@ -33,7 +33,7 @@ const ok=(n,c)=>console.log((c?'  OK ':'FALLA')+'  '+n);
   const nEq=await g(`EQ.length`);
 
   // ---- PRECIOS ----
-  await p.click('nav.tabs button[data-v="precios"]'); await p.waitForTimeout(400);
+  await p.click('nav.tabs button[data-v="precios"]'); await p.waitForTimeout(400); await p.evaluate(()=>{PCADV=true;pintarPrecios();}); await p.waitForTimeout(250);
   ok('la pestaña Precios pinta', (await p.textContent('#v-precios')).includes('Precios por grupo'));
   await p.screenshot({path:OUT+'v22-precios0.png'});
 
@@ -67,7 +67,7 @@ const ok=(n,c)=>console.log((c?'  OK ':'FALLA')+'  '+n);
     pintarPrecios();});
   await p.waitForTimeout(300);
   ok('avisa cuando el reparto a mano no cuadra', (await p.textContent('#v-precios')).includes('te faltan'));
-  await p.click('#v-precios button:has-text("Cuadrar")'); await p.waitForTimeout(350);
+  await p.click('#v-precios .pc-adv button:has-text("Cuadrar")'); await p.waitForTimeout(350);
   ok('el botón de cuadrar ajusta la última fila',
      Math.abs((await g(`gpRepartido(GPRE[0])`))-520000)<0.01);
   await p.evaluate(()=>{GPRE[0].base='costo';pintarPrecios();refreshAll();});

@@ -611,9 +611,9 @@ function updateWizFoot(){const f=document.getElementById('reconFoot');
 /* Paso 1 */
 function renderWizReceive(){
   if(!WIZ.loaded){document.getElementById('reconBody').innerHTML=`
-    <div class="wizhint">Selecciona el <b>detailed</b> (Detailed order and operational fund report). De ahí sale todo: los pedidos, los montos, los pagos a China, los otros componentes y el cupo Sinosure. El ORDER REPORT es opcional y solo sirve para pegarle el cliente a cada pedido.</div>
+    <div class="wizhint">Selecciona <b>los dos archivos juntos</b>. Del <b>ORDER REPORT</b> salen los pedidos, el cliente, el proyecto, el estado y las fechas. Del <b>detailed</b> salen la plata con China (saldos, otros componentes, pagos) y el cupo Sinosure. Si los dos dicen cosas distintas, te lo muestro.</div>
     <div class="uploadbox" onclick="document.getElementById('reportFile').click()">
-      <div class="up-ic">⬆︎</div><div class="up-t">Seleccionar el detailed</div><div class="up-s">Archivo .xlsx con hojas Summary y Sinosure</div></div>`;return;}
+      <div class="up-ic">⬆︎</div><div class="up-t">Seleccionar los dos archivos</div><div class="up-s">El detailed y el ORDER REPORT a la vez (Ctrl + clic en cada uno). El detailed solo también sirve.</div></div>`;return;}
   const ords=new Set(WIZ.work.map(w=>w.ordenId)).size;
   const sum=(mfg,f)=>WIZ.work.filter(w=>w.mfg===mfg).reduce((s,w)=>s+(+w[f]||0),0);
   const C=WIZ.concilia;
@@ -634,14 +634,7 @@ function renderWizReceive(){
     ${(WIZ.omitidos||[]).length?`<div class="cfgnote2" style="margin-top:8px"><b>${WIZ.omitidos.length} pedido(s) cerrados</b> que no se cargan (sin saldo y fuera de la hoja Sinosure): ${WIZ.omitidos.map(o=>o.poRaw).join(' · ')}</div>`:''}
     ${(WIZ.agregados||[]).length?`<div class="cfgnote2"><b>Filas agregadas</b> que no se cargan porque son la suma de otros pedidos: ${WIZ.agregados.map(a=>a.poRaw+' ('+fmtUSDs(a.monto)+' = '+a.cubre.join(' + ')+')').join(' · ')}</div>`:''}
     ${C?renderConcilia(C):'<div class="cfgnote2" style="margin-top:8px;color:var(--dato-vencido)">Este archivo no trae hoja <b>Sinosure</b>, así que el cupo queda sin asignar.</div>'}
-    <div class="rep-sec" style="margin-top:20px">ORDER REPORT · opcional</div>
-    ${WIZ.orNombre?`<div class="cfgnote2">Cruzado con <b>${WIZ.orNombre}</b>.
-      ${(WIZ.orDifs||[]).length?`<br><span style="color:var(--dato-vencido)">${WIZ.orDifs.length} pedido(s) con monto distinto</span>: ${WIZ.orDifs.map(d=>d.derrame+' (order report '+fmtUSDs(d.or)+' vs detailed '+fmtUSDs(d.det)+')').join(' · ')}. Manda el detailed.`:'<br>Los montos coinciden.'}
-      ${(WIZ.orSobran||[]).length?`<br>Está en el ORDER REPORT y no en el detailed: ${WIZ.orSobran.join(' · ')}`:''}</div>`
-     :`<div class="wizhint" style="margin-bottom:10px">El detailed no trae el cliente de cada pedido. Si subes el ORDER REPORT, se lo pega; si no, los asignas a mano en el paso siguiente (y se quedan guardados para los próximos cortes).</div>
-      <div class="uploadbox" onclick="document.getElementById('reportOldFile').click()" style="padding:14px">
-        <div class="up-ic">⬆︎</div><div class="up-t">Cargar ORDER REPORT (opcional)</div><div class="up-s">Solo aporta el cliente y las fechas límite</div>
-      </div>`}`;
+    ${_orBloqueHTML()}`;
 }
 
 /* Tabla de conciliación: una fila por pedido, desplegable para ver el bloque completo leído */

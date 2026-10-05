@@ -188,4 +188,332 @@ wizApprove=function(){
   return _apruebaAntesMio.apply(this,arguments);
 };
 
+/* ===================================================================
+   v1.5 · LOS DOS ARCHIVOS JUNTOS
+   Del ORDER REPORT: pedidos, cliente, proyecto, cantidad, estado, fechas,
+   BL, telex y fecha límite de pago. Del detailed: la plata con China
+   (saldo al fabricante, otros componentes, desglose de pagos) y el cupo
+   Sinosure. Lo que tú cambies a mano gana sobre los dos.
+   Si los archivos no coinciden, no se escoge en silencio: se avisa.
+   =================================================================== */
+let _ORPEND=null;
+/* el pedido del ORDER REPORT que corresponde a una fila (o a la parte de un derrame) */
+function _orBuscar(idx,w){
+  const base=w.splitDe||(w._splitGroup?(''+w.derrame).replace(/[A-P]$/,''):w.derrame);
+  const c=idx[_poKey(base)+_poVarK(base)]||[];
+  return c.find(function(o){return o.mfg===w.mfg;})||c.find(function(o){return !o.mfg;})||null;
+}
+function aplicarOrderReport(p,nombre){
+  const idx={};
+  p.equipos.forEach(function(o){ const k=_poKey(o.derrame)+_poVarK(o.derrame); (idx[k]=idx[k]||[]).push(o); });
+  const usados=new Set(), difs=[], n={cli:0,lim:0};
+  const distinto=function(a,b){return Math.abs((+a||0)-(+b||0))>2;};
+  (WIZ.work||[]).forEach(function(w){
+    const esParte=!!(w.splitDe||w._splitGroup);
+    const c=_orBuscar(idx,w);
+    if(!c){ if(!esParte) difs.push({tipo:'soloDet',der:w.derrame,mfg:w.mfg,det:+w.cupoSaldo||0}); return; }
+    usados.add(c);
+    /* una fila que Andrés todavía no llenó (sin fabricante ni montos) solo aporta cliente y proyecto */
+    const vacia=!c.mfg&&!(+c.cupoMonto>0);
+    /* lo que manda el ORDER REPORT */
+    if(c.cliente&&c.cliente!=='Por asignar'&&!w._cliCustom){ if(w.cliente!==c.cliente) n.cli++; w.cliente=c.cliente; }
+    if(!esParte&&c.proj&&c.proj!=='-'&&!w._projMio) w.proj=c.proj;
+    if(!vacia&&c.st&&!c.dudoso){ if(!esParte&&w.st!==c.st) difs.push({tipo:'estado',der:w.derrame,mfg:w.mfg,det:STAGE[w.st]||w.st,or:STAGE[c.st]||c.st}); w.st=c.st; }
+    if(!vacia) ['etd','eta','prodFin'].forEach(function(f){ if(c[f]) w[f]=c[f]; });
+    if(c.bl) w.bl=c.bl; if(c.blNo) w.blNo=c.blNo; if(c.telex) w.telex=c.telex;
+    if(c.limitePago){ w.limitePago=c.limitePago; w.limiteFuente='ORDER REPORT · pagos prioritarios'; n.lim++; }
+    if(!vacia&&!esParte&&(''+(c.qtyRaw||'')).trim()&&(+c.qty||0)>0&&(+w.qty||1)!==(+c.qty)){ difs.push({tipo:'cantidad',der:w.derrame,mfg:w.mfg,det:+w.qty||1,or:+c.qty}); w.qty=+c.qty; }
+    /* la plata la manda el detailed: aquí solo se compara */
+    if(!esParte){
+      if(!c.mfg&&!(+c.cupoMonto>0)) difs.push({tipo:'sinMontos',der:w.derrame,mfg:w.mfg,det:+w.cupoSaldo||0});
+      else {
+        if(distinto(w.cupoSaldo,c.cupoSaldo)) difs.push({tipo:'saldo',der:w.derrame,mfg:w.mfg,det:+w.cupoSaldo||0,or:+c.cupoSaldo||0});
+        if(distinto(w.otrosSaldo,c.otrosSaldo)) difs.push({tipo:'otros',der:w.derrame,mfg:w.mfg,det:+w.otrosSaldo||0,or:+c.otrosSaldo||0});
+      }
+    }
+  });
+  p.equipos.forEach(function(o){
+    if(usados.has(o)) return;
+    if((+o.cupoSaldo||0)+(+o.otrosSaldo||0)>0.5) difs.push({tipo:'soloOR',der:o.derrame,mfg:o.mfg,or:+o.cupoSaldo||0});
+  });
+  WIZ.orNombre=nombre||'ORDER REPORT'; WIZ.orDifs=difs; WIZ.orResumen=n; WIZ.orSobran=[];
+  return difs;
+}
+/* el resumen del cruce, en el paso 1 */
+function _orBloqueHTML(){
+  if(!WIZ.orNombre) return ''
+    +'<div class="rep-sec" style="margin-top:20px">ORDER REPORT</div>'
+    +'<div class="wizhint" style="margin-bottom:10px">Cargaste solo el detailed. Sube también el ORDER REPORT para traer el cliente, el estado y las fechas de cada pedido.</div>'
+    +'<div class="uploadbox" onclick="document.getElementById(\'reportOldFile\').click()" style="padding:14px">'
+    +'<div class="up-ic">⬆︎</div><div class="up-t">Cargar ORDER REPORT</div><div class="up-s">Cliente, proyecto, estado, fechas y fecha límite de pago</div></div>';
+  const d=WIZ.orDifs||[], r=WIZ.orResumen||{};
+  const etq={saldo:'Saldo al fabricante distinto',otros:'Otros componentes distintos',estado:'Estado distinto',cantidad:'Cantidad distinta',
+    sinMontos:'Sin montos en el ORDER REPORT',soloDet:'Solo está en el detailed',soloOR:'Solo está en el ORDER REPORT'};
+  const queManda={saldo:'detailed',otros:'detailed',estado:'ORDER REPORT',cantidad:'ORDER REPORT',sinMontos:'detailed',soloDet:'detailed',soloOR:'—'};
+  const val=function(x){return typeof x==='number'?fmtUSDs(x):(x==null?'—':x);};
+  const filas=d.map(function(x){
+    const num=(x.tipo==='cantidad');
+    return '<tr><td><b>'+x.der+'</b><small>'+(x.mfg||'')+'</small></td><td>'+etq[x.tipo]+'</td>'
+      +'<td class="r">'+(x.det==null?'—':(num?x.det:val(x.det)))+'</td><td class="r">'+(x.or==null?'—':(num?x.or:val(x.or)))+'</td>'
+      +'<td class="od-m">'+queManda[x.tipo]+'</td></tr>';}).join('');
+  return '<div class="rep-sec" style="margin-top:20px">ORDER REPORT · '+WIZ.orNombre+'</div>'
+    +'<div class="cfgnote2">Del ORDER REPORT se tomaron cliente, proyecto, estado, fechas'+(r.lim?' y '+r.lim+' fecha(s) límite de pago':'')+'. '
+    +(d.length?'<b style="color:var(--dato-vencido)">'+d.length+' diferencia(s) entre los dos archivos</b>: la columna "Manda" dice cuál se usó. Esta lista es para mandársela a Andrés.'
+             :'Los dos archivos coinciden en todo.')+'</div>'
+    +(d.length?'<div class="vscroll" style="max-height:260px;margin-top:8px"><table class="vtable od"><thead><tr><th>Pedido</th><th>Qué difiere</th><th class="r">Detailed</th><th class="r">ORDER REPORT</th><th>Manda</th></tr></thead><tbody>'+filas+'</tbody></table></div>':'');
+}
+
+/* ---- la carga: el ORDER REPORT se aplica ANTES de devolverte tus derrames y nombres ---- */
+const _cargarDetAntesOR=cargarDetailed;
+cargarDetailed=function(wb,nombre){
+  const orp=_ORPEND; _ORPEND=null;
+  if(!orp) return _cargarDetAntesOR.apply(this,arguments);
+  /* se intercala: detailed → ORDER REPORT → lo tuyo */
+  const reap=mioReaplicar; let x={derrames:0,nombres:0};
+  mioReaplicar=function(){ aplicarOrderReport(orp.p,orp.nombre); x=reap(); return x; };
+  try{ return _cargarDetAntesOR.apply(this,arguments); } finally { mioReaplicar=reap; validateWiz(); renderWiz(); }
+};
+/* ORDER REPORT subido después, por la casilla del paso 1 */
+cruzarOrderReport=function(wb,nombre){
+  if(!WIZ.work){ toast('Primero carga el detailed'); return false; }
+  const p=parseReportV2(wb);
+  if(!p){ toast('Ese archivo no tiene hoja "ORDER REPORT".'); return false; }
+  if(p.error){ toast(p.error); return false; }
+  const d=aplicarOrderReport(p,nombre);
+  /* lo tuyo sigue ganando */
+  (WIZ.work||[]).forEach(function(w){ const k=kOf(w);
+    if(MIO.proj[k]) w.proj=MIO.proj[k];
+    if(MIO.cli[k]){ w.cliente=MIO.cli[k]; w._cliCustom=true; } });
+  WIZ.prev=prevDe(); validateWiz(); renderWiz();
+  toast('ORDER REPORT cruzado'+(d.length?' · '+d.length+' diferencia(s) con el detailed':' · coincide con el detailed'));
+  return true;
+};
+
+/* ---- la entrada acepta los dos archivos a la vez ---- */
+(function(){
+  const viejo=document.getElementById('reportFile'); if(!viejo) return;
+  const nuevo=viejo.cloneNode(true); nuevo.multiple=true;
+  viejo.parentNode.replaceChild(nuevo,viejo);
+  nuevo.addEventListener('change',function(ev){
+    const fs=[...(ev.target.files||[])]; ev.target.value=''; if(!fs.length) return;
+    const b=document.getElementById('reconBody'); if(b) b.innerHTML='<div class="wizhint">Leyendo '+fs.map(function(f){return '<b>'+f.name+'</b>';}).join(' y ')+'…</div>';
+    if(typeof XLSX==='undefined'){ wizError('No se cargó la librería para leer Excel (SheetJS). Revisa la conexión a internet.'); return; }
+    Promise.all(fs.map(function(f){return new Promise(function(ok,mal){
+      const rd=new FileReader(); rd.onerror=function(){mal(new Error('No se pudo abrir '+f.name));};
+      rd.onload=function(e){ try{ ok({f:f,wb:XLSX.read(new Uint8Array(e.target.result),{type:'array',cellDates:true})}); }catch(err){ mal(err); } };
+      rd.readAsArrayBuffer(f);});}))
+    .then(function(lista){
+      const det=lista.find(function(x){return _sheet(x.wb,'Summary');});
+      const orx=lista.find(function(x){return _sheet(x.wb,'ORDER REPORT');});
+      if(!det){
+        wizError(orx?'Falta el <b>detailed</b>. Vuelve a seleccionar y marca <b>los dos archivos</b> a la vez (Ctrl + clic en cada uno): el detailed trae la plata con China y el cupo Sinosure.'
+                    :'No reconozco estos archivos. Hojas: '+lista.map(function(x){return x.wb.SheetNames.join(', ');}).join(' / '));
+        return;
+      }
+      if(orx){
+        const p=parseReportV2(orx.wb);
+        if(p&&!p.error) _ORPEND={p:p,nombre:orx.f.name};
+        else toast('El ORDER REPORT no se pudo leer'+(p&&p.error?': '+p.error:'')+'. Sigo solo con el detailed.');
+      }
+      cargarDetailed(det.wb,det.f.name);
+    })
+    .catch(function(err){ wizError('No se pudo leer el archivo: '+(err&&err.message?err.message:err)); });
+  });
+})();
+
+/* ===================================================================
+   SINOSURE · ¿COINCIDE CON LA HOJA DE ANDRÉS?
+   La cifra que vale es la de la hoja Sinosure del detailed. Si algún
+   pedido quedó distinto (una decisión vieja, como el PO#10 en "saldo"),
+   se avisa arriba y se iguala de un clic.
+   =================================================================== */
+function sinoDifHoja(){
+  const out=[], vistos={};
+  const g=_gruposDerrame(EQ);
+  Object.keys(g).forEach(function(k){
+    const x=g[k], pk=_claveDe(x.mfg,x.base), r=SINO.ped[pk];
+    x.partes.forEach(function(e){ vistos[kOf(e)]=true; });
+    if(!r||r.sug==null) return;
+    const mio=x.partes.reduce(function(a,e){return a+consumoEq(e,e.mfg);},0);
+    if(Math.abs(mio-r.sug)>2) out.push({k:pk,der:x.base,mfg:x.mfg,mio:mio,hoja:r.sug,partes:x.partes});
+  });
+  EQ.forEach(function(e){
+    const k=kOf(e); if(vistos[k]||e.splitDe) return;
+    const r=SINO.ped[k]; if(!r||r.sug==null) return;
+    const mio=consumoEq(e,e.mfg);
+    if(Math.abs(mio-r.sug)>2) out.push({k:k,der:e.derrame,mfg:e.mfg,mio:mio,hoja:r.sug,partes:[e]});
+  });
+  return out;
+}
+function sinoIgualar(k){
+  const lista=sinoDifHoja().filter(function(d){return !k||d.k===k;});
+  lista.forEach(function(d){
+    const O=d.partes.reduce(function(a,e){return a+(+e.cupoSaldo||0);},0);
+    const M=d.partes.reduce(function(a,e){return a+(+e.cupoMonto||e.mfgAmt||0);},0);
+    const pr=_sinoPropuesta(Math.round(O),Math.round(M),d.hoja)||{modo:'fijo',fijo:Math.round(d.hoja)};
+    const r=SINO.ped[d.k]||(SINO.ped[d.k]={nota:'',sug:d.hoja});
+    r.modo=pr.modo; r.fijo=pr.fijo; r.mio=false;
+    /* las partes vuelven a heredar del pedido completo */
+    if(d.partes.length>1) d.partes.forEach(function(e){ const o=SINO.ped[kOf(e)]; if(o){ o.modo=null; o.mio=false; } });
+  });
+  refreshAll(); renderLedger(); guardar4();
+  toast(lista.length+' pedido(s) igualado(s) a la hoja de Andrés');
+}
+function _snDifHTML(){
+  const d=sinoDifHoja(); if(!d.length) return '';
+  return '<div class="sn-difh"><b>'+d.length+' pedido(s) no coinciden con la hoja de Andrés</b>'
+    +'<button class="vz-b" style="margin-left:auto" onclick="sinoIgualar()">Igualar todo a la hoja</button>'
+    +'<div class="sn-difl">'+d.map(function(x){
+      return '<span class="sn-bp">'+x.der+' · tú '+fmtUSDs(x.mio)+' · hoja '+fmtUSDs(x.hoja)
+        +' <a href="#" onclick="event.preventDefault();sinoIgualar(\''+x.k+'\')">igualar</a></span>';}).join('')+'</div></div>';
+}
+
+/* ===================================================================
+   PRECIOS Y CLIENTES (v1.5)
+   Una tabla, un pedido por fila. Proyecto, cliente y precio se editan ahí
+   mismo. Marcas varios y: los mueves a otro cliente, o les pones un precio
+   total que se reparte solo por costo. Todo queda en MIO, así que ninguna
+   carga del order report lo vuelve a pisar.
+   La vista de grupos de antes queda abajo, plegada.
+   =================================================================== */
+let PCSEL=new Set(), PCF={cli:'',q:'',sinPrecio:false}, PCADV=false;
+const _pcEq=k=>EQ.find(function(e){return kOf(e)===k;});
+function _pcVisibles(){
+  const q=(PCF.q||'').toLowerCase();
+  return EQ.filter(function(e){
+    if(PCF.cli&&e.cliente!==PCF.cli) return false;
+    if(PCF.sinPrecio&&(+e.precioVenta>0||gpDeEq(e))) return false;
+    if(q&&((e.derrame||'')+' '+(e.proj||'')+' '+(e.cliente||'')+' '+(e.ordenId||'')).toLowerCase().indexOf(q)<0) return false;
+    return true;
+  }).sort(function(a,b){
+    return (a.mfg+a.ordenId).localeCompare(b.mfg+b.ordenId)||(''+a.derrame).localeCompare(''+b.derrame,undefined,{numeric:true});
+  });
+}
+const _pcCosto=e=>(+e.totalChina||((+e.cupoMonto||0)+(+e.otrosMonto||0)));
+function _pcCliOpts(sel){
+  const cs=[...new Set(CLIENTES.concat(EQ.map(function(e){return e.cliente;})))].filter(function(c){return c&&c!=='Por asignar';}).sort();
+  return '<option value="Por asignar"'+(sel==='Por asignar'||!sel?' selected':'')+'>Por asignar</option>'
+    +cs.map(function(c){return '<option value="'+esc4(c)+'"'+(c===sel?' selected':'')+'>'+esc4(c)+(esInterno(c)?' · interno':'')+'</option>';}).join('');
+}
+/* el filtro: "Todos" de verdad, y cada cliente con cuántos pedidos tiene */
+function _pcFiltroOpts(){
+  const n={}; EQ.forEach(function(e){ const c=e.cliente||'Por asignar'; n[c]=(n[c]||0)+1; });
+  return '<option value=""'+(!PCF.cli?' selected':'')+'>Todos los clientes ('+EQ.length+')</option>'
+    +Object.keys(n).sort().map(function(c){return '<option value="'+esc4(c)+'"'+(PCF.cli===c?' selected':'')+'>'+esc4(c)+' ('+n[c]+')</option>';}).join('');
+}
+function _pcHTML(){
+  const filas=_pcVisibles(), porOrd={};
+  filas.forEach(function(e){ const k=e.mfg+'|'+e.ordenId; (porOrd[k]=porOrd[k]||[]).push(e); });
+  let body='';
+  Object.keys(porOrd).forEach(function(ok){
+    const eqs=porOrd[ok], todas=eqs.every(function(e){return PCSEL.has(kOf(e));});
+    if(eqs.length>1) body+='<tr class="pc-o"><td><input type="checkbox" '+(todas?'checked':'')+' onchange="pcSelOrden(\''+ok+'\',this.checked)"></td>'
+      +'<td colspan="6">Orden '+eqs[0].ordenId+' · '+(eqs[0].mfg==='Singsun'?'trackers':'shelters')+' · '+eqs.length+' pedidos · marca aquí para seleccionarlos todos</td></tr>';
+    eqs.forEach(function(e){
+      const k=kOf(e), g=gpDeEq(e), sel=PCSEL.has(k);
+      const precio=g
+        ? '<span class="pc-gp">'+fmtUSDs(gpParte(g,e))+'<small>grupo «'+esc4(g.nombre||'sin nombre')+'» · <a href="#" onclick="event.preventDefault();pcSacar(\''+k+'\')">sacar</a></small></span>'
+        : '<input class="pc-in pc-num" type="number" step="0.01" min="0" value="'+(+e.precioVenta>0?e.precioVenta:'')+'" placeholder="sin precio" data-foco="pv-'+k+'" onchange="pcPrecio(\''+k+'\',this.value)">';
+      body+='<tr class="pc-r'+(sel?' on':'')+'">'
+        +'<td><input type="checkbox" '+(sel?'checked':'')+' onchange="pcSel(\''+k+'\',this.checked)"></td>'
+        +'<td class="pc-po"><b>'+(e.derrame||e.ordenId)+'</b></td>'
+        +'<td><input class="pc-in" value="'+esc4(e.proj||'')+'" placeholder="proyecto" data-foco="pj-'+k+'" onchange="pcProj(\''+k+'\',this.value)"></td>'
+        +'<td><select class="pc-cli'+(esInterno(e.cliente)?' int':'')+'" onchange="pcCli(\''+k+'\',this.value)">'+_pcCliOpts(e.cliente)+'</select></td>'
+        +'<td class="r">'+(+e.qty||1)+'</td>'
+        +'<td class="r">'+fmtUSDs(_pcCosto(e))+'</td>'
+        +'<td class="r">'+precio+'</td></tr>';
+    });
+  });
+  const selEqs=[...PCSEL].map(_pcEq).filter(Boolean);
+  const selCli=[...new Set(selEqs.map(function(e){return e.cliente;}))];
+  const sinP=EQ.filter(function(e){return !(+e.precioVenta>0)&&!gpDeEq(e);}).length;
+  const barra=selEqs.length
+    ? '<div class="pc-bar"><b>'+selEqs.length+' seleccionado(s)</b><span class="pc-q">costo '+fmtUSDs(selEqs.reduce(function(a,e){return a+_pcCosto(e);},0))+' · '+selCli.join(', ')+'</span>'
+      +'<span class="pc-act">Mover a <select id="pcDest">'+_pcCliOpts('')+'<option value="__nuevo">+ cliente nuevo…</option></select>'
+      +'<button class="btn" onclick="pcMover()">Mover</button></span>'
+      +'<span class="pc-act">Precio total US$ <input id="pcTot" class="pc-in pc-num" type="number" step="0.01" min="0" data-foco="pc-tot">'
+      +'<button class="btn" onclick="pcRepartir()">Repartir</button></span>'
+      +'<button class="btn" onclick="pcQuitar()">Quitar precio</button>'
+      +'<button class="btn" onclick="PCSEL.clear();pintarPrecios()">Cancelar</button></div>'
+    : '';
+  return '<div class="pc-top"><h2 class="title" style="margin:0">Precios y clientes</h2><div class="sn-sp"></div>'
+    +'<select class="pc-f" onchange="PCF.cli=this.value;pintarPrecios()">'+_pcFiltroOpts()+'</select>'
+    +'<input class="pc-f pc-buscar" placeholder="Buscar pedido o proyecto" value="'+esc4(PCF.q)+'" data-foco="pc-q" oninput="PCF.q=this.value;pintarPrecios()">'
+    +'<label class="pc-chk"><input type="checkbox" '+(PCF.sinPrecio?'checked':'')+' onchange="PCF.sinPrecio=this.checked;pintarPrecios()"> solo sin precio ('+sinP+')</label></div>'
+    +'<div class="sn-sub">Escribe el precio de venta de cada pedido, o marca varios y ponles un precio total: se reparte solo por su costo. '
+      +'Para pasar pedidos de Solenium a otro cliente, márcalos y usa <b>Mover a</b>. Lo que cambies aquí se queda en las próximas cargas.</div>'
+    +barra
+    +'<div class="vscroll pc-wrap"><table class="vtable pc"><thead><tr><th><input type="checkbox" onchange="pcSelTodo(this.checked)"></th>'
+    +'<th>Pedido</th><th>Proyecto</th><th>Cliente</th><th class="r">Cant.</th><th class="r">Costo China</th><th class="r">Precio de venta</th></tr></thead>'
+    +'<tbody>'+(body||'<tr><td colspan="7" class="sn-vacio">Nada con este filtro</td></tr>')+'</tbody></table></div>';
+}
+function _pcListo(){ sincronizarPrecios(); refreshAll(); renderLedger(); guardar4(); }
+function pcSel(k,on){ if(on) PCSEL.add(k); else PCSEL.delete(k); pintarPrecios(); }
+function pcSelOrden(ok,on){ _pcVisibles().forEach(function(e){ if(e.mfg+'|'+e.ordenId===ok){ if(on) PCSEL.add(kOf(e)); else PCSEL.delete(kOf(e)); } }); pintarPrecios(); }
+function pcSelTodo(on){ if(on) _pcVisibles().forEach(function(e){PCSEL.add(kOf(e));}); else PCSEL.clear(); pintarPrecios(); }
+function pcProj(k,v){ const e=_pcEq(k); if(!e) return; e.proj=(''+v).trim(); if(e.proj) MIO.proj[k]=e.proj; else delete MIO.proj[k]; _pcListo(); }
+function pcPrecio(k,v){ const e=_pcEq(k); if(!e||gpDeEq(e)) return; e.precioVenta=Math.max(0,+v||0); _pcListo(); }
+/* un pedido que cambia de cliente no puede seguir en un grupo de precio de otro */
+function _pcSacarDeGrupos(e,soloSiOtroCliente){
+  GPRE.forEach(function(g){
+    const i=(g.eqRefs||[]).indexOf(e.derrame); if(i<0) return;
+    if(soloSiOtroCliente&&(!g.cliente||g.cliente===e.cliente)) return;
+    g.eqRefs.splice(i,1); if(g.partes) delete g.partes[e.derrame];
+  });
+  /* un grupo que se quedó sin pedidos por un movimiento ya no representa nada */
+  for(let j=GPRE.length-1;j>=0;j--) if(!(GPRE[j].eqRefs||[]).length&&+GPRE[j].total>0) GPRE.splice(j,1);
+}
+function _pcAsignar(e,cli){
+  e.cliente=cli; e._cliCustom=true;
+  if(cli&&cli!=='Por asignar') MIO.cli[kOf(e)]=cli; else delete MIO.cli[kOf(e)];
+  _pcSacarDeGrupos(e,true);
+}
+function _pcRecalcOrdenes(){
+  ORD.forEach(function(o){ const cs={}; (o.equipos||[]).forEach(function(e){const c=e.cliente||'Por asignar';cs[c]=(cs[c]||0)+1;});
+    const top=Object.entries(cs).sort(function(a,b){return b[1]-a[1];})[0]; if(top) o.cliente=top[0]; });
+}
+function _pcAvisoExterno(cli){
+  if(cli&&cli!=='Por asignar'&&!esInterno(cli))
+    toast('<b>'+esc4(cli)+'</b> arma su estado de cuenta desde facturas: el pedido no le aparece hasta que tenga factura. Si debe salir como Solenium, márcalo interno en Clientes.');
+}
+function pcCli(k,v){ const e=_pcEq(k); if(!e) return; _pcAsignar(e,v); _pcRecalcOrdenes(); _pcListo(); _pcAvisoExterno(v); }
+function pcMover(){
+  let dest=(document.getElementById('pcDest')||{}).value; if(!dest) return;
+  if(dest==='__nuevo'){
+    dest=(prompt('Nombre del cliente nuevo:')||'').trim(); if(!dest) return;
+    const interno=confirm('¿'+dest+' es del grupo, como Solenium?\n\nAceptar: su estado de cuenta sale del order report a precio de venta.\nCancelar: su estado de cuenta sale de facturas.');
+    if(!CLI[dest]) addCliente(dest,60,false,interno);
+  }
+  const eqs=[...PCSEL].map(_pcEq).filter(Boolean);
+  eqs.forEach(function(e){ _pcAsignar(e,dest); });
+  _pcRecalcOrdenes(); PCSEL.clear(); _pcListo();
+  toast(eqs.length+' pedido(s) movido(s) a <b>'+esc4(dest)+'</b>'); _pcAvisoExterno(dest);
+}
+function pcRepartir(){
+  const tot=+((document.getElementById('pcTot')||{}).value||0);
+  if(!(tot>0)){ toast('Escribe el precio total'); return; }
+  const eqs=[...PCSEL].map(_pcEq).filter(Boolean); if(!eqs.length) return;
+  const cs=[...new Set(eqs.map(function(e){return e.cliente;}))];
+  if(cs.length>1){ toast('Los seleccionados son de clientes distintos ('+cs.join(', ')+'). Muévelos primero al mismo cliente.'); return; }
+  eqs.forEach(function(e){ _pcSacarDeGrupos(e,false); });
+  const g={id:_gidNuevo().replace(/^sp/,'gp'), nombre:(eqs[0].proj||eqs[0].derrame)+(eqs.length>1?' y '+(eqs.length-1)+' más':''),
+    cliente:cs[0], total:tot, base:'costo', eqRefs:eqs.map(function(e){return e.derrame;}), partes:{}, fecha:'', nota:'',
+    facNum:null, facTotal:null, facFecha:null};
+  GPRE.push(g); PCSEL.clear(); _pcListo();
+  toast('US$ '+fmtUSDs(tot)+' repartidos entre '+eqs.length+' pedido(s) por su costo');
+}
+function pcSacar(k){ const e=_pcEq(k); if(!e) return; _pcSacarDeGrupos(e,false); e.precioVenta=0; _pcListo(); }
+function pcQuitar(){ [...PCSEL].map(_pcEq).filter(Boolean).forEach(function(e){ _pcSacarDeGrupos(e,false); e.precioVenta=0; }); PCSEL.clear(); _pcListo(); }
+
+const _pintarPreciosAntesPC=pintarPrecios;
+pintarPrecios=function(){
+  const cont=document.getElementById('v-precios'); if(!cont) return;
+  const a=document.activeElement, foco=a&&a.closest&&a.closest('#v-precios')?a.getAttribute('data-foco'):null;
+  _pintarPreciosAntesPC.apply(this,arguments);
+  const viejo=cont.innerHTML;
+  cont.innerHTML=_pcHTML()
+    +'<details class="pc-adv"'+(PCADV?' open':'')+' ontoggle="PCADV=this.open"><summary>Grupos de precio · vista detallada ('+GPRE.length+')</summary>'+viejo+'</details>';
+  if(foco){ const n=cont.querySelector('[data-foco="'+foco+'"]'); if(n&&n.focus){ n.focus(); try{ if(n.setSelectionRange&&n.type!=='number') n.setSelectionRange(n.value.length,n.value.length); }catch(e){} } }
+};
+
 </script>

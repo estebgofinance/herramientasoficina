@@ -725,7 +725,8 @@ if(_gpParteSetAntes){
 /* al salir del campo sí se repinta todo, una sola vez */
 document.addEventListener('blur',function(ev){
   const t=ev.target;
-  if(!t||!t.closest||!t.closest('#v-precios')) return;
+  /* solo los campos de la vista de grupos; la tabla de precios y clientes guarda con onchange */
+  if(!t||!t.closest||!t.closest('#v-precios .pc-adv')) return;
   if(t.tagName!=='INPUT'&&t.tagName!=='TEXTAREA') return;
   clearTimeout(_gpT); guardar4();
   refreshAll();
@@ -931,8 +932,9 @@ pintarSino=function(){
       +'</div>'
       +(hayHoja?'<button class="vz-b" onclick="snCmp()">'+(SNCMP?'Ocultar':'Comparar con')+' la hoja de Andrés</button>':'')
     +'</div>'
-    +'<div class="sn-sub">El cupo lo armas tú. Cada pedido tiene su palanca y lo que decidas se queda: '
-      +'una carga nueva solo agrega los pedidos que no existían, nunca toca lo que ya clasificaste.</div>'
+    +'<div class="sn-sub">La cifra que vale es la de la hoja Sinosure del detailed. Cada pedido tiene su palanca; '
+      +'lo que cambies a mano se queda, y aquí arriba te avisa si algo ya no coincide con la hoja.</div>'
+    +_snDifHTML()
     +(pend.length
       ? '<div class="sn-band"><b>'+pend.length+' pedido(s) sin clasificar</b> · no están consumiendo cupo hasta que les digas qué son: '
         +pend.slice(0,12).map(function(e){return '<span class="sn-bp">'+(e.derrame||'')+' · '+fmtUSDs(+e.cupoSaldo||0)+'</span>';}).join('')

@@ -15,17 +15,17 @@ const ok=(n,c)=>console.log((c?'  OK ':'FALLA')+'  '+n);
   await p.setInputFiles('#reportFile','DET.xlsx'); await p.waitForTimeout(1500);
   await p.evaluate(()=>{wizGo(4);wizApprove();document.getElementById('toast').classList.remove('on');});
   await p.waitForTimeout(700);
-  await p.click('nav.tabs button[data-v="precios"]'); await p.waitForTimeout(350);
+  await p.click('nav.tabs button[data-v="precios"]'); await p.waitForTimeout(350); await p.evaluate(()=>{PCADV=true;pintarPrecios();}); await p.waitForTimeout(250);
   await p.evaluate(()=>{gpNuevo();const g=GPRE[0];g.nombre='Factura Mompox';g.cliente=EQ[0].cliente;
     g.eqRefs=[EQ[5].derrame,EQ[9].derrame];g.total=480000;pintarPrecios();refreshAll();});
   await p.waitForTimeout(400);
-  const ord=await p.evaluate(()=>[...document.querySelectorAll('#v-precios tbody tr')]
+  const ord=await p.evaluate(()=>[...document.querySelectorAll('#v-precios .pc-adv tbody tr')]
     .slice(0,3).map(t=>t.querySelector('input[type=checkbox]')&&t.querySelector('input[type=checkbox]').checked));
   ok('los pedidos marcados aparecen de primeros', ord[0]===true&&ord[1]===true);
   await p.fill('#gq','piojo'); await p.waitForTimeout(400);
-  const vis=await p.evaluate(()=>[...document.querySelectorAll('#v-precios tbody tr')].length);
+  const vis=await p.evaluate(()=>[...document.querySelectorAll('#v-precios .pc-adv tbody tr')].length);
   ok('el filtro reduce la lista pero no esconde los marcados',
-     vis<20 && (await p.evaluate(()=>[...document.querySelectorAll('#v-precios tbody tr input:checked')].length))===2);
+     vis<20 && (await p.evaluate(()=>[...document.querySelectorAll('#v-precios .pc-adv tbody tr input:checked')].length))===2);
   await p.fill('#gq',''); await p.waitForTimeout(350);
   await p.screenshot({path:OUT+'v22-precios2.png'});
   await p.click('nav.tabs button[data-v="sinosure"]'); await p.waitForTimeout(400);

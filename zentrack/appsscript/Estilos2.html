@@ -380,4 +380,46 @@ table.wd td{vertical-align:top;padding:9px 10px}
 .wd-aj{margin-left:auto}
 .wd-vacio{color:var(--ink3);padding:18px 10px!important;text-align:center}
 
+/* --- diferencias entre ORDER REPORT y detailed --- */
+table.vtable.od td small{display:block;font-size:10px;color:var(--ink3)}
+table.vtable.od td.od-m{font-size:11px;color:var(--ink2);white-space:nowrap}
+
+/* --- aviso: no coincide con la hoja de Andrés --- */
+.sn-difh{display:flex;flex-wrap:wrap;align-items:center;gap:8px;border:1px solid #E8B4B0;background:#FDF4F3;color:#6B1511;
+  border-radius:10px;padding:10px 13px;font-size:12px;margin-bottom:14px}
+.sn-difl{flex-basis:100%;line-height:2}
+.sn-difh a{color:#8C1D18;font-weight:600}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .sn-difh{background:#2A1A18;border-color:#5C3330;color:#F2B8B5}
+  :root:not([data-theme="light"]) .sn-difh a{color:#F2B8B5}}
+:root[data-theme="dark"] .sn-difh{background:#2A1A18;border-color:#5C3330;color:#F2B8B5}
+
+/* --- precios y clientes --- */
+.pc-top{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:4px}
+.pc-f{font:inherit;font-size:12px;padding:5px 8px;border:1px solid var(--line);border-radius:7px;background:var(--card);color:var(--ink)}
+.pc-buscar{width:220px}
+.pc-num{border-color:var(--line)!important;background:var(--card)!important}
+.pc-num::placeholder{color:var(--ink3)}
+.pc-chk{font-size:12px;color:var(--ink2);display:flex;align-items:center;gap:5px}
+.pc-in{font:inherit;font-size:12px;padding:4px 7px;border:1px solid transparent;border-radius:6px;background:transparent;color:var(--ink);width:100%;min-width:90px}
+.pc-in:hover,.pc-in:focus{border-color:var(--line);background:var(--card)}
+.pc-num{text-align:right;font-variant-numeric:tabular-nums;max-width:120px}
+.pc-cli{font:inherit;font-size:12px;padding:3px 6px;border:1px solid var(--line);border-radius:6px;background:var(--card);color:var(--ink);max-width:170px}
+.pc-cli.int{border-color:#9CC3B4}
+table.vtable.pc td{vertical-align:middle}
+table.vtable.pc td.r{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+tr.pc-o td{background:var(--hover);font-size:11px;font-weight:600;color:var(--ink2);letter-spacing:.02em}
+tr.pc-r.on td{background:#EEF4FB}
+.pc-po{white-space:nowrap}
+.pc-gp small{display:block;font-size:10px;color:var(--ink3)}
+.pc-bar{position:sticky;top:0;z-index:2;display:flex;flex-wrap:wrap;align-items:center;gap:10px;background:var(--ink);color:var(--card);
+  border-radius:10px;padding:9px 12px;margin:8px 0;font-size:12px}
+.pc-bar .pc-q{opacity:.75}
+.pc-bar .pc-act{display:flex;align-items:center;gap:6px}
+.pc-bar select,.pc-bar .pc-in{background:var(--card);color:var(--ink);border-color:var(--line);width:auto}
+.pc-wrap{max-height:62vh}
+details.pc-adv{margin-top:22px}
+details.pc-adv>summary{cursor:pointer;font-size:12.5px;color:var(--ink2);padding:6px 0}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) tr.pc-r.on td{background:#1C2836}}
+:root[data-theme="dark"] tr.pc-r.on td{background:#1C2836}
+
 </style>
