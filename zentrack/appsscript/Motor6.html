@@ -1,0 +1,191 @@
+<script>
+
+/* ===================================================================
+   LO QUE YO HICE A MANO (v1.4)
+   El trabajo manual no vivía en ninguna parte: el derrame de un pedido,
+   el nombre de proyecto que escribiste y el cliente que asignaste se
+   armaban sobre WIZ.work, y WIZ.work se reconstruye del archivo en cada
+   carga. Por eso cada order report te obligaba a rehacer todo.
+   Ahora se guarda en MIO y se vuelve a aplicar solo, antes de que veas
+   nada. Resultado: al cargar el mismo archivo otra vez, no hay nada que
+   rehacer y el paso Comparar sale vacío.
+   =================================================================== */
+let MIO={split:{},proj:{},cli:{}};
+/* Identificador de cada derrame. Antes era hora en ms + un azar de 0 a 999: al
+   re-partir 13 pedidos en el mismo milisegundo, dos podían quedar con el mismo y
+   sus partes se mezclaban en una sola receta (~7% por carga, y empeoraba solo). */
+let _GIDN=0;
+const _gidNuevo=()=>'sp'+Date.now().toString(36)+'-'+(++_GIDN);
+
+/* ---- lo que guardo ---- */
+function mioRecordarSplit(baseClave,partes){ MIO.split[baseClave]={partes:partes}; }
+function mioOlvidarSplit(baseClave){ delete MIO.split[baseClave]; }
+function mioNombre(clave,proj){ if(proj&&(''+proj).trim()) MIO.proj[clave]=(''+proj).trim(); }
+function mioCliente(clave,cli){ if(cli&&cli!=='Por asignar') MIO.cli[clave]=cli; }
+
+/* ---- reconstruir un derrame sobre la fila que trae el archivo nuevo ---- */
+const _SUF='ABCDEFGHIJKLMNOP'.split('');
+function _mioParte(w,k,n,gid,orig){
+  const x=Object.assign({},w);
+  x.derrame=(w.derrame||'')+_SUF[k]; x.qty=1; x._splitGroup=gid; x._splitOrig=(k===0?orig:null);
+  _MONEY.forEach(function(f){
+    const v=+w[f]||0, q=Math.round(v/n);
+    x[f]=(k===n-1)?Math.round(v-q*(n-1)):q;
+  });
+  if(w.otrosDesglose) x.otrosDesglose=w.otrosDesglose.map(function(d){return Object.assign({},d,{monto:d.monto/n,pagado:d.pagado/n,saldo:d.saldo/n});});
+  if(w.pagosChina)    x.pagosChina   =w.pagosChina.map(function(d){return Object.assign({},d,{monto:Math.round(d.monto/n)});});
+  return x;
+}
+/* Vuelve a aplicar TODO lo manual sobre lo que acaba de traer el archivo. */
+function mioReaplicar(){
+  if(!WIZ.work||!WIZ.work.length) return {derrames:0,nombres:0};
+  let nd=0,nn=0;
+  /* 1) los derrames */
+  const salida=[];
+  WIZ.work.forEach(function(w){
+    const rec=MIO.split[kOf(w)];
+    if(!rec||!rec.partes||rec.partes.length<2||w._splitGroup){ salida.push(w); return; }
+    const n=rec.partes.length;
+    const gid=_gidNuevo();
+    const orig=JSON.parse(JSON.stringify(w));
+    for(let k=0;k<n;k++){
+      const x=_mioParte(w,k,n,gid,orig);
+      x.splitDe=w.derrame;
+      const pr=rec.partes[k]||{};
+      if(pr.proj) x.proj=pr.proj;
+      if(pr.cliente&&pr.cliente!=='Por asignar'){ x.cliente=pr.cliente; x._cliCustom=true; }
+      salida.push(x);
+    }
+    nd++;
+  });
+  WIZ.work=salida; WIZ.work.forEach(function(x,j){x._i=j;});
+  /* 2) los nombres y clientes que escribí, incluso si el archivo trae otra cosa */
+  WIZ.work.forEach(function(w){
+    const k=kOf(w);
+    if(MIO.proj[k] && MIO.proj[k]!==w.proj){ w.proj=MIO.proj[k]; w._projMio=true; nn++; }
+    if(MIO.cli[k] && (!w.cliente||w.cliente==='Por asignar'||MIO.cli[k]!==w.cliente)){ w.cliente=MIO.cli[k]; w._cliCustom=true; }
+  });
+  return {derrames:nd,nombres:nn};
+}
+
+/* ---- enganches: registrar lo que hagas en el asistente ---- */
+const _splitAntesMio=splitRow;
+splitRow=function(i){
+  const w=W(i); const base=w?kOf(w):null;
+  _splitAntesMio.apply(this,arguments);
+  if(base){
+    const partes=WIZ.work.filter(function(x){return x._splitGroup&&(''+x.derrame).indexOf(w.derrame)===0;})
+      .map(function(x){return {proj:x.proj,cliente:x.cliente};});
+    if(partes.length>1) mioRecordarSplit(base,partes);
+  }
+};
+const _unSplitAntesMio=unSplit;
+unSplit=function(gid){
+  const items=(WIZ.work||[]).filter(function(w){return w._splitGroup===gid;});
+  const base=items.length?kOf({mfg:items[0].mfg,derrame:(''+items[0].derrame).replace(/[A-P]$/,'')}):null;
+  _unSplitAntesMio.apply(this,arguments);
+  if(base) mioOlvidarSplit(base);
+};
+/* cada vez que escribes un proyecto o eliges un cliente en el paso 2, queda registrado */
+const _setWAntesMio=setW;
+setW=function(i,f,val){
+  _setWAntesMio.apply(this,arguments);
+  const w=W(i); if(!w) return;
+  if(f==='proj') mioNombre(kOf(w),val);
+  if(f==='cliente') mioCliente(kOf(w),val);
+};
+const _setOrdCliAntesMio=(typeof setOrdCliente==='function')?setOrdCliente:null;
+if(_setOrdCliAntesMio) setOrdCliente=function(oid,v){
+  _setOrdCliAntesMio.apply(this,arguments);
+  (WIZ.work||[]).forEach(function(w){ if(w.ordenId===oid) mioCliente(kOf(w),v); });
+};
+
+/* ---- al cargar un archivo, reaplicar ANTES de que veas nada ---- */
+const _cargarDetAntesMio=cargarDetailed;
+cargarDetailed=function(wb,nombre){
+  const r=_cargarDetAntesMio.apply(this,arguments);
+  if(r!==false){
+    const x=mioReaplicar();
+    if(x.derrames||x.nombres){
+      WIZ.prev=prevDe(); validateWiz(); renderWiz();
+      toast('Te devolví lo tuyo: '+(x.derrames?x.derrames+' pedido(s) derramado(s) como los tenías':'')
+        +(x.derrames&&x.nombres?' · ':'')+(x.nombres?x.nombres+' nombre(s) de proyecto':''));
+    }
+  }
+  return r;
+};
+
+/* ---- que MIO viva en la Hoja ---- */
+const _serAntesMio=serializeState;
+serializeState=function(){
+  const o=JSON.parse(_serAntesMio.apply(this,arguments));
+  o.MIO=MIO; return JSON.stringify(o);
+};
+const _appAntesMio=applyState;
+applyState=function(s){
+  _appAntesMio.apply(this,arguments);
+  MIO=(s.MIO&&s.MIO.split)?{split:s.MIO.split||{},proj:s.MIO.proj||{},cli:s.MIO.cli||{},v:s.MIO.v||0}
+                          :{split:{},proj:{},cli:{},v:0};
+  if(!s.MIO) mioSembrar();          /* estado viejo: deducir lo manual de lo ya cargado */
+  const nr=mioRecuperar();
+  if(nr) setTimeout(function(){ toast('Recuperé '+nr+' pedido(s) que tenías derramados. Vuelven a aparecer partidos en la próxima carga del detailed.'); },900);
+};
+/* Recetas de derrame que faltan:
+   1) lo que hoy está derramado (versiones viejas no guardaban la receta);
+   2) UNA sola vez: lo que se perdió al aprobar con la v1.4 sin receta. Cada carga guarda
+      una foto completa del estado anterior (snapPrev); la más reciente que muestra un
+      pedido decide cómo lo tenías: partido o entero. */
+function mioRecuperar(){
+  let n=0;
+  const receta=function(x){return {partes:x.partes.map(function(e){return {proj:e.proj,cliente:e.cliente};})};};
+  const hoy=_gruposDerrame(EQ);
+  Object.keys(hoy).forEach(function(k){ const c=_claveDe(hoy[k].mfg,hoy[k].base); if(!MIO.split[c]){ MIO.split[c]=receta(hoy[k]); n++; } });
+  if((MIO.v||0)>=2) return n;
+  const visto={};
+  Object.keys(hoy).forEach(function(k){ visto[_claveDe(hoy[k].mfg,hoy[k].base)]=true; });
+  for(let i=HIST.length-1;i>=0;i--){
+    const sp=HIST[i]&&HIST[i].snapPrev; if(!sp||!sp.ORD) continue;
+    const lista=[]; sp.ORD.forEach(function(o){ (o.equipos||[]).forEach(function(e){ lista.push(e); }); });
+    const gg=_gruposDerrame(lista);
+    Object.keys(gg).forEach(function(k){
+      const c=_claveDe(gg[k].mfg,gg[k].base); if(visto[c]) return; visto[c]=true;
+      if(!MIO.split[c]){ MIO.split[c]=receta(gg[k]); n++; }
+    });
+    /* un pedido que en esa foto estaba entero: lo dejaste así a propósito */
+    lista.forEach(function(e){ if(!_reDer.test(''+e.derrame)){ const c=kOf(e); if(!visto[c]) visto[c]=true; } });
+  }
+  MIO.v=2;
+  return n;
+}
+/* Si vienes de una versión anterior, lo que ya tenías derramado y nombrado se
+   deduce de ORD y queda registrado, para no perderlo en la próxima carga. */
+function mioSembrar(){
+  const grupos={};
+  EQ.forEach(function(e){
+    if(e._splitGroup){ (grupos[e._splitGroup]=grupos[e._splitGroup]||[]).push(e); }
+    if(e.proj&&!/^(Orden|Pedido)\s/.test(e.proj)) MIO.proj[kOf(e)]=e.proj;
+    if(e.cliente&&e.cliente!=='Por asignar') MIO.cli[kOf(e)]=e.cliente;
+  });
+  Object.keys(grupos).forEach(function(g){
+    const items=grupos[g].slice().sort(function(a,b){return (''+a.derrame).localeCompare(''+b.derrame);});
+    const base=kOf({mfg:items[0].mfg,derrame:(''+items[0].derrame).replace(/[A-P]$/,'')});
+    MIO.split[base]={partes:items.map(function(x){return {proj:x.proj,cliente:x.cliente};})};
+  });
+}
+const _apruebaAntesMio=wizApprove;
+wizApprove=function(){
+  /* lo que quedó en pantalla al aprobar ES lo tuyo: se registra */
+  (WIZ.work||[]).forEach(function(w){
+    if(w.proj&&!/^(Orden|Pedido)\s/.test(w.proj)) MIO.proj[kOf(w)]=w.proj;
+    if(w.cliente&&w.cliente!=='Por asignar') MIO.cli[kOf(w)]=w.cliente;
+  });
+  /* por nombre (7-2A, 7-2B → 7-2), igual que en todo lo demás */
+  const grupos=_gruposDerrame(WIZ.work||[]);
+  Object.keys(grupos).forEach(function(k){
+    const x=grupos[k];
+    MIO.split[_claveDe(x.mfg,x.base)]={partes:x.partes.map(function(e){return {proj:e.proj,cliente:e.cliente};})};
+  });
+  return _apruebaAntesMio.apply(this,arguments);
+};
+
+</script>

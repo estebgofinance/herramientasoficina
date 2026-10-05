@@ -497,7 +497,7 @@ let GSEL=null;
 let GQ='';
 
 function gpNuevo(){
-  const g={id:'gp'+Date.now().toString(36)+Math.floor(Math.random()*1000),
+  const g={id:(typeof _gidNuevo==='function')?_gidNuevo().replace(/^sp/,'gp'):('gp'+Date.now().toString(36)+Math.floor(Math.random()*1e9)),
     nombre:'', cliente:(CLIENTES[0]||''), total:0, base:'costo',
     eqRefs:[], partes:{}, fecha:'', nota:'',
     facNum:null, facTotal:null, facFecha:null};

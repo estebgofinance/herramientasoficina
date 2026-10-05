@@ -573,7 +573,7 @@ function wizFlag(w){const p=WIZ.prev[kOf(w)];
 
 const _MONEY=['mfgAmt','cupoMonto','cupoPagado','cupoSaldo','otrosMonto','otrosPagado','otrosSaldo','totalChina','totalPagado','totalSaldo','antTot','antPend','antPend0'];
 function splitRow(i){const w=W(i);if(!w)return;const n=Math.max(w.qty||2,2);const parts=parseProjects(w.proj,n);const suf=['A','B','C','D','E','F','G','H'];const base=w.derrame||('X-'+i);
-  const gid='sp'+Date.now()+'-'+Math.floor(Math.random()*1000);
+  const gid=(typeof _gidNuevo==='function')?_gidNuevo():('sp'+Date.now()+'-'+Math.floor(Math.random()*1e9));
   const orig=JSON.parse(JSON.stringify(w));['bl','etd','eta','prodFin'].forEach(k=>{if(w[k])orig[k]=w[k];});
   /* todos los montos se reparten por partes iguales; la última parte absorbe el redondeo */
   const nuevos=parts.map((p,k)=>{const x={...w,derrame:base+suf[k],proj:p||('Orden '+base+suf[k]),qty:1,_splitGroup:gid,_splitOrig:k===0?orig:null};

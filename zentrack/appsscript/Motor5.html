@@ -520,78 +520,133 @@ let SINO={ped:{},sembrado:false};
      null    → sin clasificar, está en la bandeja y no consume */
 const SINO_MODOS=[['saldo','Saldo por pagar'],['monto','Monto completo'],['fijo','Monto fijo'],['fuera','No entra']];
 const sinoReg=e=>SINO.ped[kOf(e)]||null;
+
+/* ---- DERRAMES (v1.4.1) ----
+   La hoja Sinosure de Andrés habla del pedido completo (7-2), nunca de sus partes
+   (7-2A, 7-2B). Antes cada parte necesitaba su propia clasificación, nadie se la
+   daba, y todo pedido derramado consumía 0. Ahora una parte sin decisión propia
+   HEREDA la de su pedido completo, repartida por su monto. */
+const _reDer=/^(.*\d)([A-P])$/;
+const _claveDe=(mfg,der)=>kOf({mfg:mfg,derrame:der});
+/* Encuentra los derrames de una lista: partes A, B, C… seguidas, sin el pedido entero al lado. */
+function _gruposDerrame(lista){
+  const g={}, hay={};
+  lista.forEach(function(e){ hay[e.mfg+'|'+e.derrame]=true; });
+  lista.forEach(function(e){
+    const m=(''+(e.derrame||'')).match(_reDer); if(!m) return;
+    if(hay[e.mfg+'|'+m[1]]) return;
+    const k=e.mfg+'|'+m[1];
+    (g[k]=g[k]||{mfg:e.mfg,base:m[1],partes:[]}).partes.push(e);
+  });
+  Object.keys(g).forEach(function(k){
+    const ps=g[k].partes.sort(function(a,b){return (''+a.derrame).localeCompare(''+b.derrame);});
+    const letras=ps.map(function(x){return (''+x.derrame).slice(-1);}).join('');
+    if(ps.length<2||'ABCDEFGHIJKLMNOP'.indexOf(letras)!==0) delete g[k]; else g[k].partes=ps;
+  });
+  return g;
+}
+function _marcarDerrames(lista){
+  const g=_gruposDerrame(lista);
+  Object.keys(g).forEach(function(k){ g[k].partes.forEach(function(x){ x.splitDe=g[k].base; }); });
+  return g;
+}
+/* La decisión que manda sobre un pedido: la suya, o la de su pedido completo. */
+function sinoRegEf(e){
+  const own=SINO.ped[kOf(e)];
+  if(own&&own.modo) return {r:own,share:1,heredado:false};
+  if(e&&e.splitDe){
+    const pr=SINO.ped[_claveDe(e.mfg,e.splitDe)];
+    if(pr&&pr.modo){
+      const sib=EQ.filter(function(x){return x.mfg===e.mfg&&x.splitDe===e.splitDe;});
+      const tot=sib.reduce(function(a,x){return a+(+x.cupoMonto||0);},0);
+      return {r:pr,share:tot?(+e.cupoMonto||0)/tot:1/Math.max(1,sib.length),heredado:true};
+    }
+  }
+  return null;
+}
 function sinoSet(clave,campo,valor){
   const r=SINO.ped[clave]||(SINO.ped[clave]={modo:null,fijo:0,nota:'',sug:null});
   r[campo]=(campo==='fijo')?(+valor||0):valor;
+  /* lo decidiste tú: ninguna carga lo vuelve a tocar */
+  if(campo==='modo'||campo==='fijo') r.mio=true;
   if(campo==='modo'&&valor==='fijo'&&!(+r.fijo>0)){
-    const e=EQ.find(x=>kOf(x)===clave); if(e) r.fijo=Math.round(+e.cupoSaldo||0);
+    const e=EQ.find(function(x){return kOf(x)===clave;}); if(e) r.fijo=Math.round(+e.cupoSaldo||0);
   }
 }
-function sinoSug(e){ const r=sinoReg(e); return r&&r.sug!=null?r.sug:null; }
+function sinoSug(e){
+  const ef=sinoRegEf(e), r=ef?ef.r:sinoReg(e);
+  if(!r||r.sug==null) return null;
+  return Math.round(r.sug*(ef?ef.share:1));
+}
 
-/* ---- el consumo ahora sale de TU decisión, no del archivo ---- */
+/* ---- el consumo sale de TU decisión (o de la propuesta, si no has decidido) ---- */
 const _consumoAnterior=consumoEq;
 consumoEq=function(e,mfg,regla){
-  mfg=mfg||e.mfg;
-  const r=SINO.ped[kOf(e)];
-  if(!r||!r.modo||r.modo==='fuera') return 0;
+  const ef=sinoRegEf(e);
+  if(!ef||ef.r.modo==='fuera') return 0;
+  const r=ef.r;
   const O=(e.cupoSaldo!=null)?(+e.cupoSaldo||0):((e.antSaldo||0)+(e.balSaldo||0));
   const M=(e.cupoMonto!=null)?(+e.cupoMonto||0):(+e.mfgAmt||0);
-  /* "monto fijo" es una decisión explícita tuya y manda sobre todo lo demás,
-     incluso si el pedido figura pagado: es la palanca para los casos en que la
-     hoja de Andrés dice una cosa y el detailed otra. */
+  /* "monto fijo" es una decisión explícita y manda sobre todo, incluso si el
+     pedido figura pagado. En una parte de un derrame, le toca su proporción. */
   if(r.modo==='fijo'){
     const girado=Math.max(0,(+e.cupoSaldo0||0)-O);
-    return Math.max(0,(+r.fijo||0)-girado);
+    return Math.max(0,(+r.fijo||0)*ef.share-girado);
   }
   if(O<=0.5) return 0;
   if(r.modo==='monto') return M;
   return O;
 };
 
-/* ---- siembra: UNA sola vez, con lo que el motor ya había leído ---- */
-function sinoSembrar(){
-  if(SINO.sembrado) return 0;
+/* Qué propondría la hoja de Andrés para un pedido con este saldo (O) y monto (M). */
+function _sinoPropuesta(O,M,d){
+  if(d==null) return null;
+  const v=Math.round(d);
+  if(Math.abs(v-O)<=2) return {modo:'saldo',fijo:0};
+  if(Math.abs(v-M)<=2) return {modo:'monto',fijo:0};
+  return {modo:'fijo',fijo:v};
+}
+/* ---- cada carga ----
+   · lo que decidiste tú (mio) no se toca nunca;
+   · lo que está "sin clasificar" se PROPONE desde la hoja de Andrés, como la primera vez;
+   · lo ya clasificado no se re-propone: se mueve solo con los pagos;
+   · solo lo que la hoja no lista (el PO#16) queda en la bandeja.
+   Antes, un pedido nuevo entraba siempre "sin clasificar" y consumía 0 hasta que
+   alguien lo tocara: por eso cada carga pedía más mano. */
+function sinoMerge(){
   const hoja=(CONCILIA&&CONCILIA.sinoPorDerrame)||{};
-  let n=0;
-  EQ.forEach(e=>{
-    const k=kOf(e);
-    if(SINO.ped[k]) return;
-    const O=Math.round(+e.cupoSaldo||0), M=Math.round(+e.cupoMonto||e.mfgAmt||0);
+  const g=_marcarDerrames(EQ);
+  let pendientesNuevos=0;
+  const proponer=function(k,O,M,manual,embarcado){
     const d=hoja[k];
-    let modo=null, fijo=0;
-    if(e.sinoManual==='no') modo='fuera';
-    else if(d!=null){
-      const v=Math.round(d);
-      if(Math.abs(v-O)<=2) modo='saldo';
-      else if(Math.abs(v-M)<=2) modo='monto';
-      else { modo='fijo'; fijo=v; }
-    }
-    else if(e.sinoManual==='si') modo=isShipped(e)?'saldo':'monto';
-    SINO.ped[k]={modo:modo,fijo:fijo,nota:'',sug:d!=null?Math.round(d):null};
-    n++;
+    let r=SINO.ped[k]; const esNuevo=!r;
+    if(!r) r=SINO.ped[k]={modo:null,fijo:0,nota:'',sug:null};
+    if(d!=null) r.sug=Math.round(d);
+    /* solo se propone donde no hay nada decidido: lo ya clasificado (por ti o por la
+       primera propuesta) se queda, y se mueve solo con los pagos del archivo */
+    if(r.mio||r.modo) return;
+    let p=_sinoPropuesta(O,M,d);
+    if(manual==='no') p={modo:'fuera',fijo:0};
+    else if(!p&&manual==='si') p={modo:embarcado?'saldo':'monto',fijo:0};
+    if(p){ r.modo=p.modo; r.fijo=p.fijo; }
+    if(esNuevo&&!r.modo) pendientesNuevos++;
+  };
+  /* el pedido completo de cada derrame: la hoja lo lista por él, no por sus partes */
+  Object.keys(g).forEach(function(k){
+    const x=g[k];
+    const O=x.partes.reduce(function(a,e){return a+(+e.cupoSaldo||0);},0);
+    const M=x.partes.reduce(function(a,e){return a+(+e.cupoMonto||e.mfgAmt||0);},0);
+    proponer(_claveDe(x.mfg,x.base),Math.round(O),Math.round(M),x.partes[0].sinoManual,isShipped(x.partes[0]));
+  });
+  EQ.forEach(function(e){
+    if(e.splitDe) return;
+    proponer(kOf(e),Math.round(+e.cupoSaldo||0),Math.round(+e.cupoMonto||e.mfgAmt||0),e.sinoManual,isShipped(e));
   });
   SINO.sembrado=true;
-  return n;
+  return pendientesNuevos;
 }
-/* ---- carga nueva: solo AGREGA lo que no existía ---- */
-function sinoMerge(){
-  if(!SINO.sembrado) return sinoSembrar();
-  const hoja=(CONCILIA&&CONCILIA.sinoPorDerrame)||{};
-  let n=0;
-  EQ.forEach(e=>{
-    const k=kOf(e);
-    if(SINO.ped[k]){
-      const d=hoja[k]; if(d!=null) SINO.ped[k].sug=Math.round(d);
-      return;
-    }
-    const d=hoja[k];
-    SINO.ped[k]={modo:null,fijo:0,nota:'',sug:d!=null?Math.round(d):null};
-    n++;
-  });
-  return n;
-}
-const sinoPendientes=()=>EQ.filter(function(e){var r=SINO.ped[kOf(e)];return !r||!r.modo;});
+function sinoSembrar(){ return sinoMerge(); }
+const sinoPendientes=()=>EQ.filter(function(e){return !sinoRegEf(e);});
 
 /* ---- que SINO viva en la Hoja junto con todo lo demás ---- */
 const _serAntesSino=serializeState;
@@ -603,8 +658,11 @@ serializeState=function(){
 const _appAntesSino=applyState;
 applyState=function(s){
   _appAntesSino.apply(this,arguments);
-  if(s.SINO&&s.SINO.ped){ SINO={ped:s.SINO.ped,sembrado:!!s.SINO.sembrado}; sinoMerge(); }
-  else { SINO={ped:{},sembrado:false}; sinoSembrar(); }
+  SINO={ped:(s.SINO&&s.SINO.ped)||{},sembrado:!!(s.SINO&&s.SINO.sembrado)};
+  /* versiones anteriores no distinguían lo tuyo de lo propuesto: lo que tenía una
+     clasificación se respeta como tuyo; lo que quedó "sin clasificar" se vuelve a proponer */
+  Object.keys(SINO.ped).forEach(function(k){ const r=SINO.ped[k]; if(r&&r.mio===undefined) r.mio=!!r.modo; });
+  sinoMerge();
 };
 
 /* ---- después de aprobar una carga, los pedidos nuevos entran a la bandeja ---- */
@@ -761,6 +819,8 @@ function snToggle(id){ SNAB2[id]=!SNAB2[id]; pintarSino(); }
 function snFiltro(f){ SNVER=f; pintarSino(); }
 function snCmp(){ SNCMP=!SNCMP; pintarSino(); }
 function snSet(clave,campo,valor){ sinoSet(clave,campo,valor); refreshAll(); renderLedger(); guardar4(); }
+/* un monto fijo escrito en una parte es una decisión propia de esa parte */
+function snFijo(clave,v){ sinoSet(clave,'modo','fijo'); sinoSet(clave,'fijo',v); refreshAll(); renderLedger(); guardar4(); }
 /* poner toda una orden en el mismo modo, de un golpe */
 function snOrden(ordenId,mfg,modo){
   EQ.forEach(function(e){ if(e.ordenId===ordenId&&e.mfg===mfg) sinoSet(kOf(e),'modo',modo); });
@@ -777,8 +837,8 @@ function _snGrupos(mfg){
     const eqs=porOrd[id];
     const cons=eqs.reduce(function(a,e){return a+consumoEq(e,mfg);},0);
     const saldo=eqs.reduce(function(a,e){return a+(+e.cupoSaldo||0);},0);
-    const pend=eqs.filter(function(e){var r=SINO.ped[kOf(e)];return !r||!r.modo;}).length;
-    const fuera=eqs.filter(function(e){var r=SINO.ped[kOf(e)];return r&&r.modo==='fuera';}).length;
+    const pend=eqs.filter(function(e){return !sinoRegEf(e);}).length;
+    const fuera=eqs.filter(function(e){var f=sinoRegEf(e);return f&&f.r.modo==='fuera';}).length;
     const sug=eqs.reduce(function(a,e){var v=sinoSug(e);return a+(v||0);},0);
     return {id:id,mfg:mfg,eqs:eqs,cons:cons,saldo:saldo,pend:pend,fuera:fuera,sug:sug};
   }).filter(function(g){
@@ -790,7 +850,8 @@ function _snGrupos(mfg){
 }
 
 function _snFilaEq(e){
-  const k=kOf(e), r=SINO.ped[k]||{modo:null,fijo:0,nota:'',sug:null};
+  const k=kOf(e), ef=sinoRegEf(e), own=SINO.ped[k]||{modo:null,fijo:0,nota:'',sug:null};
+  const r=ef?{modo:ef.r.modo,fijo:Math.round((+ef.r.fijo||0)*ef.share),nota:own.nota,sug:sinoSug(e)}:own;
   const cons=consumoEq(e,e.mfg);
   const sel='<select class="sn-sel '+(r.modo==='fuera'?'off':r.modo?'on':'pend')+'" '
     +'onchange="snSet(\''+k+'\',\'modo\',this.value)">'
@@ -799,12 +860,12 @@ function _snFilaEq(e){
     +'</select>';
   const fijo=r.modo==='fijo'
     ? '<input class="sn-fijo" type="number" step="1" value="'+(+r.fijo||0)+'" data-foco="fj-'+k+'" '
-      +'onchange="snSet(\''+k+'\',\'fijo\',this.value)">'
+      +'onchange="snFijo(\''+k+'\',this.value)">'
     : '';
   const dif=(SNCMP&&r.sug!=null&&Math.abs(r.sug-cons)>2)
     ? '<small class="sn-dif">'+(r.sug>cons?'+':'')+fmtUSDs(r.sug-cons)+'</small>' : '';
   return '<tr class="sn-eq'+(!r.modo?' sn-p':'')+'">'
-    +'<td class="sn-po">'+(e.derrame||'')+'</td>'
+    +'<td class="sn-po">'+(e.derrame||'')+(ef&&ef.heredado?'<small class="sn-her">de la orden '+e.splitDe+'</small>':'')+'</td>'
     +'<td class="sn-pr">'+(nombreEq(e)||'')+'</td>'
     +'<td class="sn-n">'+fmtUSDs(+e.cupoSaldo||0)+'</td>'
     +'<td class="sn-m">'+sel+fijo+'</td>'
@@ -1009,160 +1070,6 @@ renderWizDiff=function(){
     +'<div class="vscroll"><table class="vtable wd"><thead><tr>'
       +'<th>Pedido</th><th>Proyecto</th><th>Qué cambió</th>'
     +'</tr></thead><tbody>'+cuerpo+'</tbody></table></div>';
-};
-
-/* ===================================================================
-   LO QUE YO HICE A MANO (v1.4)
-   El trabajo manual no vivía en ninguna parte: el derrame de un pedido,
-   el nombre de proyecto que escribiste y el cliente que asignaste se
-   armaban sobre WIZ.work, y WIZ.work se reconstruye del archivo en cada
-   carga. Por eso cada order report te obligaba a rehacer todo.
-   Ahora se guarda en MIO y se vuelve a aplicar solo, antes de que veas
-   nada. Resultado: al cargar el mismo archivo otra vez, no hay nada que
-   rehacer y el paso Comparar sale vacío.
-   =================================================================== */
-let MIO={split:{},proj:{},cli:{}};
-
-/* ---- lo que guardo ---- */
-function mioRecordarSplit(baseClave,partes){ MIO.split[baseClave]={partes:partes}; }
-function mioOlvidarSplit(baseClave){ delete MIO.split[baseClave]; }
-function mioNombre(clave,proj){ if(proj&&(''+proj).trim()) MIO.proj[clave]=(''+proj).trim(); }
-function mioCliente(clave,cli){ if(cli&&cli!=='Por asignar') MIO.cli[clave]=cli; }
-
-/* ---- reconstruir un derrame sobre la fila que trae el archivo nuevo ---- */
-const _SUF='ABCDEFGHIJKLMNOP'.split('');
-function _mioParte(w,k,n,gid,orig){
-  const x=Object.assign({},w);
-  x.derrame=(w.derrame||'')+_SUF[k]; x.qty=1; x._splitGroup=gid; x._splitOrig=(k===0?orig:null);
-  _MONEY.forEach(function(f){
-    const v=+w[f]||0, q=Math.round(v/n);
-    x[f]=(k===n-1)?Math.round(v-q*(n-1)):q;
-  });
-  if(w.otrosDesglose) x.otrosDesglose=w.otrosDesglose.map(function(d){return Object.assign({},d,{monto:d.monto/n,pagado:d.pagado/n,saldo:d.saldo/n});});
-  if(w.pagosChina)    x.pagosChina   =w.pagosChina.map(function(d){return Object.assign({},d,{monto:Math.round(d.monto/n)});});
-  return x;
-}
-/* Vuelve a aplicar TODO lo manual sobre lo que acaba de traer el archivo. */
-function mioReaplicar(){
-  if(!WIZ.work||!WIZ.work.length) return {derrames:0,nombres:0};
-  let nd=0,nn=0;
-  /* 1) los derrames */
-  const salida=[];
-  WIZ.work.forEach(function(w){
-    const rec=MIO.split[kOf(w)];
-    if(!rec||!rec.partes||rec.partes.length<2||w._splitGroup){ salida.push(w); return; }
-    const n=rec.partes.length;
-    const gid='sp'+Date.now()+'-'+Math.floor(Math.random()*1000);
-    const orig=JSON.parse(JSON.stringify(w));
-    for(let k=0;k<n;k++){
-      const x=_mioParte(w,k,n,gid,orig);
-      const pr=rec.partes[k]||{};
-      if(pr.proj) x.proj=pr.proj;
-      if(pr.cliente&&pr.cliente!=='Por asignar'){ x.cliente=pr.cliente; x._cliCustom=true; }
-      salida.push(x);
-    }
-    nd++;
-  });
-  WIZ.work=salida; WIZ.work.forEach(function(x,j){x._i=j;});
-  /* 2) los nombres y clientes que escribí, incluso si el archivo trae otra cosa */
-  WIZ.work.forEach(function(w){
-    const k=kOf(w);
-    if(MIO.proj[k] && MIO.proj[k]!==w.proj){ w.proj=MIO.proj[k]; w._projMio=true; nn++; }
-    if(MIO.cli[k] && (!w.cliente||w.cliente==='Por asignar'||MIO.cli[k]!==w.cliente)){ w.cliente=MIO.cli[k]; w._cliCustom=true; }
-  });
-  return {derrames:nd,nombres:nn};
-}
-
-/* ---- enganches: registrar lo que hagas en el asistente ---- */
-const _splitAntesMio=splitRow;
-splitRow=function(i){
-  const w=W(i); const base=w?kOf(w):null;
-  _splitAntesMio.apply(this,arguments);
-  if(base){
-    const partes=WIZ.work.filter(function(x){return x._splitGroup&&(''+x.derrame).indexOf(w.derrame)===0;})
-      .map(function(x){return {proj:x.proj,cliente:x.cliente};});
-    if(partes.length>1) mioRecordarSplit(base,partes);
-  }
-};
-const _unSplitAntesMio=unSplit;
-unSplit=function(gid){
-  const items=(WIZ.work||[]).filter(function(w){return w._splitGroup===gid;});
-  const base=items.length?kOf({mfg:items[0].mfg,derrame:(''+items[0].derrame).replace(/[A-P]$/,'')}):null;
-  _unSplitAntesMio.apply(this,arguments);
-  if(base) mioOlvidarSplit(base);
-};
-/* cada vez que escribes un proyecto o eliges un cliente en el paso 2, queda registrado */
-const _setWAntesMio=setW;
-setW=function(i,f,val){
-  _setWAntesMio.apply(this,arguments);
-  const w=W(i); if(!w) return;
-  if(f==='proj') mioNombre(kOf(w),val);
-  if(f==='cliente') mioCliente(kOf(w),val);
-};
-const _setOrdCliAntesMio=(typeof setOrdCliente==='function')?setOrdCliente:null;
-if(_setOrdCliAntesMio) setOrdCliente=function(oid,v){
-  _setOrdCliAntesMio.apply(this,arguments);
-  (WIZ.work||[]).forEach(function(w){ if(w.ordenId===oid) mioCliente(kOf(w),v); });
-};
-
-/* ---- al cargar un archivo, reaplicar ANTES de que veas nada ---- */
-const _cargarDetAntesMio=cargarDetailed;
-cargarDetailed=function(wb,nombre){
-  const r=_cargarDetAntesMio.apply(this,arguments);
-  if(r!==false){
-    const x=mioReaplicar();
-    if(x.derrames||x.nombres){
-      WIZ.prev=prevDe(); validateWiz(); renderWiz();
-      toast('Te devolví lo tuyo: '+(x.derrames?x.derrames+' pedido(s) derramado(s) como los tenías':'')
-        +(x.derrames&&x.nombres?' · ':'')+(x.nombres?x.nombres+' nombre(s) de proyecto':''));
-    }
-  }
-  return r;
-};
-
-/* ---- que MIO viva en la Hoja ---- */
-const _serAntesMio=serializeState;
-serializeState=function(){
-  const o=JSON.parse(_serAntesMio.apply(this,arguments));
-  o.MIO=MIO; return JSON.stringify(o);
-};
-const _appAntesMio=applyState;
-applyState=function(s){
-  _appAntesMio.apply(this,arguments);
-  MIO=(s.MIO&&s.MIO.split)?{split:s.MIO.split||{},proj:s.MIO.proj||{},cli:s.MIO.cli||{}}
-                          :{split:{},proj:{},cli:{}};
-  if(!s.MIO) mioSembrar();          /* estado viejo: deducir lo manual de lo ya cargado */
-};
-/* Si vienes de una versión anterior, lo que ya tenías derramado y nombrado se
-   deduce de ORD y queda registrado, para no perderlo en la próxima carga. */
-function mioSembrar(){
-  const grupos={};
-  EQ.forEach(function(e){
-    if(e._splitGroup){ (grupos[e._splitGroup]=grupos[e._splitGroup]||[]).push(e); }
-    if(e.proj&&!/^(Orden|Pedido)\s/.test(e.proj)) MIO.proj[kOf(e)]=e.proj;
-    if(e.cliente&&e.cliente!=='Por asignar') MIO.cli[kOf(e)]=e.cliente;
-  });
-  Object.keys(grupos).forEach(function(g){
-    const items=grupos[g].slice().sort(function(a,b){return (''+a.derrame).localeCompare(''+b.derrame);});
-    const base=kOf({mfg:items[0].mfg,derrame:(''+items[0].derrame).replace(/[A-P]$/,'')});
-    MIO.split[base]={partes:items.map(function(x){return {proj:x.proj,cliente:x.cliente};})};
-  });
-}
-const _apruebaAntesMio=wizApprove;
-wizApprove=function(){
-  /* lo que quedó en pantalla al aprobar ES lo tuyo: se registra */
-  const grupos={};
-  (WIZ.work||[]).forEach(function(w){
-    if(w._splitGroup) (grupos[w._splitGroup]=grupos[w._splitGroup]||[]).push(w);
-    if(w.proj&&!/^(Orden|Pedido)\s/.test(w.proj)) MIO.proj[kOf(w)]=w.proj;
-    if(w.cliente&&w.cliente!=='Por asignar') MIO.cli[kOf(w)]=w.cliente;
-  });
-  Object.keys(grupos).forEach(function(g){
-    const items=grupos[g].slice().sort(function(a,b){return (''+a.derrame).localeCompare(''+b.derrame);});
-    const base=kOf({mfg:items[0].mfg,derrame:(''+items[0].derrame).replace(/[A-P]$/,'')});
-    MIO.split[base]={partes:items.map(function(x){return {proj:x.proj,cliente:x.cliente};})};
-  });
-  return _apruebaAntesMio.apply(this,arguments);
 };
 
 </script>
