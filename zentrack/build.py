@@ -137,7 +137,6 @@ def verificar():
         for ln in list(difflib.unified_diff(a.split(' '), c.split(' '), lineterm='', n=2))[:20]:
             print('   ', ln[:140])
         sys.exit(1)
-    open('/tmp/asm_verify.html', 'w', encoding='utf-8').write(asm)
 
 if '--verify' in sys.argv or True:
     verificar()
