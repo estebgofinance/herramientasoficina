@@ -1,2 +1,6 @@
 # copias de master.html que se generan para probar antes de desplegar
 zentrack/Zentrack_v*_prueba.html
+
+# clasp: configuración local de cada máquina
+zentrack/.clasp.json
+zentrack/deploy_id.txt
