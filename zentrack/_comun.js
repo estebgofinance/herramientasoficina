@@ -26,8 +26,17 @@ function buscarClasp() {
   }
   return null;
 }
+/* El archivo del servidor puede llamarse Code, Código o como sea (depende del idioma
+   de la cuenta). Lo que importa es que exista uno con doGet, que es lo que sirve la
+   web app: si se sube sin él, el proyecto queda sin servidor. Devuelve su nombre. */
 function tieneCodigoServidor() {
-  return ['Code.js', 'Code.gs'].some(f => fs.existsSync(path.join('appsscript', f)));
+  const dir = 'appsscript';
+  if (!fs.existsSync(dir)) return null;
+  for (const f of fs.readdirSync(dir)) {
+    if (!/\.(js|gs)$/i.test(f)) continue;
+    try { if (/function\s+doGet\s*\(/.test(fs.readFileSync(path.join(dir, f), 'utf8'))) return f; } catch (e) {}
+  }
+  return null;
 }
 function abrir(url) {
   correr((WIN ? 'start "" ' : process.platform === 'darwin' ? 'open ' : 'xdg-open ') + '"' + url + '"', {silencio: true});

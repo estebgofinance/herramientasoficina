@@ -6,7 +6,7 @@ process.chdir(__dirname);
 titulo('Desplegando Zentrack');
 if (!fs.existsSync('.clasp.json'))   falla('Esta carpeta no esta configurada. Primero doble clic en configurar.');
 if (!fs.existsSync('deploy_id.txt')) falla('Falta deploy_id.txt. Primero doble clic en configurar.');
-if (!tieneCodigoServidor())          falla('No esta tu Code.gs en la carpeta appsscript. NO despliego, porque se borraria del lado de Google. Corre configurar otra vez.');
+if (!tieneCodigoServidor())          falla('No encuentro el archivo del servidor (el que tiene doGet) en la carpeta appsscript. NO despliego, porque se borraria del lado de Google. Corre configurar otra vez.');
 const py = buscarPython();     if (!py) falla('No encuentro Python 3.');
 const clasp = buscarClasp();   if (!clasp) falla('No encuentro clasp. Corre configurar otra vez.');
 const id = fs.readFileSync('deploy_id.txt', 'utf8').replace(/\s/g, '');

@@ -58,8 +58,9 @@ const preguntar = q => { process.stdout.write(q); return new Promise(r => cola.l
     console.log('\n  Bajando tu proyecto real (incluye tu Code.gs)...');
     if (!correr(clasp + ' clone ' + m[1] + ' --rootDir appsscript').ok) falla('No se pudo bajar el proyecto. Revisa que la API este ACTIVADA (paso 4) y que entraste con la cuenta dueña.');
   }
-  if (!tieneCodigoServidor()) falla('No llego tu Code.gs a la carpeta appsscript. NO despliegues: mandame una captura de esta ventana.');
-  console.log('  OK, tu Code.gs esta en la carpeta.');
+  const srv = tieneCodigoServidor();
+  if (!srv) falla('No encuentro el archivo del servidor (el que tiene doGet) en la carpeta appsscript. NO despliegues: mandame una captura de esta ventana.');
+  console.log('  OK, tu codigo del servidor esta en la carpeta: ' + srv);
 
   if (fs.existsSync('deploy_id.txt')) {
     console.log('\n  Ya tenias guardada la implementacion: ' + fs.readFileSync('deploy_id.txt', 'utf8').trim());

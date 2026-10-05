@@ -4,6 +4,7 @@ zentrack/Zentrack_v*_prueba.html
 # clasp: configuración local de cada máquina
 zentrack/.clasp.json
 zentrack/deploy_id.txt
-zentrack/appsscript/Code.js
+zentrack/appsscript/*.js
+zentrack/appsscript/*.gs
 zentrack/appsscript/appsscript.json
 zentrack/Zentrack_despliegue.zip
