@@ -1,47 +1,63 @@
-# Desplegar Zentrack con clasp
+# Desplegar Zentrack sin pegar archivos
 
-Una vez configurado, desplegar es un solo comando: `desplegar.bat` (Windows) o
-`./desplegar.sh` (Mac). Arma los 8 archivos, los sube a Apps Script y actualiza la
-implementación existente, así que **la URL no cambia**.
+Se configura una sola vez con `configurar.bat`. Desde ahí, cada versión nueva es
+doble clic en `desplegar.bat`, y la URL de la herramienta no cambia.
 
-## Configuración (una sola vez)
+## A. Configurar (una sola vez, ~10 minutos)
 
-1. **Node.js** (versión LTS) desde nodejs.org. Comprueba con `node -v`.
-2. **Python 3** desde python.org. En Windows marca *Add python.exe to PATH*.
-3. **clasp**: `npm install -g @google/clasp`. Comprueba con `clasp -v` (3.x).
-4. **Activa la API**: entra a https://script.google.com/home/usersettings y pon
-   *API de Google Apps Script* en **Activada**. Sin esto, `push` falla con
-   "User has not enabled the Apps Script API".
-5. **Inicia sesión**: `clasp login`, con la cuenta de Google dueña del proyecto.
-6. **Baja el proyecto real** desde la carpeta `zentrack`:
+### 1. Descomprimir
+Clic derecho sobre `Zentrack_despliegue.zip` → **Extraer todo…** → **Extraer**.
+Queda una carpeta `Zentrack`. Muévela a *Documentos* si quieres.
+No abras los archivos desde dentro del ZIP sin extraer: no funcionan ahí.
 
-   ```
-   clasp clone <ID_DEL_SCRIPT> --rootDir appsscript
-   ```
+### 2. Abrir el instalador
+Entra a la carpeta `Zentrack` y haz doble clic en **configurar.bat**.
 
-   El ID está en el editor de Apps Script → ⚙ *Configuración del proyecto* →
-   *ID de la secuencia de comandos*. Esto crea `.clasp.json` y baja a `appsscript/`
-   tu `Code.gs` (aparece como `Code.js`, es normal) y `appsscript.json`.
-7. **Guarda el ID de la implementación** en un archivo `deploy_id.txt` dentro de
-   `zentrack`. Está en *Implementar → Administrar implementaciones → ID de
-   implementación* (empieza por `AKfycb`). También sale con `clasp deployments`.
+Si Windows muestra *"Windows protegió su PC"*: clic en **Más información** →
+**Ejecutar de todas formas**. Se abre una ventana negra con 6 pasos.
 
-## Antes del primer despliegue: un control
+### 3. Lo que hace cada paso
 
-```
-clasp status
-```
+| Paso | Qué pasa | Qué haces tú |
+| --- | --- | --- |
+| 1 · Node.js | Revisa que esté instalado | Nada |
+| 2 · Python | Lo busca, esté o no en el PATH | Nada. Si dice que no lo encuentra, mira el recuadro de abajo |
+| 3 · clasp | Si no está, lo instala solo (~1 min) | Esperar |
+| 4 · Activar la API | Abre una página de Google | Pon **API de Google Apps Script** en *Activada*, vuelve a la ventana negra y presiona **Enter** |
+| 5 · Iniciar sesión | Abre el navegador | Entra con la cuenta dueña del proyecto y clic en **Permitir**. Cuando diga *"Logged in"*, vuelve a la ventana negra |
+| 6 · Conectar | Te pide la dirección del proyecto | Ver abajo |
 
-Tiene que listar **10 archivos**: `Code.js`, `appsscript.json` y los 8 HTML.
-**Si `Code.js` no aparece, no sigas**: `clasp push` reemplaza el proyecto entero
-y borraría tu Code.gs del lado de Google.
+**Paso 6 en detalle:** abre tu Google Sheet → **Extensiones → Apps Script**. Se abre
+el editor de código. Haz clic en la barra de direcciones del navegador, **Ctrl+C**
+para copiar la dirección completa. Vuelve a la ventana negra, **clic derecho** para
+pegar (en esa ventana Ctrl+V a veces no funciona) y **Enter**.
 
-## Cada vez que haya versión nueva
+Luego busca solo tu implementación. Si encuentra varias, te muestra una lista con su
+número de versión: elige la que coincide con la que ves en Apps Script →
+**Implementar → Administrar implementaciones**.
 
-```
-desplegar.bat        (Windows)
-./desplegar.sh       (Mac)
-```
+Cuando diga **LISTO**, presiona cualquier tecla para cerrar.
 
-Abre la URL de siempre y verifica en la primera pantalla del asistente:
-trackers 1,413,028 y shelters 1,465,652.
+> **Si en el paso 2 dice que no encuentra Python:** entra a python.org → Downloads,
+> descarga e instala. En la **primera pantalla del instalador**, abajo, marca la
+> casilla **"Add python.exe to PATH"** antes de darle *Install Now*. Cierra la
+> ventana negra y vuelve a abrir `configurar.bat`.
+
+## B. Desplegar (cada versión nueva)
+
+1. Reemplaza `master.html` en la carpeta por el nuevo que te mande.
+2. Doble clic en **desplegar.bat**.
+3. Abre la URL de siempre con **Ctrl+Shift+R** y carga el detailed. La primera
+   pantalla debe decir trackers **1,413,028** y shelters **1,465,652**.
+
+`desplegar.bat` se niega a subir nada si no encuentra tu `Code.gs` en la carpeta
+`appsscript`, porque subir sin él lo borraría del lado de Google.
+
+## Mac
+Lo mismo con `configurar.sh` y `desplegar.sh`, pero desde la Terminal: escribe `cd `,
+arrastra la carpeta `Zentrack` a la ventana, Enter, y luego `bash configurar.sh`
+(para desplegar: `bash desplegar.sh`).
+
+## Si algo falla
+Copia todo lo que salió en la ventana negra (clic derecho → *Seleccionar todo*,
+Enter para copiar) y mándamelo tal cual.
