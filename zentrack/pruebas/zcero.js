@@ -1,0 +1,47 @@
+let p2;const {chromium}=require('playwright-core');const fs=require('fs');
+(async()=>{
+  const b=await chromium.launch({executablePath:'/opt/pw-browsers/chromium'});
+  let n=0,f=0; const ok=(t,c)=>{c?n++:f++;console.log((c?'  OK   ':'  FALLA ')+t);};
+  const errs=[];
+  const p=await b.newPage({viewport:{width:1500,height:1000},acceptDownloads:true});
+  let respuesta='BORRAR'; p.on('dialog',d=>d.type()==='prompt'?d.accept(respuesta):d.accept()); p.on('pageerror',e=>errs.push(''+e));
+  await p.route('**/*',r=>{const u=r.request().url();
+    if(u.includes('xlsx.full.min.js'))return r.fulfill({body:fs.readFileSync(require.resolve('xlsx/dist/xlsx.full.min.js'),'utf8'),contentType:'text/javascript'});
+    if(u.startsWith('http'))return r.fulfill({body:'',contentType:'text/javascript'});return r.continue();});
+  await p.goto('file://'+__dirname+'/ASM4.html'); await p.waitForTimeout(450);
+  const cargar=async()=>{await p.evaluate(()=>verifyOpen()); await p.setInputFiles('#reportFile',['DET3.xlsx','OR2.xlsx']);
+    await p.waitForFunction(()=>WIZ&&WIZ.loaded&&WIZ.work&&WIZ.work.length>0,null,{timeout:60000}); await p.waitForTimeout(300);};
+  await cargar();
+  await p.evaluate(()=>{wizGo(2);const w=WIZ.work.find(x=>x.derrame==='13');splitRow(w._i);wizApprove();
+    CUPO.Singsun=1500000; EQ[0].precioVenta=123456;});
+  const antes=await p.evaluate(()=>({ord:ORD.length,eq:EQ.length,hist:HIST.length,sino:Object.keys(SINO.ped).length,mio:Object.keys(MIO.split).length}));
+  ok('hay datos cargados ('+JSON.stringify(antes)+')',antes.eq>0&&antes.hist>0&&antes.mio>0);
+  await p.evaluate(()=>showView?showView('config'):0).catch(()=>{});
+  await p.evaluate(()=>renderConfig());
+  ok('el botón aparece en Ajustes',await p.evaluate(()=>!!document.querySelector('#zrCaja button')));
+  respuesta='no'; await p.evaluate(()=>zrBorrarTodo());
+  ok('si no escribes BORRAR no se borra nada',await p.evaluate(()=>EQ.length>0));
+  respuesta='borrar';
+  const [dl]=await Promise.all([p.waitForEvent('download'),p.evaluate(()=>zrBorrarTodo())]);
+  const ruta=__dirname+'/respaldo_test.json'; await dl.saveAs(ruta);
+  ok('se descargó el respaldo ('+dl.suggestedFilename()+')',JSON.parse(fs.readFileSync(ruta,'utf8')).ORD.length===antes.ord);
+  const desp=await p.evaluate(()=>({ord:ORD.length,eq:EQ.length,fact:FACT.length,pagos:PAGOS.length,cli:Object.keys(CLI).length,hist:HIST.length,
+    sino:Object.keys(SINO.ped).length,mio:Object.keys(MIO.split).length+Object.keys(MIO.proj).length+Object.keys(MIO.cli).length,gpre:GPRE.length,cupo:CUPO.Singsun,
+    ser:JSON.parse(serializeState())}));
+  ok('todo quedó vacío',desp.ord+desp.eq+desp.fact+desp.pagos+desp.cli+desp.hist+desp.sino+desp.mio+desp.gpre===0);
+  ok('lo que se guarda también está vacío',desp.ser.ORD.length===0&&desp.ser.HIST.length===0&&Object.keys(desp.ser.MIO.split).length===0);
+  ok('los ajustes se conservaron (cupo 1,500,000)',desp.cupo===1500000);
+  await cargar();
+  const nuevo=await p.evaluate(()=>({der:WIZ.work.filter(x=>/^13[A-P]$/.test(x.derrame)).length,prev:Object.keys(WIZ.prev||{}).length}));
+  ok('la siguiente carga sale como la primera (13 entero, sin nada que devolver)',nuevo.der===0);
+  await p.evaluate(()=>closeRecon());
+  await p.setInputFiles('#zrArchivo',ruta); await p.waitForFunction(()=>EQ.length>0,null,{timeout:10000});
+  const rest=await p.evaluate(()=>({eq:EQ.length,hist:HIST.length,mio:Object.keys(MIO.split).length,precio:EQ[0].precioVenta}));
+  ok('restaurar el respaldo devuelve todo',rest.eq===antes.eq&&rest.hist===antes.hist&&rest.mio===antes.mio&&rest.precio===123456);
+  await p.evaluate(()=>{document.getElementById('zrCfg').checked=true;}); respuesta='BORRAR';
+  await Promise.all([p.waitForEvent('download'),p.evaluate(()=>zrBorrarTodo())]);
+  ok('con la casilla, los ajustes vuelven a fábrica (cupo 1,300,000)',await p.evaluate(()=>CUPO.Singsun===1300000&&EQ.length===0));
+  await p.evaluate(()=>{refreshAll();renderLedger();});
+  ok('sin errores de JS',errs.length===0); if(errs.length) console.log(errs);
+  console.log('\n'+n+' OK · '+f+' fallas'); fs.unlinkSync(ruta); await b.close(); process.exitCode=f?1:0;
+})();

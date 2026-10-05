@@ -23,6 +23,7 @@ const isShipped=e=>e.st==='shipping'||e.st==='shipped';
 const nombreEq=e=>{const p=(''+(e.proj||'')).trim();return (p&&p!=='-'&&!/^Orden\s/.test(p))?p:('Pedido '+(e.derrame||e.ordenId));};
 const term=mfg=>mfg==='Singsun'?90:60;
 let CONFIG={Singsun:{reserveFrom:'confirm',antPct:0.10,dias:90,receptor:'Nexus'},Eaglerise:{reserveFrom:'confirm',antPct:0.20,dias:60,receptor:'Eaglerise'},trmProy:4050,logDias:30,pagoMinDias:15,cupoRegla:'sinosure',contarDupSino:false};
+const _DEF0=JSON.stringify({CONFIG:CONFIG,CUPO:CUPO}); /* ajustes de fábrica, para "Empezar de cero" */
 /* Cómo se cuenta el cupo Sinosure que consume un pedido. Tres reglas, porque los archivos
    no usan una sola:
      'saldo'  → el saldo por pagar al fabricante (columna O). Es el 90% del tracker o el 80%

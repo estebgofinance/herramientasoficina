@@ -545,4 +545,74 @@ closeRecon=function(){
   return _cerrarAntesBorr.apply(this,arguments);
 };
 
+/* ===================================================================
+   v1.6 · EMPEZAR DE CERO
+   Borra todo lo cargado (pedidos, facturas, pagos, clientes, historial,
+   Sinosure, derrames y nombres, grupos de precio). Antes descarga un
+   respaldo .json que se puede volver a subir con "Restaurar respaldo".
+   =================================================================== */
+function _zrDescargar(){
+  const d=new Date(), f=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')
+    +'_'+String(d.getHours()).padStart(2,'0')+String(d.getMinutes()).padStart(2,'0');
+  const blob=new Blob([serializeState()],{type:'application/json'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='zentrack_respaldo_'+f+'.json';
+  document.body.appendChild(a); a.click(); a.remove();
+}
+function _zrRepintar(){
+  try{ closeRecon(); }catch(e){}
+  try{ closePanel(); }catch(e){}
+  if(typeof PCSEL!=='undefined') PCSEL.clear();
+  refreshAll(); renderLedger();
+  if(typeof pintarPrecios==='function') try{ pintarPrecios(); }catch(e){}
+}
+function zrBorrarTodo(){
+  const cfg=document.getElementById('zrCfg'), tambienAjustes=!!(cfg&&cfg.checked);
+  const r=prompt('Esto borra TODO lo cargado: pedidos, facturas, pagos, clientes, historial, Sinosure, derrames, nombres y precios'
+    +(tambienAjustes?', y también los ajustes (cupos y reglas)':' (los ajustes de cupo y reglas se conservan)')
+    +'.\n\nAntes se descarga un respaldo por si te arrepientes.\n\nEscribe BORRAR para confirmar:');
+  if(r===null) return;
+  if((''+r).trim().toUpperCase()!=='BORRAR'){ toast('No escribiste BORRAR: no se borró nada'); return; }
+  _zrDescargar();
+  const def=JSON.parse(_DEF0);
+  applyState({v:'1.0',ORD:[],FACT:[],PAGOS:[],CLI:{},HIST:[],CONCILIA:null,GPRE:[],
+    SINO:{ped:{},sembrado:false},MIO:{split:{},proj:{},cli:{},v:2},
+    CONFIG:tambienAjustes?def.CONFIG:CONFIG, CUPO:tambienAjustes?def.CUPO:CUPO});
+  PID=1; _MIOBORR=null;
+  WIZ={step:1,work:null,prev:null,err:0,filter:'todos',loaded:false,totals:{}};
+  _zrRepintar();
+  if(typeof saveToServer==='function') saveToServer();
+  toast('Listo: quedó como nuevo. El respaldo se descargó'+(tambienAjustes?'':' · los ajustes se conservaron'));
+}
+function zrRestaurar(input){
+  const f=input.files&&input.files[0]; input.value=''; if(!f) return;
+  const rd=new FileReader();
+  rd.onload=function(e){
+    let s; try{ s=JSON.parse(e.target.result); }catch(err){ toast('Ese archivo no es un respaldo de Zentrack'); return; }
+    if(!s||!Array.isArray(s.ORD)){ toast('Ese archivo no es un respaldo de Zentrack'); return; }
+    if(ORD.length&&!confirm('Esto reemplaza lo que hay ahora por el respaldo "'+f.name+'". ¿Seguir?')) return;
+    applyState(s); _MIOBORR=null; _zrRepintar();
+    if(typeof saveToServer==='function') saveToServer();
+    toast('Respaldo restaurado: '+ORD.length+' orden(es)');
+  };
+  rd.readAsText(f);
+}
+const _renderConfigAntesZr=renderConfig;
+renderConfig=function(){
+  const r=_renderConfigAntesZr.apply(this,arguments);
+  const v=document.getElementById('v-config');
+  if(v&&!document.getElementById('zrCaja')){
+    const d=document.createElement('div'); d.id='zrCaja';
+    d.innerHTML='<div class="cfgsec">Empezar de cero</div>'
+      +'<div class="cfgnote2">Borra todo lo cargado para que la herramienta quede como nueva. Antes de borrar se descarga un respaldo (.json); con <b>Restaurar respaldo</b> lo vuelves a subir si te arrepientes.</div>'
+      +'<label style="display:flex;gap:8px;align-items:center;margin:10px 0;font-size:13px"><input type="checkbox" id="zrCfg"> Borrar también los ajustes (cupos Sinosure, anticipos, plazos, TRM)</label>'
+      +'<div style="display:flex;gap:8px;flex-wrap:wrap">'
+      +'<button class="btn" style="background:var(--dato-vencido);color:#fff;border-color:var(--dato-vencido)" onclick="zrBorrarTodo()">Borrar todo y empezar de cero</button>'
+      +'<button class="btn" onclick="_zrDescargar()">Descargar respaldo</button>'
+      +'<button class="btn" onclick="document.getElementById(\'zrArchivo\').click()">Restaurar respaldo</button>'
+      +'<input type="file" id="zrArchivo" accept=".json,application/json" style="display:none" onchange="zrRestaurar(this)"></div>';
+    v.appendChild(d);
+  }
+  return r;
+};
+
 </script>
