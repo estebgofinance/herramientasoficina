@@ -243,7 +243,7 @@ function aplicarOrderReport(p,nombre){
 function _orBloqueHTML(){
   if(!WIZ.orNombre) return ''
     +'<div class="rep-sec" style="margin-top:20px">ORDER REPORT</div>'
-    +'<div class="wizhint" style="margin-bottom:10px">Cargaste solo el detailed. Sube también el ORDER REPORT para traer el cliente, el estado y las fechas de cada pedido.</div>'
+    +'<div class="wizhint" style="margin-bottom:10px;border-left:3px solid var(--dato-vencido);padding-left:10px"><b style="color:var(--dato-vencido)">Cargaste solo el detailed.</b> Sin el ORDER REPORT, el cliente, el proyecto, el estado y las fechas salen del detailed y la lectura cambia. Sube también el ORDER REPORT, o cancela y selecciona los dos archivos a la vez (Ctrl + clic).</div>'
     +'<div class="uploadbox" onclick="document.getElementById(\'reportOldFile\').click()" style="padding:14px">'
     +'<div class="up-ic">⬆︎</div><div class="up-t">Cargar ORDER REPORT</div><div class="up-s">Cliente, proyecto, estado, fechas y fecha límite de pago</div></div>';
   const d=WIZ.orDifs||[], r=WIZ.orResumen||{};
@@ -514,6 +514,35 @@ pintarPrecios=function(){
   cont.innerHTML=_pcHTML()
     +'<details class="pc-adv"'+(PCADV?' open':'')+' ontoggle="PCADV=this.open"><summary>Grupos de precio · vista detallada ('+GPRE.length+')</summary>'+viejo+'</details>';
   if(foco){ const n=cont.querySelector('[data-foco="'+foco+'"]'); if(n&&n.focus){ n.focus(); try{ if(n.setSelectionRange&&n.type!=='number') n.setSelectionRange(n.value.length,n.value.length); }catch(e){} } }
+};
+
+/* ===================================================================
+   v1.5.1 · LO QUE HACES EN EL ASISTENTE SOLO CUENTA SI APRUEBAS
+   Antes, derramar o renombrar en el paso 2 quedaba guardado en MIO al
+   instante. Si cerrabas sin aprobar, la siguiente carga te devolvía esos
+   cambios como si fueran tuyos. Ahora MIO se toma en borrador al abrir
+   el asistente y se descarta si cierras o cancelas sin aprobar.
+   =================================================================== */
+let _MIOBORR=null;
+const _mioFoto=function(){ _MIOBORR=JSON.stringify(MIO); };
+const _abrirAntesBorr=verifyOpen;
+verifyOpen=function(){ _mioFoto(); return _abrirAntesBorr.apply(this,arguments); };
+const _corregirAntesBorr=corregirUltima;
+corregirUltima=function(){ _mioFoto(); return _corregirAntesBorr.apply(this,arguments); };
+const _aprobarAntesBorr=wizApprove;
+wizApprove=function(){
+  const b=_MIOBORR; _MIOBORR=null;
+  try{ return _aprobarAntesBorr.apply(this,arguments); }
+  catch(err){ _MIOBORR=b; throw err; }
+};
+const _cerrarAntesBorr=closeRecon;
+closeRecon=function(){
+  if(_MIOBORR!==null){
+    const cambio=_MIOBORR!==JSON.stringify(MIO);
+    MIO=JSON.parse(_MIOBORR); _MIOBORR=null;
+    if(cambio) toast('Cerraste sin aprobar: los derrames y nombres de esta carga no se guardaron.');
+  }
+  return _cerrarAntesBorr.apply(this,arguments);
 };
 
 </script>
