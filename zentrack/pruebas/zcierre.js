@@ -1,6 +1,6 @@
 let p2;const {chromium}=require('playwright-core');const fs=require('fs');
 (async()=>{
-  const b=await chromium.launch({executablePath:'/opt/pw-browsers/chromium'});
+  const b=await chromium.launch({executablePath:process.env.CHROMIUM||'/opt/pw-browsers/chromium'});
   const abrir=async()=>{const p=await b.newPage({viewport:{width:1500,height:1000}});p.on('dialog',d=>d.accept());p.on('pageerror',e=>console.log('ERR',''+e));
     await p.route('**/*',r=>{const u=r.request().url();
       if(u.includes('xlsx.full.min.js'))return r.fulfill({body:fs.readFileSync(require.resolve('xlsx/dist/xlsx.full.min.js'),'utf8'),contentType:'text/javascript'});

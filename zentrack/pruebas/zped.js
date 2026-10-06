@@ -2,7 +2,7 @@ const {chromium}=require('playwright-core');const fs=require('fs');
 const OUT='/tmp/claude-0/-home-user-herramientasoficina/ca332b4e-3f1e-594e-b2aa-30133e5b1508/scratchpad/';
 const ok=(n,c)=>console.log((c?'  OK ':'FALLA')+'  '+n);
 (async()=>{
-  const b=await chromium.launch({executablePath:'/opt/pw-browsers/chromium'}).catch(()=>chromium.launch());
+  const b=await chromium.launch({executablePath:process.env.CHROMIUM||'/opt/pw-browsers/chromium'}).catch(()=>chromium.launch());
   const p=await b.newPage({viewport:{width:1560,height:1040},deviceScaleFactor:1.3});
   p.on('dialog',d=>d.accept());
   const errs=[];p.on('pageerror',e=>errs.push(e.message));

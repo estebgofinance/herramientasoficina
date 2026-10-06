@@ -1,6 +1,6 @@
 let p2;const {chromium}=require('playwright-core');const fs=require('fs');
 (async()=>{
-  const b=await chromium.launch({executablePath:'/opt/pw-browsers/chromium'});
+  const b=await chromium.launch({executablePath:process.env.CHROMIUM||'/opt/pw-browsers/chromium'});
   let n=0,f=0; const ok=(t,c)=>{c?n++:f++;console.log((c?'  OK   ':'  FALLA ')+t);};
   const errs=[];
   const p=await b.newPage({viewport:{width:1500,height:1000},acceptDownloads:true});

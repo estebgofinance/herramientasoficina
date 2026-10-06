@@ -72,6 +72,5 @@ renombran**: por eso lo ya cargado sobrevive.
 
 ## Pruebas
 
-En `scratchpad/t/` hay siete suites de Chromium que corren sobre el
-ensamblado con el detailed real. La más importante es `zfinal.js`: mete un
-estado guardado por la versión anterior y comprueba que no se pierda nada.
+En `pruebas/` (ver `TRASPASO.md`, sección 9): `npm install && node correr.js`.
+Corren en Chromium sobre master.html con los Excel reales de Andrés, que no van al repo.

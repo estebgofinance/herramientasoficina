@@ -8,3 +8,16 @@ zentrack/appsscript/*.js
 zentrack/appsscript/*.gs
 zentrack/appsscript/appsscript.json
 zentrack/Zentrack_despliegue.zip
+
+# pruebas: datos reales de Andrés y archivos que genera correr.js
+zentrack/pruebas/*.xlsx
+zentrack/pruebas/ASM4.html
+zentrack/pruebas/V13.html
+zentrack/pruebas/V14.html
+zentrack/pruebas/V141.html
+zentrack/pruebas/node_modules
+zentrack/pruebas/package-lock.json
+zentrack/pruebas/*.png
+
+# datos del negocio: no van a un repo público
+zentrack/privado/

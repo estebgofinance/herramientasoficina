@@ -1,7 +1,7 @@
 const {chromium}=require('playwright-core');const fs=require('fs');
 let ok=0,mal=0;const T=(c,m)=>{if(c){ok++;console.log('  OK   '+m);}else{mal++;console.log('  FALLA '+m);}};
 (async()=>{
-  const b=await chromium.launch({executablePath:'/opt/pw-browsers/chromium'});
+  const b=await chromium.launch({executablePath:process.env.CHROMIUM||'/opt/pw-browsers/chromium'});
   const p=await b.newPage({viewport:{width:1500,height:1000}});
   const errs=[];p.on('pageerror',e=>errs.push(''+e));p.on('dialog',d=>d.accept());
   await p.route('**/*',r=>{const u=r.request().url();

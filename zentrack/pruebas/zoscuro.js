@@ -1,6 +1,6 @@
 const {chromium}=require('playwright-core');const fs=require('fs');
 (async()=>{
-  const b=await chromium.launch({executablePath:'/opt/pw-browsers/chromium'});
+  const b=await chromium.launch({executablePath:process.env.CHROMIUM||'/opt/pw-browsers/chromium'});
   const p=await b.newPage({viewport:{width:1400,height:900},colorScheme:'dark'});
   p.on('dialog',d=>d.accept()); const errs=[]; p.on('pageerror',e=>errs.push(''+e));
   await p.route('**/*',r=>{const u=r.request().url();
@@ -14,8 +14,10 @@ const {chromium}=require('playwright-core');const fs=require('fs');
   await p.evaluate(()=>{const c=document.querySelectorAll('#v-precios input[type=checkbox]');for(let i=1;i<4&&i<c.length;i++)c[i].click();}); await p.waitForTimeout(300);
   await p.screenshot({path:'os_precios.png'});
   const est=await p.evaluate(()=>[...document.querySelectorAll('select')].filter(x=>x.offsetParent).slice(0,40).map(x=>{const c=getComputedStyle(x);return c.backgroundColor+'|'+c.color;}));
-  console.log([...new Set(est)]);
+  const u=[...new Set(est)]; const ok=(t,c)=>{console.log((c?'  OK   ':'  FALLA ')+t); if(!c) process.exitCode=1;};
+  ok('Windows oscuro: los menús en Precios son blancos con letra oscura '+u.join(' '),u.length===1&&u[0]==='rgb(255, 255, 255)|rgb(23, 24, 26)');
+  ok('los botones de la barra de selección tienen letra blanca',await p.evaluate(()=>[...document.querySelectorAll('.pc-bar .btn')].every(x=>getComputedStyle(x).color==='rgb(255, 255, 255)')));
   await p.evaluate(()=>navTo('sinosure')); await p.waitForTimeout(300); await p.evaluate(()=>{const t=[...document.querySelectorAll('#v-sinosure tr')].find(r=>/Orden 11/.test(r.textContent));if(t)t.click();}); await p.waitForTimeout(300); await p.screenshot({path:'os_sino.png'});
   await p.evaluate(()=>openPanel(ORD[0].id)); await p.waitForTimeout(300); await p.screenshot({path:'os_panel.png'});
-  console.log('errores',errs); await b.close();
+  console.log((errs.length?'  FALLA ':'  OK   ')+'sin errores de JS'); if(errs.length){console.log(errs);process.exitCode=1;} await b.close();
 })();
