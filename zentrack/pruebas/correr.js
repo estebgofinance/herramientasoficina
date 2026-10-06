@@ -15,7 +15,7 @@ fs.copyFileSync('V13_referencia.html','V13.html');
 const git=c=>execSync('git show '+c+':zentrack/master.html',{maxBuffer:1<<26});
 try{ fs.writeFileSync('V14.html',git('077ba5d')); fs.writeFileSync('V141.html',git('ed59b88')); }catch(e){ console.warn('sin historial git: se salta zrepro2'); }
 const SUITE=['z22.js','z22b.js','zsino2.js','zmio.js','zdos.js','zpc.js','zderr.js','zwiz.js','zgem.js','zident.js',
-  'zflujo.js','zgid.js','zrepro2.js','zcierre.js','zcero.js','zoscuro.js'];
+  'zflujo.js','zgid.js','zrepro2.js','zcierre.js','zcero.js','zoscuro.js','zcosto.js'];
 const lista=process.argv.slice(2).length?process.argv.slice(2):SUITE.filter(f=>f!=='zrepro2.js'||fs.existsSync('V141.html'));
 let mal=0;
 for(const f of lista){

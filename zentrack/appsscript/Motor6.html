@@ -389,7 +389,10 @@ function _pcVisibles(){
     return (a.mfg+a.ordenId).localeCompare(b.mfg+b.ordenId)||(''+a.derrame).localeCompare(''+b.derrame,undefined,{numeric:true});
   });
 }
-const _pcCosto=e=>(+e.totalChina||((+e.cupoMonto||0)+(+e.otrosMonto||0)));
+/* costo con China = lo que se le paga al fabricante + otros componentes (lo mismo que ves en Clientes).
+   No se usa la columna "Total amount" del detailed: en pedidos que pasan por Nexus (PO12 Solaris)
+   Andrés pone ahí el precio de venta, y en 12-1/12-2 repite el total de los dos pedidos. */
+const _pcCosto=e=>(+e.cupoMonto||+e.mfgAmt||0)+(+e.otrosMonto||0);
 function _pcCliOpts(sel){
   const cs=[...new Set(CLIENTES.concat(EQ.map(function(e){return e.cliente;})))].filter(function(c){return c&&c!=='Por asignar';}).sort();
   return '<option value="Por asignar"'+(sel==='Por asignar'||!sel?' selected':'')+'>Por asignar</option>'

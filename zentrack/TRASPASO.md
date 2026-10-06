@@ -1,6 +1,6 @@
 # Zentrack · traspaso
 
-Este documento es para quien siga el proyecto, sea una persona u otro Claude, y no estuvo en las conversaciones anteriores. Léelo completo antes de cambiar algo. La versión actual es **v1.6.1**.
+Este documento es para quien siga el proyecto, sea una persona u otro Claude, y no estuvo en las conversaciones anteriores. Léelo completo antes de cambiar algo. La versión actual es **v1.6.2**.
 
 ## 1. Qué es
 
@@ -103,6 +103,7 @@ Si se sube solo el detailed, cliente, estado y fechas salen del detailed y la le
 - **Pedido cerrado:** sin saldo y sin renglón en la hoja, no se carga.
 - **El techo del cupo** lo pone Esteban a mano en Ajustes o en Sinosure. Ninguna carga lo cambia.
 - **La cifra de Sinosure que vale es la de la hoja Sinosure del detailed.** Si una decisión vieja la contradice, sale un aviso con "Igualar a la hoja".
+- **Costo con China = fabricante + otros componentes** (`cupoMonto + otrosMonto`). No uses la columna "Total amount" del detailed (`totalChina`): en pedidos pagados vía Nexus (PO12 Solaris) Andrés pone ahí el precio de venta, y en 12-1/12-2 repite el total del par.
 - **Solenium es cliente interno** (`CLI[x].interno`). Su estado de cuenta es un espejo del order report a precio de venta.
 
 ## 7. Pendiente
@@ -131,7 +132,7 @@ Decisiones que Esteban todavía no ha tomado:
 
 ## 9. Pruebas
 
-`zentrack/pruebas/` tiene 16 suites de Chromium (Playwright) que cargan los Excel reales, hacen clic como el usuario y verifican números y persistencia. Son 185 verificaciones.
+`zentrack/pruebas/` tiene 17 suites de Chromium (Playwright) que cargan los Excel reales, hacen clic como el usuario y verifican números y persistencia. Son 188 verificaciones.
 
 ```
 cd zentrack/pruebas

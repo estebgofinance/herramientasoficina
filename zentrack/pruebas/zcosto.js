@@ -1,0 +1,21 @@
+const {chromium}=require('playwright-core');const fs=require('fs');
+(async()=>{
+  const b=await chromium.launch({executablePath:process.env.CHROMIUM||'/opt/pw-browsers/chromium'});
+  let n=0,f=0; const ok=(t,c)=>{c?n++:f++;console.log((c?'  OK   ':'  FALLA ')+t);};
+  const p=await b.newPage({viewport:{width:1400,height:900}}); const errs=[]; p.on('pageerror',e=>errs.push(''+e)); p.on('dialog',d=>d.accept());
+  await p.route('**/*',r=>{const u=r.request().url();
+    if(u.includes('xlsx.full.min.js'))return r.fulfill({body:fs.readFileSync(require.resolve('xlsx/dist/xlsx.full.min.js'),'utf8'),contentType:'text/javascript'});
+    if(u.startsWith('http'))return r.fulfill({body:'',contentType:'text/javascript'});return r.continue();});
+  await p.goto('file://'+__dirname+'/ASM4.html'); await p.waitForTimeout(400);
+  await p.evaluate(()=>verifyOpen()); await p.setInputFiles('#reportFile',['DET3.xlsx','OR2.xlsx']);
+  await p.waitForFunction(()=>WIZ.loaded&&WIZ.work&&WIZ.work.length,null,{timeout:60000});
+  await p.evaluate(()=>{wizGo(2);wizApprove();navTo('precios');}); await p.waitForTimeout(300);
+  const fila=async d=>p.evaluate(d=>{const tr=[...document.querySelectorAll('#v-precios tr.pc-r')].find(r=>{const c=r.querySelector('td:nth-child(2)');return c&&c.textContent.trim()===d;});
+    return tr?[...tr.querySelectorAll('td.r')].map(x=>x.textContent.trim()):null;},d);
+  const sol=await fila('12');
+  ok('Solaris (PO12) muestra costo China 72,240, no el precio 111,701 ('+(sol||[]).join(' / ')+')',!!sol&&sol.some(x=>x==='72,240')&&!sol.some(x=>x==='111,701'));
+  const d121=await fila('12-1');
+  ok('12-1 muestra su propio costo 71,326, no el total de los dos ('+(d121||[]).join(' / ')+')',!!d121&&d121.some(x=>x==='71,326'));
+  ok('sin errores de JS',errs.length===0);
+  console.log('\n'+n+' OK · '+f+' fallas'); await b.close(); process.exitCode=f?1:0;
+})();

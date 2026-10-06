@@ -1322,7 +1322,7 @@ details.pc-adv>summary{cursor:pointer;font-size:12.5px;color:var(--ink2);padding
     <button class="loadbtn" onclick="verifyOpen()"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" style="width:14px;height:14px"><path d="M8 2v8M5 7l3 3 3-3M3 13h10"/></svg> Cargar datos</button>
     <button class="loadbtn" style="margin-left:6px;background:#0d9488;color:#fff;border-color:#0d9488" onclick="facWizOpen()"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" style="width:14px;height:14px"><path d="M4 2h6l3 3v9H4V2zM10 2v3h3"/></svg> Cargar facturas</button>
     <div class="corte">
-      <b id="verTag">v1.6.1</b>
+      <b id="verTag">v1.6.2</b>
     </div>
   </header>
 
@@ -5980,7 +5980,10 @@ function _pcVisibles(){
     return (a.mfg+a.ordenId).localeCompare(b.mfg+b.ordenId)||(''+a.derrame).localeCompare(''+b.derrame,undefined,{numeric:true});
   });
 }
-const _pcCosto=e=>(+e.totalChina||((+e.cupoMonto||0)+(+e.otrosMonto||0)));
+/* costo con China = lo que se le paga al fabricante + otros componentes (lo mismo que ves en Clientes).
+   No se usa la columna "Total amount" del detailed: en pedidos que pasan por Nexus (PO12 Solaris)
+   Andrés pone ahí el precio de venta, y en 12-1/12-2 repite el total de los dos pedidos. */
+const _pcCosto=e=>(+e.cupoMonto||+e.mfgAmt||0)+(+e.otrosMonto||0);
 function _pcCliOpts(sel){
   const cs=[...new Set(CLIENTES.concat(EQ.map(function(e){return e.cliente;})))].filter(function(c){return c&&c!=='Por asignar';}).sort();
   return '<option value="Por asignar"'+(sel==='Por asignar'||!sel?' selected':'')+'>Por asignar</option>'

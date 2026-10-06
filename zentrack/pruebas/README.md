@@ -22,6 +22,7 @@ Chromium: `/opt/pw-browsers/chromium` en la nube, o la ruta que indique la varia
 | zmio, zgid, zderr | Derrames y nombres que sobreviven cargas, sin choques de id ni saltos de scroll |
 | zdos | La carga de los dos archivos juntos |
 | zpc | Precios y clientes: mover, repartir, quitar |
+| zcosto | El costo China en Precios es fabricante + otros, no el precio de Nexus |
 | zwiz, zflujo, zident, zgem | El asistente, el paso Comparar, la identidad de pedidos y los gemelos |
 | zrepro2 | Un estado guardado por versiones viejas abre sin perder nada |
 | zcierre | Cerrar el asistente sin aprobar no deja rastros |
