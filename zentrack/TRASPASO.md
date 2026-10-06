@@ -119,7 +119,7 @@ Decisiones que Esteban todavía no ha tomado:
 - ¿Sinosure cubre solo al fabricante o el costo total a China (que incluye Jingwei, Wenzhong y Restar)?
 - ¿Se le piden a Andrés dos columnas nuevas en el ORDER REPORT: "Cupo Sinosure" y "Entra a Sinosure Sí/No"?
 
-**Diseño pendiente: pago directo del cliente al fabricante.** En PO12 Solaris (Eaglerise, cliente Ingenio Verde) el detailed dice "Payment via: Nexus", con "Total amount" 111,701 y "Manufacturer amount" 72,240. Esteban explicó que el 111,701 es lo que **Ingenio Verde le tiene que pagar a Eaglerise**, o sea su precio de venta. Es el único shelter con "Payment via" Nexus; los demás dicen Zentrack, y en los trackers Nexus es lo normal. Hoy la herramienta lo trata como deuda propia: suma a "Vencido con China" y consume cupo.
+**Diseño pendiente: pago directo del cliente al fabricante.** En PO12 Solaris (Eaglerise, cliente Ingenio Verde) el detailed dice "Payment via: Nexus", y "Total amount" es mayor que "Manufacturer amount" (montos en `privado/CIFRAS.md`). Esteban explicó que el "Total amount" es lo que **Ingenio Verde le tiene que pagar a Eaglerise**, o sea su precio de venta. Es el único shelter con "Payment via" Nexus; los demás dicen Zentrack, y en los trackers Nexus es lo normal. Hoy la herramienta lo trata como deuda propia: suma a "Vencido con China" y consume cupo.
 
 Propuesta hecha a Esteban, **sin construir**: una marca por pedido, "lo paga el cliente directo al fabricante", que se pone una vez y persiste en una llave nueva del estado. Con la marca:
 - El saldo sale de lo que debe Zentrack y se muestra como deuda del cliente con el fabricante.
@@ -127,7 +127,7 @@ Propuesta hecha a Esteban, **sin construir**: una marca por pedido, "lo paga el 
 - Sinosure sigue la hoja de Andrés, salvo que Esteban lo ponga en "fuera".
 
 Antes de construir hay que preguntarle:
-1. ¿Ingenio Verde le paga los 111,701 completos a Eaglerise y Eaglerise le devuelve la diferencia a Zentrack, o le paga 72,240 a Eaglerise y 39,461 a Zentrack?
+1. ¿Ingenio Verde le paga el total completo a Eaglerise y Eaglerise le devuelve la diferencia a Zentrack, o le paga a Eaglerise solo el monto del fabricante y la diferencia a Zentrack?
 2. ¿Ese pedido debe consumir cupo Sinosure?
 3. ¿Es un caso único o va a repetirse (por ejemplo con PO14 Siliana)?
 
