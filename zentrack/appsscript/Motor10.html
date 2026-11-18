@@ -1,0 +1,582 @@
+<script>
+
+/* ===================================================================
+   v1.17 · ESTADO DE CUENTA EN PDF Y EXCEL, MÁS CLAROS
+   PDF: resumen arriba (saldo, vencido, próximos 30 días, sin fecha y lo
+   pagado), "Lo que vence, fecha a fecha", los pedidos por grupos
+   (Shelters, Trackers, Otros productos, Otros cargos) con las cuotas
+   anidadas, cada cargo de Finkargo como ficha con su préstamo, los pagos
+   recibidos (los aplicados a cada pedido más los abonos sueltos) y un
+   pie con la fecha de corte y el número de página.
+   Excel (ExcelJS, se carga solo al exportar): hoja "Estado de cuenta"
+   con grupos, subtotales con fórmula, cuotas plegables, filtros y
+   encabezado fijo; hoja "Fecha a fecha" con acumulado; hoja "Abonos".
+   Si ExcelJS no carga, baja el Excel sencillo de antes.
+   Solo cambia cómo se exporta; no toca datos ni el estado guardado.
+   =================================================================== */
+function _ecPdfHTML(c){
+  const {filas}=ecFilas(c), t=ecTotales(c), interno=esInterno(c), H=x=>esc4(x==null?'':x);
+  const M=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+  const fl=d=>d?d.getDate()+' de '+M[d.getMonth()]+' de '+d.getFullYear():'';
+  const fc=d=>d?String(d.getDate()).padStart(2,'0')+'-'+['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'][d.getMonth()]+'-'+String(d.getFullYear()).slice(2):'—';
+  const n2=v=>Math.abs(v)<0.005?'—':_ec2(v);
+  const est=(saldo,vence,mora)=>saldo<=0.005?'<span class="es ok">Pagado</span>':(mora>0?'<span class="pl mal">Vencido · '+mora+' d</span>':(vence?'<span class="es">Vence '+fc(vence)+'</span>':'<span class="es gr">Sin fecha</span>'));
+  const en30=addD(TODAY,30); let p30=0, sinf=0;
+  filas.forEach(f=>{ if(f.cuotas) f.cuotas.forEach(q=>{ if(q.saldo>0.005){ if(!q.vence) sinf+=q.saldo; else if(q.vence>=TODAY&&q.vence<=en30) p30+=q.saldo; } });
+    else if(f.saldo>0.005){ if(!f.vence) sinf+=f.saldo; else if(f.vence>=TODAY&&f.vence<=en30) p30+=f.saldo; } });
+  const pct=t.valor>0?Math.min(100,t.abonado/t.valor*100):0;
+  /* grupos */
+  const grupo=f=>f.tipo==='eq'?(f.e&&f.e.mfg==='Singsun'?'Trackers':(f.e&&f.e.mfg==='Eaglerise'?'Shelters':'Equipos')):(f.x&&f.x.tipo==='cargo'?'Otros cargos':'Otros productos');
+  const orden=['Shelters','Trackers','Equipos','Otros productos','Otros cargos'], G={};
+  filas.forEach(f=>(G[grupo(f)]=G[grupo(f)]||[]).push(f));
+  const sub=l=>l.reduce((a,f)=>({valor:a.valor+f.valor,abonado:a.abonado+f.abonado,saldo:a.saldo+Math.max(0,f.saldo),venc:a.venc+(f.vencido||0)}),{valor:0,abonado:0,saldo:0,venc:0});
+  const filaEq=f=>{ let h='<tr class="p'+(f.saldo<=0.005?' pag':'')+'"><td><b>'+H(f.pedido)+'</b>'+(f.tipo==='x'&&f.equipo?'<small>'+H(f.equipo)+'</small>':'')+'</td><td>'+H(f.proyecto)+(f.sinfac?' <span class="tag">sin facturar</span>':'')+'</td><td>'+(f.etd?fc(new Date(f.etd)):'—')+'</td>'
+      +'<td class="r">'+n2(f.valor)+'</td><td class="r">'+n2(f.abonado)+'</td><td class="r"><b>'+n2(Math.max(0,f.saldo))+'</b></td><td>'+est(f.saldo,f.vence,f.mora)+'</td></tr>';
+    if(f.cuotas&&f.cuotas.length) h+=f.cuotas.map((q,i)=>'<tr class="q'+(i===f.cuotas.length-1?' ult':'')+(q.saldo<=0.005?' pag':'')+'"><td colspan="2"><span class="ram">'+(i===f.cuotas.length-1?'└':'├')+'</span>'+H(q.q.concepto||('Cuota '+(i+1)))+'</td><td>'+fc(q.vence)+'</td>'
+      +'<td class="r">'+n2(q.monto)+'</td><td class="r">'+n2(q.abonado)+'</td><td class="r">'+n2(Math.max(0,q.saldo))+'</td><td>'+est(q.saldo,q.vence,q.mora)+'</td></tr>').join('');
+    return h; };
+  const juntar=l=>{ const out=[], idx={}; l.forEach(f=>{ if(f.tipo!=='x'||f.cuotas){ out.push(f); return; }
+      const k=[f.pedido,f.equipo,f.valor,f.abonado,f.vence?f.vence.getTime():'',f.mora].join('|');
+      if(idx[k]==null){ idx[k]=out.length; out.push(Object.assign({},f,{_n:1,_proys:[f.proyecto]})); }
+      else { const g=out[idx[k]]; g._n++; g._proys.push(f.proyecto); g.valor+=f.valor; g.abonado+=f.abonado; g.saldo+=f.saldo; g.vencido=(g.vencido||0)+(f.vencido||0); } });
+    return out.map(f=>f._n>1?Object.assign(f,{proyecto:f._n+' unidades: '+f._proys.join(', ')}):f); };
+  const tabla=(nom,l0,corto)=>{ const l=juntar(l0), s=sub(l0);
+    return '<section class="grupo"><div class="gh"><h2>'+H(nom)+'</h2><span>'+l0.length+' '+(l0.length===1?'línea':'líneas')+' · saldo <b>US$ '+_ec2(s.saldo)+'</b>'+(s.venc>0.005?' · <span class="mal">vencido '+_ec2(s.venc)+'</span>':'')+'</span></div>'
+      +'<table><thead><tr><th>Pedido</th><th>Proyecto</th><th>ETD</th><th class="r">Valor</th><th class="r">Abonado</th><th class="r">Saldo</th><th>Estado</th></tr></thead><tbody>'
+      +l.map(filaEq).join('')+'<tr class="st"><td colspan="3">Subtotal '+H((corto||nom).toLowerCase())+'</td><td class="r">'+n2(s.valor)+'</td><td class="r">'+n2(s.abonado)+'</td><td class="r">'+n2(s.saldo)+'</td><td></td></tr></tbody></table></section>'; };
+  /* otros cargos: cada uno como ficha; los de Finkargo con su préstamo */
+  const cargo=f=>{ const op=f.x&&f.x.fink&&typeof FINK!=='undefined'?FINK.ops.find(o=>o.id===f.x.fink):null;
+    let h='<div class="ficha"><div class="fh"><div><b>'+H(f.pedido||'Cargo')+'</b>'+(f.equipo&&!op?' · '+H(f.equipo):'')+'</div><div style="white-space:nowrap">Saldo <b>US$ '+_ec2(Math.max(0,f.saldo))+'</b></div></div>';
+    if(op) h+='<div class="fd">Préstamo que tomó Zentrack con Finkargo el '+fl(_p14D(op.fecha))+(op.para?' para '+H(op.para):'')+'; '+H(c)+' asume el capital, los intereses y los cargos. '
+      +'<span>Capital US$ '+_ec2(op.capital)+' · tasa '+H(op.tasa)+' % mensual vencida · fondo de garantías US$ '+_ec2(op.fondo)+' · servicio de giro US$ '+_ec2(op.giroFee)+' · capital en la cuota '+fkCuotas(op).length+'.</span></div>';
+    else if(f.x&&f.x.nota) h+='<div class="fd">'+H(f.x.nota)+'</div>';
+    h+='<table><thead><tr><th>Cuota</th><th>Fecha</th><th class="r">Valor</th><th class="r">Abonado</th><th class="r">Saldo</th><th>Estado</th></tr></thead><tbody>'
+      +(f.cuotas&&f.cuotas.length?f.cuotas.map(q=>'<tr'+(q.saldo<=0.005?' class="pag"':'')+'><td>'+H(q.q.concepto||'')+'</td><td>'+fc(q.vence)+'</td><td class="r">'+n2(q.monto)+'</td><td class="r">'+n2(q.abonado)+'</td><td class="r">'+n2(Math.max(0,q.saldo))+'</td><td>'+est(q.saldo,q.vence,q.mora)+'</td></tr>').join('')
+        :'<tr><td>Único pago</td><td>'+fc(f.vence)+'</td><td class="r">'+n2(f.valor)+'</td><td class="r">'+n2(f.abonado)+'</td><td class="r">'+n2(Math.max(0,f.saldo))+'</td><td>'+est(f.saldo,f.vence,f.mora)+'</td></tr>')
+      +'<tr class="st"><td colspan="2">Total</td><td class="r">'+n2(f.valor)+'</td><td class="r">'+n2(f.abonado)+'</td><td class="r">'+n2(Math.max(0,f.saldo))+'</td><td></td></tr></tbody></table></div>';
+    return h; };
+  /* lo que viene, fecha a fecha */
+  let viene='';
+  try{ const E=(typeof ecEntra==='function')?ecEntra(c):null;
+    if(E&&(E.venc>0.5||E.fechas.length)){ let ac=E.venc;
+      viene='<section class="viene"><h2>Lo que viene, fecha a fecha</h2><div class="tl">'+(E.venc>0.5?'<div class="it rojo"><b>Vencido hoy</b><span>'+_ec2(E.venc)+'</span><small>acumulado '+_ec2(ac)+'</small></div>':'')
+        +E.fechas.slice(0,7).map(x=>{ ac+=x.v; return '<div class="it"><b>'+fc(x.d)+'</b><span>'+_ec2(x.v)+'</span><small>acumulado '+_ec2(ac)+'</small></div>'; }).join('')
+        +(E.fechas.length>7?'<div class="it g"><b>Después</b><span>'+_ec2(E.fechas.slice(7).reduce((a,x)=>a+x.v,0))+'</span><small>'+(E.fechas.length-7)+' fechas más</small></div>':'')+'</div>'
+        +(interno?'<p class="nt">Para clientes del grupo, las fechas de pago son las que hayan acordado; aquí se muestran los vencimientos de cada pedido.</p>':'')+'</section>'; } }catch(e){}
+  if(interno){ const fs=[]; filas.forEach(f=>{ if(f.cuotas) f.cuotas.forEach(q=>{ if(q.saldo>0.005&&q.vence) fs.push([q.vence,q.saldo]); }); else if(f.saldo>0.005&&f.vence) fs.push([f.vence,f.saldo]); });
+    const venc=fs.filter(x=>x[0]<TODAY).reduce((a,x)=>a+x[1],0), g={}; fs.filter(x=>x[0]>=TODAY).forEach(([d,v])=>{ const k=_p14Iso(d); g[k]=(g[k]||0)+v; });
+    const ks=Object.keys(g).sort(); let ac=venc;
+    viene='<section class="viene"><h2>Lo que vence, fecha a fecha</h2><div class="tl">'+(venc>0.5?'<div class="it rojo"><b>Vencido hoy</b><span>'+_ec2(venc)+'</span><small>acumulado '+_ec2(ac)+'</small></div>':'')
+      +ks.slice(0,7).map(k=>{ ac+=g[k]; return '<div class="it"><b>'+fc(_p14D(k))+'</b><span>'+_ec2(g[k])+'</span><small>acumulado '+_ec2(ac)+'</small></div>'; }).join('')
+      +(ks.length>7?'<div class="it g"><b>Después</b><span>'+_ec2(ks.slice(7).reduce((a,k)=>a+g[k],0))+'</span><small>'+(ks.length-7)+' fechas más</small></div>':'')
+      +(sinf>0.5?'<div class="it g"><b>Sin fecha</b><span>'+_ec2(sinf)+'</span><small>esperan despacho</small></div>':'')+'</div></section>'; }
+  const abonos=(ECA||[]).filter(a=>a.cliente===c).sort((a,b)=>(''+b.fecha).localeCompare(''+a.fecha));
+  const directo=t.abonado-abonos.reduce((a,x)=>a+(+x.usd||0),0);
+  const css='@page{size:letter;margin:14mm 13mm 16mm;@bottom-left{content:"Zentrack S.A.S · Estado de cuenta de '+H(c).replace(/"/g,'')+' · corte '+fc(TODAY)+'";font:8pt Archivo,Arial,sans-serif;color:#8a8f95}@bottom-right{content:"Página " counter(page) " de " counter(pages);font:8pt Archivo,Arial,sans-serif;color:#8a8f95}}'
+    +'*{box-sizing:border-box}body{font-family:Archivo,Arial,sans-serif;font-size:9.5pt;color:#17181A;margin:0;-webkit-print-color-adjust:exact;print-color-adjust:exact;font-variant-numeric:tabular-nums}'
+    +'.cab{display:flex;justify-content:space-between;align-items:flex-end;border-bottom:1px solid #17181A;padding-bottom:10px}.marca{display:flex;align-items:center;gap:8px;font-weight:700;font-size:13pt;letter-spacing:.02em}.marca i{width:11px;height:11px;background:#FD9C10;border-radius:2px;display:block}'
+    +'.cab .der{text-align:right}.cab h1{margin:0;font-size:18pt;line-height:1.1}.cab .cli{font-size:12pt;font-weight:600;margin-top:2px}.cab small{display:block;color:#565B61;font-size:8.5pt;margin-top:3px}'
+    +'.res{display:grid;grid-template-columns:1.4fr 1fr 1fr 1fr;gap:0;margin:14px 0 6px}.box{border-left:1px solid #E4E6E9;padding:1px 12px}.box:first-child{border-left:0;padding-left:0}.box .l{font-size:8pt;color:#565B61}.box .v{font-size:12pt;font-weight:600;margin-top:2px}.box small{font-size:7.5pt;color:#8a8f95}'
+    +'.box.n .v{font-size:15pt;font-weight:700}.box .v.mal{color:#B3261E}'
+    +'.bar{height:4px;background:#EEF0F2;border-radius:2px;margin:10px 0 3px;overflow:hidden}.bar i{display:block;height:100%;background:#2E6E5A}.barl{font-size:8pt;color:#565B61;display:flex;justify-content:space-between}'
+    +'h2{font-size:11pt;margin:0}.gh,.viene h2{break-after:avoid;page-break-after:avoid}tbody tr:first-child{break-before:avoid}.ficha,.grupo .gh+table thead{break-inside:avoid}section{margin-top:20px}.gh{display:flex;justify-content:space-between;align-items:baseline;border-bottom:1px solid #17181A;padding-bottom:4px;margin-bottom:2px}.gh span{font-size:8.5pt;color:#565B61}'
+    +'table{width:100%;border-collapse:collapse}th{font-size:7.8pt;color:#8a8f95;font-weight:400;text-align:left;padding:4px 6px;border-bottom:1px solid #E4E6E9}td{padding:3.5px 6px;border-bottom:1px solid #F3F4F5;vertical-align:top}td b{font-weight:600}.r{text-align:right}tr{break-inside:avoid}'
+    +'td:nth-child(3),td.r,th.r{white-space:nowrap}td small{display:block;font-size:7.5pt;color:#565B61}tr.q td{font-size:8.5pt;color:#3A3D41;border-bottom:0;padding-top:2px;padding-bottom:2px}tr.q.ult td{padding-bottom:6px;border-bottom:1px solid #EEF0F2}'
+    +'.ram{color:#A2A7AD;margin:0 6px 0 4px;font-family:monospace}tr.pag td{color:#8a8f95}tr.st td{font-weight:600;border-top:1px solid #CDD1D6;border-bottom:0}'
+    +'.pl{display:inline-block;font-size:7.5pt;padding:1px 7px;border-radius:9px;white-space:nowrap}.pl.mal{background:#FBE4E2;color:#B3261E}.es{font-size:8pt;color:#3A3D41;white-space:nowrap}.es.ok{color:#2E6E5A}.es.gr{color:#A2A7AD}.tag{font-size:7pt;background:#FDF1DC;color:#7A4A00;padding:1px 5px;border-radius:6px}.mal{color:#B3261E}'
+    +'.viene .tl{display:grid;grid-template-columns:repeat(auto-fit,minmax(104px,1fr));margin-top:6px}.viene .it{border-top:2px solid #9CC3B4;padding:5px 6px 0 0}.viene .it.rojo{border-color:#B3261E}.viene .it.g{border-color:#D5D8DC}.viene .it b{font-size:8pt;display:block}.viene .it span{font-size:10pt;font-weight:600;display:block}.viene .it small{font-size:7.5pt;color:#565B61}.nt{font-size:8pt;color:#565B61;margin:6px 0 0}'
+    +'.ficha{border-left:2px solid #CDD1D6;padding:4px 0 4px 12px;margin-top:10px;break-inside:avoid}.fh{display:flex;justify-content:space-between;gap:10px;font-size:10pt}.fd{font-size:8.5pt;color:#3A3D41;margin:4px 0 6px;line-height:1.4}.fd span{display:block;color:#565B61;margin-top:2px}'
+    +'.tot{margin-top:22px;border-top:1px solid #17181A;padding-top:8px;display:grid;grid-template-columns:repeat(4,1fr);gap:8px;break-inside:avoid}.tot div{font-size:8.5pt;color:#565B61}.tot b{display:block;font-size:11pt;font-weight:600;color:#17181A}.tot .mal b{color:#B3261E}'
+    +'.nota{font-size:8pt;color:#565B61;margin-top:10px;line-height:1.4}';
+  return '<!doctype html><html lang="es"><head><meta charset="utf-8"><title>Estado de cuenta '+H(c)+' '+_ecISO(TODAY)+'</title>'
+    +'<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;700&display=swap"><style>'+css+'</style></head><body>'
+    +'<div class="cab"><div class="marca"><i></i>ZENTRACK S.A.S</div><div class="der"><h1>Estado de cuenta</h1><div class="cli">'+H(c)+'</div><small>Corte '+fl(TODAY)+' · cifras en dólares (USD)'+(interno?'':' · plazo '+_ecPlazo(c)+' días desde ETD')+'</small></div></div>'
+    +'<div class="res"><div class="box n"><div class="l">Saldo pendiente</div><div class="v">US$ '+_ec2(t.saldo)+'</div><small>de US$ '+_ec2(t.valor)+' facturado</small></div>'
+    +'<div class="box"><div class="l">Vencido</div><div class="v mal">'+_ec2(t.vencido)+'</div><small>ya pasó su fecha</small></div>'
+    +'<div class="box"><div class="l">Próximos 30 días</div><div class="v">'+_ec2(p30)+'</div><small>hasta el '+fc(en30)+'</small></div>'
+    +'<div class="box"><div class="l">Sin fecha</div><div class="v">'+_ec2(sinf)+'</div><small>esperan despacho o entrega</small></div></div>'
+    +'<div class="bar"><i style="width:'+pct.toFixed(1)+'%"></i></div><div class="barl"><span>Pagado US$ '+_ec2(t.abonado)+' ('+Math.round(pct)+' %)</span><span>'+(t.favor>0.005?'A favor del cliente US$ '+_ec2(t.favor):'')+'</span></div>'
+    +viene
+    +orden.filter(k=>G[k]&&k!=='Otros cargos').map(k=>tabla(k==='Otros productos'?'Otros productos (no vienen de China)':k,G[k],k)).join('')
+    +(G['Otros cargos']?'<section class="grupo"><div class="gh"><h2>Otros cargos</h2><span>rubros que '+H(c)+' asume · saldo <b>US$ '+_ec2(sub(G['Otros cargos']).saldo)+'</b></span></div>'+G['Otros cargos'].map(cargo).join('')+'</section>':'')
+    +(abonos.length||directo>0.005?'<section class="grupo"><div class="gh"><h2>Pagos recibidos</h2><span>total US$ '+_ec2(t.abonado)+'</span></div><table><thead><tr><th>Fecha</th><th class="r">USD</th><th class="r">COP</th><th class="r">TRM</th><th>Nota</th></tr></thead><tbody>'
+      +(directo>0.005?'<tr><td>—</td><td class="r"><b>'+_ec2(directo)+'</b></td><td class="r">—</td><td class="r">—</td><td></td></tr>':'')   /* v1.17.4: lo ve el cliente, sin nota interna */
+      +abonos.map(a=>'<tr><td>'+fc(_p14D(a.fecha))+'</td><td class="r"><b>'+_ec2(a.usd)+'</b></td><td class="r">'+(a.cop?fmtUSDs(a.cop):'—')+'</td><td class="r">'+(a.trm?_ec2(a.trm):'—')+'</td><td>'+H(a.nota||'')+'</td></tr>').join('')+'</tbody></table></section>':'')
+    +'<div class="tot"><div>Total facturado<b>US$ '+_ec2(t.valor)+'</b></div><div>Abonado<b>US$ '+_ec2(t.abonado)+'</b></div><div>Saldo pendiente<b>US$ '+_ec2(t.saldo)+'</b></div><div class="mal">Vencido<b>US$ '+_ec2(t.vencido)+'</b></div></div>'
+    +'<p class="nota">'+(interno?'':'Vence = ETD + '+_ecPlazo(c)+' días, salvo fecha acordada. ')+'Los pedidos sin ETD todavía no corren plazo. Cualquier diferencia con sus registros, por favor indíquenosla.</p>'
+    +'</body></html>';
+}
+ecPDF=function(c){
+  const w=window.open('','_blank');
+  if(!w){ toast('El navegador bloqueó la ventana. Usa el botón Excel.'); return; }
+  w.document.write(_ecPdfHTML(c)); w.document.close();
+  setTimeout(function(){ try{ w.focus(); w.print(); }catch(e){} },700);
+};
+
+/* ---- el Excel del estado de cuenta: con formato, grupos, cuotas plegables y hojas aparte ---- */
+const _EXCELJS_URL='https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js';
+function _cargarExcelJS(){ return new Promise((ok,mal)=>{ if(window.ExcelJS) return ok(window.ExcelJS);
+  const s=document.createElement('script'); s.src=_EXCELJS_URL; s.onload=()=>window.ExcelJS?ok(window.ExcelJS):mal(new Error('ExcelJS no cargó')); s.onerror=()=>mal(new Error('No se pudo cargar ExcelJS')); document.head.appendChild(s); }); }
+function _ecLibro(c,ExcelJS){
+  const {filas}=ecFilas(c), t=ecTotales(c), interno=esInterno(c);
+  const wb=new ExcelJS.Workbook(); wb.creator='Zentrack'; wb.created=new Date(); wb.calcProperties.fullCalcOnLoad=true;
+  const NEGRO='FF17181A', GRIS='FF565B61', CLARO='FFF4F5F6', LINEA='FFE4E6E9', ROJO='FFB3261E', ROJOS='FFFBE4E2', VERDE='FF2E6E5A', VERDES='FFDCEFE7', AMBAR='FFFDF1DC', NARANJA='FFFD9C10';
+  const NUM='#,##0.00;[Red]-#,##0.00;"—"', FECHA='dd-mmm-yy', fuente={name:'Arial',size:10};
+  const dt=d=>d?new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate())):null;
+  const estado=(saldo,vence,mora)=>saldo<=0.005?'Pagado':(mora>0?'Vencido · '+mora+' d':(vence?'Por vencer':'Sin fecha'));
+  const grupo=f=>f.tipo==='eq'?(f.e&&f.e.mfg==='Singsun'?'Trackers':(f.e&&f.e.mfg==='Eaglerise'?'Shelters':'Equipos')):(f.x&&f.x.tipo==='cargo'?'Otros cargos':'Otros productos');
+  const orden=['Shelters','Trackers','Equipos','Otros productos','Otros cargos'], G={}; filas.forEach(f=>(G[grupo(f)]=G[grupo(f)]||[]).push(f));
+  const en30=addD(TODAY,30); let p30=0, sinf=0;
+  filas.forEach(f=>{ (f.cuotas||[{saldo:f.saldo,vence:f.vence}]).forEach(q=>{ if(q.saldo>0.005){ if(!q.vence) sinf+=q.saldo; else if(q.vence>=TODAY&&q.vence<=en30) p30+=q.saldo; } }); });
+  /* ===== hoja 1: estado de cuenta ===== */
+  /* v1.17.4: sin fitToPage. Con el + de las cuotas arriba (summaryBelow), ExcelJS escribe <sheetPr>
+     en un orden que Excel da por dañado y no abre el archivo. Se imprime al 70 %, que cabe a lo ancho. */
+  const ws=wb.addWorksheet('Estado de cuenta',{views:[{state:'frozen',ySplit:12,showGridLines:false}],properties:{outlineLevelRow:1},pageSetup:{orientation:'landscape',scale:70,paperSize:1}});
+  ws.properties.outlineProperties={summaryBelow:false};
+  ws.columns=[{width:22},{width:46},{width:11},{width:12},{width:15},{width:15},{width:15},{width:17},{width:12}];
+  const pinta=(row,o)=>{ row.eachCell({includeEmpty:true},(cl,i)=>{ if(i>9) return; cl.font=Object.assign({},fuente,o.font||{}); if(o.fill) cl.fill={type:'pattern',pattern:'solid',fgColor:{argb:o.fill}};
+    if(o.borde) cl.border={bottom:{style:'thin',color:{argb:o.borde}}}; }); };
+  ws.getCell('A1').value='ZENTRACK S.A.S'; ws.getCell('A1').font={name:'Arial',size:11,bold:true,color:{argb:NARANJA}};
+  ws.getCell('A2').value='Estado de cuenta · '+c; ws.getCell('A2').font={name:'Arial',size:16,bold:true,color:{argb:NEGRO}};
+  ws.getCell('A3').value='Corte '+_ecFmtD(TODAY)+' · cifras en dólares (USD)'+(interno?'':' · plazo '+_ecPlazo(c)+' días desde ETD'); ws.getCell('A3').font={name:'Arial',size:10,color:{argb:GRIS}};
+  /* resumen · v1.17.5, como lo dejó Esteban en Excel: "Pagado" ya no va debajo de "Vencido" (se
+     confundían); lo pagado va junto a lo facturado y en una barra de avance (barra de datos naranja) */
+  const res=[['A5','Saldo pendiente',t.saldo],['G5','Próximos 30 días',p30],['A6','Sin fecha',sinf],['C6','Vencido',t.vencido],
+    ['G6','Total facturado',t.valor],['G7','Total pagado',t.abonado]].concat(t.favor>0.005?[['G8','A favor del cliente',t.favor]]:[]);
+  res.forEach(([ref,l,v])=>{ const a=ws.getCell(ref), b=ws.getCell(a.row,a.col+1);
+    a.value=l; a.font={name:'Arial',size:9,color:{argb:GRIS}}; b.value=Math.round(v*100)/100; b.numFmt=NUM; b.font={name:'Arial',size:12,bold:true,color:{argb:l==='Vencido'?ROJO:NEGRO}}; b.alignment={horizontal:'left'}; });
+  [5,6].forEach(n=>ws.getRow(n).height=15.5); ws.getRow(8).height=18;
+  ws.getCell('A8').value='% Pagado a la fecha'; ws.getCell('A8').font={name:'Arial',size:9,color:{argb:GRIS}};
+  const medio={style:'medium',color:{argb:NEGRO}};
+  /* primero unir: al unir, C8:F8 quedan con el MISMO objeto de estilo que B8 (ExcelJS), así que cada
+     celda recibe uno propio; si no, el borde de una pisa el de las otras */
+  ws.mergeCells('B8:F8');
+  ['B','C','D','E','F'].forEach(L=>{ const cl=ws.getCell(L+'8');
+    cl.style=Object.assign({},cl.style,{fill:{type:'pattern',pattern:'solid',fgColor:{argb:LINEA}},
+      border:Object.assign({top:medio,bottom:medio},L==='B'?{left:medio}:{},L==='F'?{right:medio}:{})}); });
+  const barra=ws.getCell('B8'); barra.value=t.valor>0?Math.min(1,Math.max(0,Math.round(t.abonado/t.valor*10000)/10000)):0;
+  barra.numFmt='0%'; barra.font={name:'Arial',size:10,bold:true,color:{argb:NEGRO}}; barra.alignment={horizontal:'center',vertical:'middle'};
+  ws.addConditionalFormatting({ref:'B8:F8',rules:[{type:'dataBar',priority:1,gradient:false,border:true,borderColor:{argb:NARANJA},color:{argb:NARANJA},
+    minLength:0,maxLength:100,axisPosition:'none',cfvo:[{type:'num',value:0},{type:'num',value:1}]}]});
+  [['B9',0,'left'],['F9',1,'right']].forEach(([ref,v,al])=>{ const cl=ws.getCell(ref); cl.value=v; cl.numFmt='0%'; cl.font={name:'Arial',size:8,color:{argb:GRIS}}; cl.alignment={horizontal:al}; });
+  ws.getCell('A10').value='Clic en el + de la izquierda para ver las cuotas de cada pedido. Los filtros de la fila 12 sirven para ver solo un grupo o un estado.'; ws.getCell('A10').font={name:'Arial',size:9,italic:true,color:{argb:GRIS}};
+  const hdr=ws.getRow(12); hdr.values=['Pedido','Proyecto / concepto','ETD','Vence','Valor','Abonado','Saldo','Estado','Días mora'];
+  pinta(hdr,{font:{bold:true,color:{argb:'FFFFFFFF'}},fill:NEGRO}); hdr.height=20;
+  /* v1.17.5: los encabezados van a la izquierda; a la derecha el botón del filtro los tapaba ("Va", "Abona") */
+  let r=13; const subtot=[];
+  orden.filter(k=>G[k]).forEach(k=>{
+    const l=G[k], s=l.reduce((a,f)=>({v:a.v+f.valor,ab:a.ab+f.abonado,sa:a.sa+Math.max(0,f.saldo),ve:a.ve+(f.vencido||0)}),{v:0,ab:0,sa:0,ve:0});
+    const gh=ws.getRow(r++); gh.values=[k+' · '+l.length+(l.length===1?' línea':' líneas'),'','','','','','',s.ve>0.005?'Vencido '+_ec2(s.ve):'',null];   /* null: "Vencido …" se ve completo */
+    pinta(gh,{font:{bold:true,size:11},fill:CLARO,borde:NEGRO}); gh.height=20;
+    const filasPed=[];
+    l.forEach(f=>{
+      const op=f.x&&f.x.fink&&typeof FINK!=='undefined'?FINK.ops.find(o=>o.id===f.x.fink):null;
+      const row=ws.getRow(r); filasPed.push(r); r++;
+      row.values=[f.pedido||'',(f.proyecto||'')+(f.tipo==='x'&&f.equipo?(f.proyecto?' · ':'')+f.equipo:'')+(f.sinfac?' (sin facturar)':''),dt(f.etd?new Date(f.etd):null),dt(f.vence),f.valor,f.abonado,Math.max(0,f.saldo),estado(f.saldo,f.vence,f.mora),f.mora||null];
+      pinta(row,{borde:LINEA,font:f.saldo<=0.005?{color:{argb:'FF8A8F95'}}:{}}); row.getCell(1).font=Object.assign({},fuente,{bold:true}); row.getCell(1).alignment={wrapText:true,vertical:'top'}; row.getCell(2).alignment={wrapText:true,vertical:'top'};
+      [3,4].forEach(i=>row.getCell(i).numFmt=FECHA); [5,6,7].forEach(i=>row.getCell(i).numFmt=NUM); row.getCell(7).font=Object.assign({},fuente,{bold:f.saldo>0.005});
+      const e=row.getCell(8); e.alignment={indent:1}; if(f.mora>0){ e.font=Object.assign({},fuente,{color:{argb:ROJO},bold:true}); e.fill={type:'pattern',pattern:'solid',fgColor:{argb:ROJOS}}; } else if(f.saldo<=0.005){ e.font=Object.assign({},fuente,{color:{argb:VERDE}}); e.fill={type:'pattern',pattern:'solid',fgColor:{argb:VERDES}}; }
+      if(op){ const n=ws.getRow(r++); n.values=['','Préstamo de Finkargo '+(op.orden||'')+' del '+_ecFmtD(_p14D(op.fecha))+': capital '+_ec2(op.capital)+' · tasa '+op.tasa+' % mensual vencida · fondo de garantías '+_ec2(op.fondo)+' · giro '+_ec2(op.giroFee)+'. '+c+' asume capital, intereses y cargos.'];
+        n.outlineLevel=1; n.getCell(2).font={name:'Arial',size:9,italic:true,color:{argb:GRIS}}; ws.mergeCells(n.number,2,n.number,9); n.getCell(2).alignment={wrapText:true}; n.height=26; }
+      (f.cuotas||[]).forEach((q,i)=>{ const qr=ws.getRow(r++); const ult=i===f.cuotas.length-1;
+        qr.values=['',(ult?'   └ ':'   ├ ')+(q.q.concepto||('Cuota '+(i+1))),'',dt(q.vence),q.monto,q.abonado,Math.max(0,q.saldo),estado(q.saldo,q.vence,q.mora),q.mora||null];
+        qr.outlineLevel=1; pinta(qr,{font:{size:9,color:{argb:q.saldo<=0.005?'FF8A8F95':'FF3A3D41'}}}); qr.getCell(4).numFmt=FECHA; [5,6,7].forEach(j=>qr.getCell(j).numFmt=NUM);
+        if(q.mora>0) qr.getCell(8).font={name:'Arial',size:9,color:{argb:ROJO}}; });
+    });
+    const st=ws.getRow(r++); st.values=['Subtotal '+k.toLowerCase(),'','','',null,null,null,'',''];
+    [5,6,7].forEach(i=>{ const L='ABCDEFGHI'[i-1]; st.getCell(i).value={formula:'SUM('+filasPed.map(x=>L+x).join(',')+')',result:i===5?s.v:(i===6?s.ab:s.sa)}; st.getCell(i).numFmt=NUM; });
+    pinta(st,{font:{bold:true},borde:'FFCDD1D6'}); subtot.push(st.number); r++;
+  });
+  const tr=ws.getRow(r); tr.values=['TOTAL','','','',null,null,null,'',''];
+  [5,6,7].forEach(i=>{ const L='ABCDEFGHI'[i-1]; tr.getCell(i).value={formula:'SUM('+subtot.map(x=>L+x).join(',')+')',result:i===5?t.valor:(i===6?t.abonado:t.saldo)}; tr.getCell(i).numFmt=NUM; });
+  pinta(tr,{font:{bold:true,size:11,color:{argb:'FFFFFFFF'}},fill:NEGRO});
+  ws.autoFilter={from:{row:12,column:1},to:{row:r-1,column:9}};
+  ws.headerFooter.oddFooter='&8Zentrack S.A.S · Estado de cuenta de '+c+' · corte '+_ecFmtD(TODAY)+'&R&8Página &P de &N';
+  ws.pageSetup.printTitlesRow='12:12';
+  /* ===== hoja 2: lo que vence, fecha a fecha ===== */
+  const w2=wb.addWorksheet('Fecha a fecha',{views:[{state:'frozen',ySplit:3,showGridLines:false}],pageSetup:{fitToPage:true,fitToWidth:1,fitToHeight:0,paperSize:1}});
+  w2.columns=[{width:14},{width:16},{width:16},{width:60}];
+  w2.getCell('A1').value='Lo que vence, fecha a fecha · '+c; w2.getCell('A1').font={name:'Arial',size:13,bold:true};
+  const h2=w2.getRow(3); h2.values=['Fecha','Monto','Acumulado','Qué vence']; pinta(h2,{font:{bold:true,color:{argb:'FFFFFFFF'}},fill:NEGRO});
+  const g={}; let venc=0; const vencQ=[];
+  filas.forEach(f=>(f.cuotas||[{saldo:f.saldo,vence:f.vence,q:{concepto:''}}]).forEach(q=>{ if(!(q.saldo>0.005)) return; const nom=(f.pedido||'')+(q.q&&q.q.concepto?' · '+q.q.concepto:'');
+    if(!q.vence) return; if(q.vence<TODAY){ venc+=q.saldo; vencQ.push(nom); return; } const k=_p14Iso(q.vence); (g[k]=g[k]||{v:0,n:[]}).v+=q.saldo; g[k].n.push(nom); }));
+  let rr=4, acu=0; const fila2=(fe,v,n,clr)=>{ const row=w2.getRow(rr); acu+=v; row.values=[fe,v,{formula:rr===4?'B4':'C'+(rr-1)+'+B'+rr,result:Math.round(acu*100)/100},n]; row.getCell(1).numFmt=FECHA; [2,3].forEach(i=>row.getCell(i).numFmt=NUM);
+    pinta(row,{borde:LINEA,font:clr?{color:{argb:clr}}:{}}); row.getCell(4).alignment={wrapText:true}; rr++; };
+  if(venc>0.005) fila2('Vencido hoy',venc,vencQ.join(', '),ROJO);
+  Object.keys(g).sort().forEach(k=>fila2(dt(_p14D(k)),g[k].v,g[k].n.join(', ')));
+  if(sinf>0.005) fila2('Sin fecha',sinf,'Esperan despacho o entrega');
+  ws.getColumn(8).eachCell((cell,rn)=>{ if(rn>=12&&!cell.isMerged) cell.alignment=Object.assign({},cell.alignment||{},{indent:1}); });
+  /* ===== hoja 3: abonos ===== */
+  const ab=(ECA||[]).filter(a=>a.cliente===c).sort((a,b)=>(''+a.fecha).localeCompare(''+b.fecha));
+  const w3=wb.addWorksheet('Abonos',{views:[{state:'frozen',ySplit:3,showGridLines:false}],pageSetup:{fitToPage:true,fitToWidth:1,fitToHeight:0,paperSize:1}});
+  w3.columns=[{width:13},{width:15},{width:17},{width:11},{width:66}];
+  w3.getCell('A1').value='Pagos recibidos · '+c; w3.getCell('A1').font={name:'Arial',size:13,bold:true};
+  const h3=w3.getRow(3); h3.values=['Fecha','USD','COP','TRM','Nota']; pinta(h3,{font:{bold:true,color:{argb:'FFFFFFFF'}},fill:NEGRO});
+  const directo=t.abonado-ab.reduce((a,x)=>a+(+x.usd||0),0); let r3=4;
+  if(directo>0.005){ const row=w3.getRow(r3++); row.values=['—',directo,null,null,''];   /* v1.17.4: lo ve el cliente, sin nota interna */ row.getCell(2).numFmt=NUM; pinta(row,{borde:LINEA}); }
+  ab.forEach(a=>{ const row=w3.getRow(r3++); row.values=[dt(_p14D(a.fecha)),+a.usd||0,a.cop||null,a.trm||null,a.nota||'']; row.getCell(1).numFmt=FECHA; row.getCell(2).numFmt=NUM; row.getCell(3).numFmt='#,##0'; row.getCell(4).numFmt='#,##0.00'; pinta(row,{borde:LINEA}); });
+  if(r3>4){ const row=w3.getRow(r3); row.values=['Total',{formula:'SUM(B4:B'+(r3-1)+')',result:t.abonado}]; row.getCell(2).numFmt=NUM; pinta(row,{font:{bold:true}}); }
+  else w3.getCell('A4').value='Sin pagos registrados.';
+  return wb;
+}
+const _ecExcelAntes117=ecExcel;
+ecExcel=function(c){
+  _cargarExcelJS().then(ExcelJS=>_ecLibro(c,ExcelJS).xlsx.writeBuffer()).then(buf=>{
+    const url=URL.createObjectURL(new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}));
+    const a=document.createElement('a'); a.href=url; a.download='EstadoCuenta_'+c.replace(/[^\w]+/g,'_')+'_'+_ecISO(TODAY)+'.xlsx'; document.body.appendChild(a); a.click();
+    setTimeout(()=>{ URL.revokeObjectURL(url); a.remove(); },1500);
+  }).catch(err=>{ console.warn(err); toast('No pude armar el Excel con formato ('+err.message+'); va el sencillo.'); _ecExcelAntes117(c); });
+};
+
+/* ===================================================================
+   v1.17.1 · CARGA DEL DETAILED SIN PERDER PEDIDOS NI CUPO
+   Salió cargando el detailed del 23-oct:
+   · La cifra de Sinosure del paso 1 y del resumen sumaba la hoja por la
+     llave de cada derrame (7-2A, 7-2B…) y la hoja la trae por pedido
+     completo (7-2): daba menos de la mitad de lo que suma la hoja. Ahora
+     cada derrame toma la de su pedido completo, una sola vez.
+   · Un pedido que ya no viene en el archivo (los trackers del PO#12) o
+     que viene pagado y cerrado se borraba al aprobar, con su línea en el
+     estado de cuenta del cliente. Ahora se conserva por defecto (el
+     cerrado, con saldo a China en 0) y en Comparar › Desaparecidos se
+     puede elegir "Quitar".
+   · En el lector: "Paying" (pago parcial) y el ORDER REPORT que no
+     devuelve a producción un pedido que ya zarpó (arreglos en su sitio).
+   No hay llaves nuevas: el pedido conservado lleva noVino o cerradoEn.
+   =================================================================== */
+const _hojaClaveW=(w,m)=>{ const k=kOf(w); if(m[k]!=null) return k;
+  const mm=(''+(w.derrame||'')).match(_reDer); if(mm){ const kb=_claveDe(w.mfg,mm[1]); if(m[kb]!=null) return kb; } return null; };
+cupoWork=function(mfg){
+  const m=(WIZ.concilia&&WIZ.concilia.sinoPorDerrame)||null, ws=(WIZ.work||[]).filter(w=>w.mfg===mfg);
+  if(!m) return ws.reduce((s,w)=>s+(+w.cupoSaldo||0),0);
+  const vistos={}; let s=0;
+  ws.forEach(w=>{ const k=_hojaClaveW(w,m); if(k&&!vistos[k]){ vistos[k]=1; s+=m[k]; } });
+  return s;
+};
+const _sinoSelAntes1171=sinoSel;
+sinoSel=function(w){
+  let h=_sinoSelAntes1171.apply(this,arguments);
+  const m=(WIZ.concilia&&WIZ.concilia.sinoPorDerrame)||null;
+  if(m&&m[kOf(w)]==null){ const kb=_hojaClaveW(w,m); if(kb) h=h.replace('Hoja · no lo lista','Hoja · '+fmtUSDs(m[kb])+' el pedido completo'); }
+  return h;
+};
+/* ---- pedidos que no vienen, o vienen cerrados ---- */
+function _idosCerrados(){
+  const s={};
+  (WIZ.omitidos||[]).forEach(o=>{ if(!o.cerrado||!o.key||!o.mfg) return;
+    const base=o.key.split('#')[0], ent=o.key.split('#')[1]||'', mc=base.match(/^CFM(\d+)(?:-(\d+))?/);
+    s[_claveDe(o.mfg,(mc?'CFM '+mc[1]+(mc[2]?'-'+mc[2]:''):base)+(ent?' '+ent:''))]=true; });
+  return s;
+}
+function _idoCerrado(k){
+  const s=_idosCerrados(); if(s[k]) return true;
+  const mfg=k.split('|')[0], p=WIZ.prev&&WIZ.prev[k];
+  const e=EQ.find(x=>kOf(x)===k), mm=(''+((e&&e.derrame)||'')).match(_reDer);
+  return !!(p&&mm&&s[_claveDe(mfg,mm[1])]);
+}
+function _idoQuitar(k){ return !!(WIZ.quitar&&WIZ.quitar[k]); }
+function _idoSel(k){
+  const q=_idoQuitar(k);
+  return '<select class="we" onchange="WIZ.quitar=WIZ.quitar||{};WIZ.quitar[\''+k.replace(/'/g,"\'")+'\']=(this.value===\'quitar\');renderWizDiff()">'
+    +'<option value="conservar"'+(q?'':' selected')+'>Conservar</option><option value="quitar"'+(q?' selected':'')+'>Quitar de la herramienta</option></select>';
+}
+/* en el paso 1, que se vea de una vez */
+const _recibeAntes1171=renderWizReceive;
+renderWizReceive=function(){
+  const r=_recibeAntes1171.apply(this,arguments);
+  if(!WIZ.loaded||!WIZ.prev) return r;
+  const idos=_wizDesaparecidos(); if(!idos.length) return r;
+  const b=document.getElementById('reconBody'); if(!b) return r;
+  const cer=idos.filter(x=>_idoCerrado(x.clave)), no=idos.filter(x=>!_idoCerrado(x.clave));
+  const nom=x=>'<b>'+x.clave.split('|')[1]+'</b>'+(x.p.proj?' '+esc4(x.p.proj):'')+(x.p.cliente&&x.p.cliente!=='Por asignar'?' ('+esc4(x.p.cliente)+')':'');
+  const d=document.createElement('div'); d.className='cfgnote2 p1171-idos';
+  d.style.cssText='margin:0 0 12px;border-left:3px solid var(--dato-debo);padding-left:10px';
+  d.innerHTML=(no.length?'<b>'+no.length+' pedido(s) que ya tenías no vienen en este archivo:</b> '+no.map(nom).join(' · ')+'. Se conservan tal como están, con su estado de cuenta. ':'')
+    +(cer.length?'<b>'+cer.length+' pedido(s) vienen pagados y cerrados:</b> '+cer.map(nom).join(' · ')+'. Se conservan con saldo a China en 0. ':'')
+    +'Si alguno sobra, quítalo en <b>Comparar › Desaparecidos</b>.';
+  b.insertBefore(d,b.firstChild);
+  return r;
+};
+/* al aprobar: lo conservado vuelve a su orden */
+const _aprobarAntes1171=wizApprove;
+wizApprove=function(){
+  const idos=(WIZ&&WIZ.prev)?_wizDesaparecidos():[];
+  const quedan=[], cerr={};
+  idos.forEach(x=>{ if(_idoQuitar(x.clave)) return; const c=_idoCerrado(x.clave);
+    EQ.filter(e=>kOf(e)===x.clave).forEach(e=>{ quedan.push(e); if(c) cerr[x.clave]=true; }); });
+  const ordsPrev={}; ORD.forEach(o=>{ ordsPrev[o.id+'|'+o.mfg]=o; });
+  const corte=_p14Iso((WIZ.corte instanceof Date&&!isNaN(WIZ.corte))?WIZ.corte:TODAY);
+  const r=_aprobarAntes1171.apply(this,arguments);
+  if(!quedan.length) return r;
+  quedan.forEach(e=>{
+    if(cerr[kOf(e)]){ e.cerradoEn=e.cerradoEn||corte; delete e.noVino;
+      ['antSaldo','balSaldo','cupoSaldo','cupoSaldo0','otrosSaldo','totalSaldo'].forEach(f=>{ e[f]=0; });
+      e.antPaid=true; e.balPaid=true; e.cupoPagado=+e.cupoMonto||0; e.otrosPagado=+e.otrosMonto||0; }
+    else e.noVino=e.noVino||corte;
+    let o=ORD.find(x=>x.id===e.ordenId&&x.mfg===e.mfg);
+    if(!o){ const p=ordsPrev[e.ordenId+'|'+e.mfg];
+      o={id:e.ordenId,mfg:e.mfg,cliente:(p&&p.cliente)||e.cliente||'Por asignar',entidad:(p&&p.entidad)||'Solenium',equipos:[]}; ORD.push(o); }
+    o.equipos.push(e);
+  });
+  EQ=ORD.flatMap(o=>o.equipos); EQ.forEach((e,i)=>e._i=i);
+  const ix={}; EQ.forEach(e=>{ ix[eqKey(e)]=e._i; });
+  PAGOS.forEach(p=>(p.aps||[]).forEach(a=>{ if(!a.ek) return; const n=ix[a.ek];
+    if(a.ieq!=null) a.ieq=(n!=null?n:-1); if(a.eqI!=null) a.eqI=(n!=null?n:-1); }));
+  if(typeof syncFlags==='function') syncFlags();
+  if(typeof sinoMerge==='function') sinoMerge();
+  refreshAll(); renderLedger();
+  toast(quedan.length+' pedido(s) que no venían en el archivo se conservaron: '+[...new Set(quedan.map(e=>e.derrame))].join(', '));
+  if(typeof saveToServer==='function') saveToServer();
+  return r;
+};
+
+/* ===================================================================
+   v1.17.2 · ENEXA: EL ROSARIO 1, 2 Y 3
+   Cambio que Esteban aprobó el 27-oct-2026. Los trackers que compró Enexa
+   salen de bodega en vez de fabricarse: 7-6 y 7-7 (Piojo 2 y 3, que eran de
+   Solenium) pasan a Enexa como El Rosario 1 y 2, con el precio y las cuotas
+   del contrato que tenían La Elvira 1 y 2 (PO 12). 7-3A, el que ya está en
+   Colombia, se llama El Rosario 3. El PO 12 de trackers ya no existe en China
+   (Andrés lo quitó del detailed y del order report del 23-oct) y sale de la
+   herramienta; lo que Solenium tenía abonado en esos pedidos pasa a lo que le
+   vence primero, como "Registrar abono". Opcional: sacar 7-6 a 7-9 del cupo
+   Sinosure, como la hoja de Andrés.
+   Nada se aplica solo: un aviso arriba muestra el cambio y se aplica con un
+   clic. Queda en Ajustes con "Deshacer".
+   No hay llaves nuevas: el registro, con lo necesario para deshacer, va en
+   CONFIG.cambios[id].
+   =================================================================== */
+const ROS_ID='enexa-rosario-2026-10-27';
+let _rosOculto=false, _rosSino=false;
+const _rosCopia=x=>x==null?null:JSON.parse(JSON.stringify(x));
+const _rosEq=d=>EQ.find(e=>e.mfg==='Singsun'&&e.derrame===d)||null;
+const _rosEnexa=()=>Object.keys(CLI).find(c=>/enexa/i.test(c))||'Enexa S.A.S';
+const _rosHecho=()=>!!(CONFIG.cambios&&CONFIG.cambios[ROS_ID]);
+const _rosBase=e=>{ const m=(''+(e.derrame||'')).match(_reDer); return m?_claveDe(e.mfg,m[1]):null; };
+/* lo abonado en una línea del estado de cuenta (fila o cuotas) */
+function _rosAbonado(k){
+  const r=ECP[k]; if(!r) return 0;
+  return Math.round((r.cuotas?r.cuotas.reduce((a,q)=>a+(+q.abonado||0),0):(+r.abonado||0))*100)/100;
+}
+function _rosPlan(){
+  if(_rosHecho()) return null;
+  const enx=_rosEnexa();
+  const doce=EQ.filter(e=>e.mfg==='Singsun'&&/^12-[12]/.test(''+e.derrame))
+    .sort((a,b)=>(''+a.derrame).localeCompare(''+b.derrame,undefined,{numeric:true}));
+  const fuentes=doce.filter(e=>e.cliente===enx);
+  const mov=[];
+  [['7-6','El Rosario 1'],['7-7','El Rosario 2']].forEach(([d,nom],i)=>{
+    const e=_rosEq(d); if(e&&e.cliente!==enx) mov.push({e,nom,src:fuentes[i]||null}); });
+  const e3=_rosEq('7-3A'), ren=(e3&&e3.cliente===enx&&e3.proj!=='El Rosario 3')?e3:null;
+  if(!mov.length&&!doce.length&&!ren) return null;
+  const usadas=new Set(mov.filter(m=>m.src).map(m=>kOf(m.src)));
+  /* lo abonado que se queda sin línea: lo de Solenium en 7-6/7-7 y lo del PO 12 que no pasa a El Rosario */
+  const salen=[...mov.map(m=>m.e),...doce.filter(e=>!usadas.has(kOf(e)))];
+  const fuera=new Set([...mov.map(m=>kOf(m.e)),...doce.map(kOf)]);
+  const abonos=[];
+  salen.forEach(e=>{
+    const k=kOf(e), tot=_rosAbonado(k); if(!(tot>0.005)) return;
+    const partes=[]; let enEca=0;
+    (ECA||[]).forEach(a=>(a.aplicado||[]).forEach((p,j)=>{ if(p.k===k){ partes.push({id:a.id,j,monto:+p.monto||0}); enEca+=+p.monto||0; } }));
+    abonos.push({k,cliente:e.cliente,nom:e.derrame+(e.proj?' '+e.proj:''),total:tot,partes,
+      directo:Math.max(0,Math.round((tot-enEca)*100)/100)});
+  });
+  return {enx,mov,ren,doce,fuera,abonos};
+}
+/* reparte montos sobre lo que le vence primero al cliente, sin las líneas que salen */
+function _rosReparto(c,montos,fuera){
+  const us=_ecUnidades(c).filter(u=>!fuera.has(u.k)).map(u=>({k:u.k,i:u.i,saldo:Math.round(u.saldo*100)/100}));
+  let ult=null;
+  return montos.map(m=>{
+    let resto=Math.round(m*100)/100; const out=[];
+    us.forEach(u=>{ if(resto<=0.005||u.saldo<=0.005) return; const x=Math.min(resto,u.saldo);
+      out.push({k:u.k,i:u.i,monto:Math.round(x*100)/100}); u.saldo=Math.round((u.saldo-x)*100)/100; resto=Math.round((resto-x)*100)/100; ult=u; });
+    if(resto>0.005){ /* sobra: queda a favor, como en "Registrar abono" */
+      const f=ecFilas(c).filas.find(x=>!fuera.has(x.k));
+      const d=ult||us[0]||(f?{k:f.k,i:f.cuotas?0:-1}:null);
+      if(d) out.push({k:d.k,i:d.i,monto:resto});
+    }
+    return out;
+  });
+}
+function _rosDestinos(p){
+  const porCli={}, res=[];
+  p.abonos.forEach(ab=>{ (porCli[ab.cliente]=porCli[ab.cliente]||[]).push(ab); });
+  Object.keys(porCli).forEach(c=>{
+    const lista=[];
+    porCli[c].forEach(ab=>{ ab.partes.forEach(pt=>lista.push({ab,pt,monto:pt.monto})); if(ab.directo>0.005) lista.push({ab,pt:null,monto:ab.directo}); });
+    const rep=_rosReparto(c,lista.map(x=>x.monto),p.fuera);
+    lista.forEach((x,i)=>res.push({ab:x.ab,pt:x.pt,dest:rep[i]}));
+  });
+  return res;
+}
+function _rosNombre(k){
+  const e=EQ.find(x=>kOf(x)===k); if(e) return e.derrame+(e.proj?' '+e.proj:'');
+  const x=(ECX||[]).find(y=>y.id===k); return x?((x.pedido||'')+' '+(x.proyecto||'')).trim():k;
+}
+function _rosDestTxt(ds){
+  const m={}, orden=[]; ds.forEach(d=>{ if(!(d.k in m)){ m[d.k]=0; orden.push(d.k); } m[d.k]+=d.monto; });
+  return orden.map(k=>'<b>'+esc4(_rosNombre(k))+'</b> '+_ec2(m[k])).join(' · ');
+}
+function rosAplicar(){
+  const p=_rosPlan(); if(!p) return;
+  const sino=_rosSino, reparto=_rosDestinos(p);   /* antes de mover nada */
+  const S={eq:{},quitados:[],MIO:{proj:{},cli:{},split:{}},COBRO:{},COSTO:{},ECP:{},ECA:{},SINO:{},GPRE:_rosCopia(GPRE),PAGOS:[]};
+  const guardaK=k=>{
+    ['proj','cli','split'].forEach(m=>{ if(!(k in S.MIO[m])) S.MIO[m][k]=_rosCopia((MIO[m]||{})[k]); });
+    if(!(k in S.COBRO)) S.COBRO[k]=_rosCopia(COBRO[k]);
+    if(!(k in S.COSTO)) S.COSTO[k]=_rosCopia(COSTO[k]);
+    if(!(k in S.ECP)) S.ECP[k]=_rosCopia(ECP[k]);
+  };
+  const guardaEcp=k=>{ if(!(k in S.ECP)) S.ECP[k]=_rosCopia(ECP[k]); };
+  const guardaEca=id=>{ const a=ECA.find(x=>x.id===id); if(a&&!(id in S.ECA)) S.ECA[id]=_rosCopia(a.aplicado); };
+  const resumen=[], ekViejo=new Map();
+  [...p.mov.map(m=>m.e),...(p.ren?[p.ren]:[])].forEach(e=>{ const k=kOf(e); ekViejo.set(e,eqKey(e));
+    S.eq[k]={cliente:e.cliente,proj:e.proj,precioVenta:e.precioVenta,_cliCustom:!!e._cliCustom}; guardaK(k); });
+  /* 1) 7-6 y 7-7 pasan a Enexa con el precio y las cuotas de La Elvira 1 y 2 */
+  p.mov.forEach(m=>{
+    const e=m.e, k=kOf(e), antes=e.derrame+(e.proj?' '+e.proj:'')+' ('+(e.cliente||'')+')';
+    _pcAsignar(e,p.enx); e.proj=m.nom; MIO.proj[k]=m.nom;
+    if(m.src){
+      const ks=kOf(m.src); guardaK(ks);
+      e.precioVenta=Math.round(precioVenta(m.src)*100)/100;
+      if(ECP[ks]) ECP[k]=_rosCopia(ECP[ks]); else delete ECP[k];
+      if(COBRO[ks]) COBRO[k]=_rosCopia(COBRO[ks]); else delete COBRO[k];
+      (ECA||[]).forEach(a=>(a.aplicado||[]).forEach(pp=>{ if(pp.k===ks){ guardaEca(a.id); pp.k=k; } }));
+      resumen.push(esc4(antes)+' → <b>'+m.nom+'</b> · '+esc4(p.enx)+' · '+_ec2(e.precioVenta)+', con el precio y las cuotas de '+esc4(m.src.derrame+' '+(m.src.proj||'')));
+    }else{
+      e.precioVenta=0; delete ECP[k]; delete COBRO[k];
+      resumen.push(esc4(antes)+' → <b>'+m.nom+'</b> · '+esc4(p.enx)+' · sin precio: pónselo en Pedidos');
+    }
+  });
+  if(p.ren){ const e=p.ren, k=kOf(e), antes=e.proj||''; e.proj='El Rosario 3'; MIO.proj[k]=e.proj;
+    resumen.push(esc4(e.derrame+' '+antes)+' → <b>El Rosario 3</b>, mismo precio y cuotas'); }
+  /* 2) el PO 12 de trackers sale de la herramienta */
+  if(p.doce.length){
+    const tocadas=new Set();
+    p.doce.forEach(e=>{
+      const k=kOf(e), kb=_rosBase(e); guardaK(k); if(kb) guardaK(kb);
+      const o=ORD.find(x=>x.id===e.ordenId&&x.mfg===e.mfg);
+      S.quitados.push({orden:o?{id:o.id,mfg:o.mfg,cliente:o.cliente,entidad:o.entidad}:{id:e.ordenId,mfg:e.mfg,cliente:e.cliente,entidad:'Solenium'},
+        e:_rosCopia(Object.assign({},e,{_i:undefined}))});
+      _pcSacarDeGrupos(e,false);
+      if(o){ o.equipos=o.equipos.filter(x=>x!==e); tocadas.add(o); }
+      ['proj','cli','split'].forEach(m=>{ if(MIO[m]){ delete MIO[m][k]; if(kb) delete MIO[m][kb]; } });
+      delete COBRO[k]; delete COSTO[k]; delete ECP[k];
+      if(kb){ delete COBRO[kb]; delete COSTO[kb]; }
+    });
+    tocadas.forEach(o=>{ if(!o.equipos.length){ const i=ORD.indexOf(o); if(i>=0) ORD.splice(i,1); } });
+    resumen.push('Sale el PO 12 de trackers ('+p.doce.map(e=>esc4(e.derrame+(e.proj?' '+e.proj:''))).join(', ')+'): ya no existe en China.');
+  }
+  EQ=ORD.flatMap(o=>o.equipos); EQ.forEach((e,i)=>e._i=i);
+  /* los pagos viejos (PAGOS) apuntan por llave + nombre: se re-apuntan */
+  ekViejo.forEach((viejo,e)=>{ const nuevo=eqKey(e); if(viejo===nuevo) return;
+    PAGOS.forEach(pg=>(pg.aps||[]).forEach((a,j)=>{ if(a.ek===viejo){ S.PAGOS.push({id:pg.id,j,ek:viejo}); a.ek=nuevo; } })); });
+  const ix={}; EQ.forEach(e=>{ ix[eqKey(e)]=e._i; });
+  PAGOS.forEach(pg=>(pg.aps||[]).forEach(a=>{ if(!a.ek) return; const n=ix[a.ek];
+    if(a.ieq!=null) a.ieq=(n!=null?n:-1); if(a.eqI!=null) a.eqI=(n!=null?n:-1); }));
+  _pcRecalcOrdenes();
+  /* 3) lo abonado que se quedó sin línea pasa a lo que le vence primero al mismo cliente */
+  const porEca={};
+  reparto.forEach(r=>{
+    r.dest.forEach(d=>{ guardaEcp(d.k); _ecSumar(d.k,d.i,d.monto); });
+    if(r.pt){ guardaEca(r.pt.id); (porEca[r.pt.id]=porEca[r.pt.id]||[]).push({j:r.pt.j,dest:r.dest}); }
+  });
+  Object.keys(porEca).forEach(id=>{ const a=ECA.find(x=>x.id===id); if(!a) return;
+    porEca[id].sort((x,y)=>y.j-x.j).forEach(x=>{ a.aplicado.splice(x.j,1,...x.dest.map(d=>({k:d.k,i:d.i,monto:d.monto}))); }); });
+  p.abonos.forEach(ab=>{ const ds=reparto.filter(r=>r.ab===ab).flatMap(r=>r.dest);
+    resumen.push('Lo abonado por '+esc4(ab.cliente)+' en '+esc4(ab.nom)+' ('+_ec2(ab.total)+') pasa a '+_rosDestTxt(ds)); });
+  /* 4) opcional: 7-6 a 7-9 fuera del cupo, como la hoja de Andrés */
+  if(sino){
+    ['7-6','7-7','7-8','7-9'].forEach(d=>{ const k=_claveDe('Singsun',d); if(!(k in S.SINO)) S.SINO[k]=_rosCopia(SINO.ped[k]);
+      sinoSet(k,'modo','fuera'); sinoSet(k,'nota','Fuera de Sinosure, como la hoja de Andrés del 23-oct'); });
+    resumen.push('Sinosure: 7-6, 7-7, 7-8 y 7-9 quedan en "No entra", como la hoja de Andrés.');
+  }
+  CONFIG.cambios=CONFIG.cambios||{};
+  CONFIG.cambios[ROS_ID]={aplicado:new Date().toISOString(),resumen,deshacer:S};
+  syncFlags(); if(typeof sincronizarPrecios==='function') sincronizarPrecios();
+  refreshAll(); renderLedger(); guardar4();
+  toast('Listo: Enexa queda con El Rosario 1, 2 y 3. Se puede deshacer en Ajustes.');
+}
+function rosDeshacer(){
+  const c=CONFIG.cambios&&CONFIG.cambios[ROS_ID]; if(!c||!c.deshacer) return;
+  if(!confirm('¿Deshacer el cambio de Enexa (El Rosario 1, 2 y 3)?\n\nLos pedidos, precios, cuotas y abonos vuelven a como estaban antes. Si después registraste abonos en esos pedidos, revísalos.')) return;
+  const S=c.deshacer, pon=(obj,k,v)=>{ if(v==null) delete obj[k]; else obj[k]=v; };
+  const vuelta=[];
+  (S.quitados||[]).forEach(q=>{
+    let o=ORD.find(x=>x.id===q.orden.id&&x.mfg===q.orden.mfg);
+    if(!o){ o={id:q.orden.id,mfg:q.orden.mfg,cliente:q.orden.cliente,entidad:q.orden.entidad||'Solenium',equipos:[]}; ORD.push(o); }
+    if(!o.equipos.some(x=>kOf(x)===kOf(q.e))){ o.equipos.push(q.e); vuelta.push(q.e); }
+  });
+  hydrateDates({ORD:[{equipos:vuelta}]});
+  EQ=ORD.flatMap(o=>o.equipos); EQ.forEach((e,i)=>e._i=i);
+  Object.keys(S.eq||{}).forEach(k=>{ const e=EQ.find(x=>kOf(x)===k); if(!e) return; const v=S.eq[k];
+    e.cliente=v.cliente; e.proj=v.proj; e.precioVenta=v.precioVenta; if(v._cliCustom) e._cliCustom=true; else delete e._cliCustom; });
+  ['proj','cli','split'].forEach(m=>{ MIO[m]=MIO[m]||{}; const g=(S.MIO||{})[m]||{}; Object.keys(g).forEach(k=>pon(MIO[m],k,g[k])); });
+  Object.keys(S.COBRO||{}).forEach(k=>pon(COBRO,k,S.COBRO[k]));
+  Object.keys(S.COSTO||{}).forEach(k=>pon(COSTO,k,S.COSTO[k]));
+  Object.keys(S.ECP||{}).forEach(k=>pon(ECP,k,S.ECP[k]));
+  Object.keys(S.ECA||{}).forEach(id=>{ const a=ECA.find(x=>x.id===id); if(a) a.aplicado=S.ECA[id]; });
+  Object.keys(S.SINO||{}).forEach(k=>pon(SINO.ped,k,S.SINO[k]));
+  if(Array.isArray(S.GPRE)){ GPRE.length=0; S.GPRE.forEach(g=>GPRE.push(g)); }
+  (S.PAGOS||[]).forEach(x=>{ const pg=PAGOS.find(y=>y.id===x.id); if(pg&&pg.aps&&pg.aps[x.j]) pg.aps[x.j].ek=x.ek; });
+  const ix={}; EQ.forEach(e=>{ ix[eqKey(e)]=e._i; });
+  PAGOS.forEach(pg=>(pg.aps||[]).forEach(a=>{ if(!a.ek) return; const n=ix[a.ek];
+    if(a.ieq!=null) a.ieq=(n!=null?n:-1); if(a.eqI!=null) a.eqI=(n!=null?n:-1); }));
+  _pcRecalcOrdenes();
+  delete CONFIG.cambios[ROS_ID];
+  _rosOculto=true;   /* en esta sesión no vuelve a salir el aviso */
+  syncFlags(); if(typeof sincronizarPrecios==='function') sincronizarPrecios();
+  refreshAll(); renderLedger(); guardar4();
+  toast('Cambio deshecho: todo volvió a como estaba.');
+}
+function _rosAvisoHTML(p){
+  const li=[];
+  p.mov.forEach(m=>{ const r=m.src?ECP[kOf(m.src)]:null;
+    li.push('<b>'+esc4(m.e.derrame)+'</b> '+esc4(m.e.proj||'')+' ('+esc4(m.e.cliente||'')+') → <b>'+m.nom+'</b> · '+esc4(p.enx)
+      +(m.src?' · '+_ec2(precioVenta(m.src))+(r&&r.cuotas?' en '+r.cuotas.length+' cuotas':'')+', lo que tenía '+esc4(m.src.derrame+' '+(m.src.proj||'')):' · sin precio (pónselo después)')); });
+  if(p.ren) li.push('<b>'+esc4(p.ren.derrame)+'</b> '+esc4(p.ren.proj||'')+' → <b>El Rosario 3</b>, mismo precio y cuotas');
+  if(p.doce.length) li.push('Sale el PO 12 de trackers: '+p.doce.map(e=>'<b>'+esc4(e.derrame)+'</b> '+esc4(e.proj||'')).join(', ')+'. Andrés lo quitó del detailed y del order report del 23-oct.');
+  const rep=_rosDestinos(p);
+  p.abonos.forEach(ab=>{ const ds=rep.filter(r=>r.ab===ab).flatMap(r=>r.dest);
+    li.push('Lo abonado por '+esc4(ab.cliente)+' en '+esc4(ab.nom)+' (<b>'+_ec2(ab.total)+'</b>) pasa a lo que le vence primero: '+_rosDestTxt(ds)); });
+  return '<h3>Cambio que aprobaste el 27-oct: trackers de Enexa</h3><ul>'+li.map(x=>'<li>'+x+'</li>').join('')+'</ul>'
+    +'<label style="display:flex;gap:8px;align-items:center;margin-top:8px;font-size:14px"><input type="checkbox" id="rosSino"'+(_rosSino?' checked':'')+' onchange="_rosSino=this.checked">'
+    +' Sinosure: sacar también 7-6, 7-7, 7-8 y 7-9 del cupo, como la hoja de Andrés (opcional)</label>'
+    +'<div class="p16-pie"><button class="ec8-b" style="background:var(--ink);color:#fff;border-color:var(--ink)" onclick="rosAplicar()">Aplicar</button>'
+    +'<button class="ec8-b" onclick="_rosOculto=true;_rosPintar()">Ahora no</button><small>Se puede deshacer después en Ajustes.</small></div>';
+}
+function _rosPintar(){
+  const main=document.querySelector('main'); if(!main) return;
+  let d=document.getElementById('rosAviso');
+  const p=_rosOculto?null:_rosPlan();
+  if(!p){ if(d) d.remove(); return; }
+  if(!d){ d=document.createElement('div'); d.id='rosAviso'; d.className='p16-pk'; d.style.borderLeft='4px solid var(--dato-debo)'; main.insertBefore(d,main.firstChild); }
+  d.innerHTML=_rosAvisoHTML(p);
+}
+function _rosAjustes(){
+  const v=document.getElementById('v-config'); if(!v) return;
+  let d=document.getElementById('rosAjustes'); const c=CONFIG.cambios&&CONFIG.cambios[ROS_ID];
+  if(!c){ if(d) d.remove(); return; }
+  if(!d){ d=document.createElement('div'); d.id='rosAjustes'; d.className='p16-pk'; v.insertBefore(d,v.firstChild); }
+  d.innerHTML='<h3>Cambio aplicado el '+_ecFmtD(new Date(c.aplicado))+': trackers de Enexa (El Rosario 1, 2 y 3)</h3><ul>'
+    +(c.resumen||[]).map(x=>'<li>'+x+'</li>').join('')+'</ul>'
+    +'<div class="p16-pie"><button class="ec8-b" onclick="rosDeshacer()">Deshacer este cambio</button></div>';
+}
+const _refreshAntes1172=refreshAll;
+refreshAll=function(){
+  const r=_refreshAntes1172.apply(this,arguments);
+  try{ _rosPintar(); }catch(err){ console.error('v1.17.2 aviso',err); }
+  return r;
+};
+/* v1.17.3: al abrir, loadFromServer pinta pantalla por pantalla (no llama refreshAll):
+   renderConfig sí se llama, así que el aviso también se pinta desde aquí */
+const _cfgAntes1172=renderConfig;
+renderConfig=function(){
+  const r=_cfgAntes1172.apply(this,arguments);
+  try{ _rosAjustes(); _rosPintar(); }catch(err){ console.error('v1.17.2 ajustes',err); }
+  return r;
+};
+
+</script>

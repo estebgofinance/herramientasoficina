@@ -1,0 +1,539 @@
+<script>
+
+/* ================= POR PAGAR ================= */
+function _p14Edad(fs){ const b=[0,0,0,0]; fs.forEach(f=>{ const v=_p14D(f.vence), d=v?days(v,TODAY):0, x=_cxpUSD(f); b[d<=0?0:(d<=30?1:(d<=60?2:3))]+=x; }); return b; }
+function _p14Acre(){
+  const t=_p14Trm(), K=EQ.length?cjCajones():null, S=l=>l.reduce((a,x)=>a+x.monto,0);
+  const chV=K?S(K.C.atras.concat(K.C.reciente,K.C.ya).filter(p=>p.tipo!=='tercero')):0, chT=EQ.length?puenteTot(null).debo:0;
+  const card=(k,tit,tot,venc,izq,der)=>'<a href="#" class="p14-ac'+(P14.acre===k?' on':'')+'" onclick="P14.acre=\''+k+'\';renderPorPagar();return false"><div class="t"><b>'+tit+'</b><b>'+tot+'</b></div>'
+    +(venc!=null?'<div class="p14-age"><i style="width:'+Math.min(100,venc[0]*100).toFixed(0)+'%;background:#B3261E"></i><i style="width:'+Math.min(100,venc[1]*100).toFixed(0)+'%;background:#C87A00"></i></div>':'')
+    +'<div class="s"><span>'+izq+'</span><span class="mut">'+der+'</span></div></a>';
+  const cx=acre=>{ const fs=cxpActivas(acre); if(!fs.length) return null; const tot=fs.reduce((a,f)=>a+_cxpUSD(f),0), r=REGLAS[acre]||{}, b=_p14Edad(fs);
+    const pasan=r.tipo==='maxMora'?fs.filter(f=>days(_p14D(f.vence)||TODAY,TODAY)>(+r.dias||0)).reduce((a,f)=>a+_cxpUSD(f),0):0;
+    return {fs,tot,b,pasan,r}; };
+  const M=cx('magnum'), T=cx('tiba');
+  const copTot=fs=>fs.filter(f=>f.moneda==='COP').reduce((a,f)=>a+f.saldo,0), usdTot=fs=>fs.filter(f=>f.moneda==='USD').reduce((a,f)=>a+f.saldo,0);
+  const rTxt=r=>r&&r.tipo==='maxMora'?'máx. '+r.dias+' días':'al vencer';
+  const mesFij=(GASTOS||[]).filter(g=>g.periodicidad==='mensual'&&!g.porIdentificar).reduce((a,g)=>a+(_gCOP(g)||0),0);
+  const venceFij=(GASTOS||[]).filter(g=>{ const f=gastoFechas(g,TODAY); return f.length&&f[0]<TODAY&&_gCOP(g)!=null; });
+  return card('china','China','US$ '+fmtUSDs(chT),chT?[chV/chT,0]:null,'<span class="mal">'+fmtUSDs(chV)+' vencido</span>','plan: lo escribes tú')
+    +card('magnum','Magnum',M?'COP '+_copM(copTot(M.fs)):'sin cargar',M?[M.pasan/M.tot,(M.b[1]+M.b[2]+M.b[3]-M.pasan)/M.tot]:null,M?(M.pasan>0.5?'<span class="mal">'+_copM(M.pasan*t)+' pasan de '+M.r.dias+' d</span>':'<span class="ok">dentro de la regla</span>'):'carga su estado de cuenta',rTxt(REGLAS.magnum))
+    +card('tiba','TIBA',T?(usdTot(T.fs)?'US$ '+fmtUSDs(usdTot(T.fs)):'')+(copTot(T.fs)?(usdTot(T.fs)?' + ':'')+'COP '+_copM(copTot(T.fs)):''):'sin cargar',T?[T.pasan/T.tot,(T.b[1]+T.b[2]+T.b[3]-T.pasan)/T.tot]:null,
+        T?(T.b[1]+T.b[2]+T.b[3]>0.5?'<span class="mal">'+fmtUSDs(T.b[1]+T.b[2]+T.b[3])+' USD vencido</span>':'<span class="ok">al día</span>'):'carga su extracto',rTxt(REGLAS.tiba))
+    +card('fijos','Fijos e impuestos','≈ COP '+_copM(mesFij)+'/mes',null,venceFij.length?'<span class="mal">'+esc4(venceFij.map(g=>g.rubro).join(', '))+' pendiente</span>':'<span class="ok">al día</span>','al vencer')
+    +'<div class="p14-ac dash">Comercial · próxima versión</div>';
+}
+function _p14Prev(acre){
+  const p=P14.prev; if(!p||p.acre!==acre) return '';
+  if(p.error) return '<div class="p14-alert">No cargué el archivo: '+esc4(p.error)+' <button class="ec8-b" onclick="cxpCancelar()">Cerrar</button></div>';
+  const r=p.r, d=p.diff, tot=m=>r.facturas.filter(f=>f.moneda===m).reduce((a,f)=>a+f.saldo,0);
+  return '<div class="p14-prev"><b>Revisa antes de aprobar · '+esc4(r.archivo||'')+'</b> · corte '+_p14F(_p14D(r.corte))+' · '+r.facturas.length+' facturas'
+    +(tot('COP')?' · COP '+_cop(tot('COP')):'')+(tot('USD')?' · US$ '+_ec2(tot('USD')):'')
+    +((r.anticipos||[]).length?' · anticipos sin facturar COP '+_cop(r.anticipos.filter(a=>a.sinFacturar).reduce((a,x)=>a+x.valor,0)):'')
+    +_p14Cambios(d,true)
+    +'<div class="p14-acc"><button class="ec8-b on" onclick="cxpAprobar()">Aprobar carga</button><button class="ec8-b" onclick="cxpCancelar()">Cancelar</button><small class="mut">Aprobar reemplaza las facturas; tus fechas planeadas, marcas de pagada y reglas se conservan.</small></div></div>';
+}
+function _p14Cambios(d,prev){
+  if(!d) return ''; if(!d.desde) return '<div class="p14-camb">'+(prev?'':'<b>Qué cambió</b>')+'<div class="mut">Es la primera carga de este acreedor: todavía no hay con qué comparar.</div></div>';
+  const mon=f=>(f.moneda==='USD'?'US$ '+_ec2(f.saldo):_cop(f.saldo));
+  const l=[].concat(d.yaNo.map(f=>'<div><span class="pl pl-ok">Ya no está</span> '+esc4(f.id)+' · '+esc4(f.empresa)+' · '+mon(f)+' → ¿pagada?</div>'),
+    d.nuevas.map(f=>'<div><span class="pl pl-ya">Nueva</span> '+esc4(f.id)+' · '+esc4(f.empresa)+(f.pedido?' · '+esc4(f.pedido):'')+' · '+mon(f)+' · vence '+_p14F(_p14D(f.vence))+'</div>'),
+    d.cambian.map(x=>'<div><span class="pl pl-n">Cambió</span> '+esc4(x.f.id)+' · '+esc4(x.f.empresa)+' · antes '+_cop(x.antes)+' → '+mon(x.f)+'</div>'));
+  return '<div class="p14-camb">'+(prev?'':'<b>Qué cambió desde el estado anterior'+(d.desde?' ('+_p14F(_p14D(d.desde))+')':'')+'</b>')+(l.length?l.join(''):'<div class="mut">Sin cambios en las facturas.</div>')+'</div>';
+}
+function _p14PanelCxp(acre){
+  const C=CXP[acre], nom=_P14_ACRE[acre], t=_p14Trm(), r=REGLAS[acre]||{tipo:'alVencer'};
+  const carga='<label class="ec8-b">Cargar estado de cuenta<input type="file" id="cxpFile-'+acre+'" accept="'+(acre==='magnum'?'.xlsx,.xls,.pdf':'.xlsx,.xls')+'" style="display:none" onchange="cxpCargar(\''+acre+'\',this)"></label>';
+  let h='<div class="p14-card"><div class="p14-ph"><div><h3>'+nom+'</h3><small class="mut">'+(acre==='magnum'?'Grupo de 4 empresas · ':'')+(C?'estado de cuenta del '+_p14F(_p14D(C.corte))+' ('+C.tipo+') · '+(acre==='magnum'?'todo en COP':'COP y USD'):'sin estado de cuenta todavía')+'</small></div>'+carga+'</div>'+_p14Prev(acre);
+  if(!C) return h+'<div class="ec8-vacio">Carga '+(acre==='magnum'?'el Excel (o el PDF) del estado de cuenta de Magnum':'el Excel del extracto de TIBA')+'. La herramienta lee las facturas; la regla y las fechas planeadas las pones tú.</div></div>';
+  const fs=cxpActivas(acre), venc=fs.filter(f=>(_p14D(f.vence)||TODAY)<TODAY), ant=(C.anticipos||[]).filter(a=>a.sinFacturar);
+  const tot=m=>fs.filter(f=>f.moneda===m).reduce((a,f)=>a+f.saldo,0), dual=(cop,usd)=>[usd?'US$ '+fmtUSDs(usd):'',cop?'COP '+_cop(cop):''].filter(Boolean).join(' + ')||'0';
+  const w0=cxpSemana(acre,0,'pago'), vC=venc.filter(f=>f.moneda==='COP').reduce((a,f)=>a+f.saldo,0), vU=venc.filter(f=>f.moneda==='USD').reduce((a,f)=>a+f.saldo,0);
+  const K_=(l,v,cls,sub,dark)=>'<div class="ec8-k'+(dark?' p14-dark':'')+'"><div class="l">'+l+'</div><div class="v '+(cls||'')+'">'+v+'</div><small>'+sub+'</small></div>';
+  h+='<div class="ma-kpis">'+K_('Le debes',dual(tot('COP'),tot('USD')),'','≈ US$ '+fmtUSDs(fs.reduce((a,f)=>a+_cxpUSD(f),0)),true)
+    +K_('Pagar esta semana',dual(w0.cop,w0.usd),'mal','como pago · '+(r.tipo==='maxMora'?'máx. '+r.dias+' días':'al vencer'))
+    +K_('Vencido',dual(vC,vU),'ya',venc.length+' factura'+(venc.length===1?'':'s'))
+    +K_('Anticipos a tu favor',ant.length?'COP '+_cop(ant.reduce((a,x)=>a+x.valor,0)):'—','ok',ant.length?ant.length+' sin facturar (aduanas)':'no hay')+'</div>';
+  const b=_p14Edad(fs), bt=b.reduce((a,x)=>a+x,0)||1, bl=['Corriente','1 a 30 días','31 a 60 días','más de 60'], bc=['#DCEFE7','#F5D49A','#E8908A','#B3261E'];
+  h+='<div class="p14-edad"><div>'+b.map((x,i)=>x>0.5?'<i style="width:'+(x/bt*100).toFixed(1)+'%;background:'+bc[i]+'"></i>':'').join('')+'</div><small>'+b.map((x,i)=>x>0.5?'<span'+(i>=2?' class="mal"':'')+'>'+bl[i]+' '+(acre==='magnum'?_copM(x*t):'US$ '+fmtUSDs(x))+'</span>':'').join('')+'</small></div>';
+  if(C.cupo){ const deb=C.sobrecupo!=null?C.sobrecupo+C.cupo:C.totalArchivo; h+='<div class="p14-alert">'+nom+' te dio un cupo de '+_copM(C.cupo)+' y vas en '+_copM(deb)+' (corte '+_p14F(_p14D(C.cupoCorte||C.corte))+'): '+fmtUSDs((deb-C.cupo)/C.cupo*100)+' % sobre el cupo. Si se cansan, frenan despachos.</div>'; }
+  h+='</div><div class="p14-card"><h4>Cómo le pagas</h4><div class="ec9-seg" style="margin-top:8px"><button class="'+(r.tipo==='maxMora'?'on':'')+'" onclick="reglaSet(\''+acre+'\',\'tipo\',\'maxMora\')">Máximo días de mora</button><button class="'+(r.tipo==='alVencer'?'on':'')+'" onclick="reglaSet(\''+acre+'\',\'tipo\',\'alVencer\')">Al vencer</button></div>'
+    +(r.tipo==='maxMora'?'<div class="p14-regla">Ninguna factura pasa de <input class="ec8-in" id="regla-dias-'+acre+'" style="width:56px;text-align:center" value="'+(r.dias==null?30:r.dias)+'" onchange="reglaSet(\''+acre+'\',\'dias\',this.value)"> días vencida. Lo que ya pasó, sale esta semana.</div>':'<div class="p14-regla">Cada factura se paga el día que vence. Lo vencido, esta semana.</div>')
+    +'<small class="mut">Orden de prioridad: la fecha que pongas a mano en una factura → esta regla → la fecha de vencimiento.</small></div>';
+  const filas=fs.map(f=>({f,d:cxpFecha(acre,f,'pago')})).sort((a,b)=>a.d-b.d), L0=_p14Lun(TODAY);
+  h+='<div class="p14-card np"><div class="p14-ph" style="padding:0 16px"><div><h4>Facturas</h4><small class="mut">hoy '+_p14F(TODAY)+' · ordenadas por fecha de pago planeada</small></div><div style="display:flex;flex-wrap:wrap;gap:8px"><button class="v2-b" onclick="v2CxpRegla(\''+acre+'\',null)">Aplicar regla a todas</button><button class="v2-b" onclick="v2CxpYa(\''+acre+'\')">Todo lo vencido esta semana</button></div></div><div class="ec8-wrap" style="border:0"><table class="ec8 p14-ft"><thead><tr><th>Factura</th><th>Empresa</th><th>Para qué</th><th>Vence</th><th>Estado</th><th class="r">Saldo</th><th>Pago planeado</th><th>En la Caja</th><th></th></tr></thead><tbody>'
+    +filas.map(({f,d})=>{ const v=_p14D(f.vence), mora=v?days(v,TODAY):0, m=CXPMIO[_mioK(acre,f)]||{}, lim=r.tipo==='maxMora'?(+r.dias||0):0;
+      const est=mora>0?'<span class="pl '+(mora>lim?'pl-mal':'pl-ya')+'">Vencida · '+mora+' d</span>':(mora===0?'<span class="pl pl-ya">Vence hoy</span>':'<span class="pl pl-g">en '+(-mora)+' d</span>');
+      const esta=Math.floor(days(L0,_p14Lun(d))/7)===0;
+      return '<tr><td><b>'+esc4(f.id)+'</b></td><td class="mut">'+esc4(f.empresa)+'</td><td>'+esc4(f.pedido||f.centroCosto||'—')+'</td><td>'+_p14F(v)+'</td><td>'+est+'</td>'
+        +'<td class="r">'+(f.moneda==='USD'?'US$ '+_ec2(f.saldo):_cop(f.saldo))+'</td>'
+        +'<td><span class="'+(esta?'mal':'')+'"><b>'+(esta?'Esta semana':_p14F(d))+'</b></span> <input type="date" class="ec8-in d p14-fd" value="'+esc4(m.planFecha||'')+'" title="Fecha a mano: manda sobre la regla" onchange="cxpPlan(\''+acre+'\',\''+_maQ(f.id)+'\',this.value)">'+(m.planFecha?'<span class="pl pl-n">a mano</span>':'')+'</td>'
+        +'<td><label class="ec13-chk" title="Sin marcar: no sale en la Caja, pero la sigues debiendo"><input type="checkbox" '+(m.fuera?'':'checked')+' onchange="v2CxpFuera(\''+acre+'\',\''+_maQ(f.id)+'\',!this.checked)" aria-label="En la Caja"></label></td>'
+        +'<td><label class="ec13-chk" title="Ya la pagaste: sale de la Caja"><input type="checkbox" onchange="cxpPagada(\''+acre+'\',\''+_maQ(f.id)+'\',this.checked)"> pagada</label></td></tr>'; }).join('')
+    +'</tbody></table></div>';
+  const pag=((C.facturas)||[]).filter(f=>(CXPMIO[_mioK(acre,f)]||{}).pagada);
+  if(pag.length) h+='<div class="p14-pag"><small class="mut">Marcadas como pagadas (no salen en la Caja): '+pag.map(f=>'<label class="ec13-chk"><input type="checkbox" checked onchange="cxpPagada(\''+acre+'\',\''+_maQ(f.id)+'\',this.checked)"> '+esc4(f.id)+'</label>').join(' ')+'</small></div>';
+  h+='</div>';
+  if(C.cambios) h+='<div class="p14-card">'+_p14Cambios(C.cambios,false)+'</div>';
+  return h;
+}
+function _p14PanelChina(){ return ''; }   /* v1.15 la reemplaza */
+function _p14PanelFijos(){
+  const hoy=TODAY, meses=[1,2,3,4].map(k=>new Date(hoy.getFullYear(),hoy.getMonth()+k,1)), tot=meses.map(d=>gastosMes(d.getFullYear(),d.getMonth()+1)), mx=tot.indexOf(Math.max(...tot));
+  const iva=(GASTOS||[]).filter(g=>_gCOP(g)==null&&!g.porIdentificar);
+  const nomM=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  let h='<div class="p14-card"><div class="p14-ph"><div><h3>Fijos e impuestos</h3><small class="mut">Lo que pagas todos los meses aunque no se mueva un equipo. Se proyecta solo en la Caja, siempre al vencer. Montos en COP.</small></div><button class="ec8-b" onclick="gastoAdd()">+ rubro</button></div>'
+    +'<div class="ma-kpis">'+meses.map((d,i)=>'<div class="ec8-k'+(i===mx?' p14-pesado':'')+'"><div class="l">'+nomM[d.getMonth()]+(i===mx?' · el mes pesado':'')+'</div><div class="v">'+_copM(tot[i])+'</div><small>'
+      +(iva.some(g=>gastoFechas(g,new Date(d.getFullYear(),d.getMonth()+1,0)).some(x=>x.getMonth()===d.getMonth()&&x.getFullYear()===d.getFullYear()))?'+ '+esc4(iva.map(g=>g.rubro).join(', '))+' sin monto':'sin IVA ni 4x1000')+'</small></div>').join('')+'</div></div>';
+  const sec=[['fijos','Nómina y fijos'],['impuestos','Impuestos'],['prestaciones','Prestaciones y anuales'],['porid','Por identificar (no se proyectan)']];
+  const per=['mensual','bimestral','cuatrimestral','semestral','anual','unica'], perT={mensual:'Mensual',bimestral:'Bimestral',cuatrimestral:'Cuatrimestral',semestral:'Semestral',anual:'Anual',unica:'Una vez'};
+  h+='<div class="p14-card np"><div class="ec8-wrap" style="border:0"><table class="ec8 p14-ft p14-g"><thead><tr><th>Rubro</th><th>Grupo</th><th class="r">Monto COP</th><th>Cada cuánto</th><th>Día</th><th>Próximo pago</th><th>Nota</th><th></th></tr></thead><tbody>'
+    +sec.map(([k,t])=>{ const l=(GASTOS||[]).filter(g=>_gSeccion(g)===k); if(!l.length) return '';
+      return '<tr class="sec"><th colspan="8">'+t+'</th></tr>'+l.map(g=>{ const q=_maQ(g.id), f=gastoFechas(g,addD(TODAY,800)), prox=f.length?f[0]:null, venc=prox&&prox<TODAY;
+        return '<tr'+(venc?' class="mora"':'')+'><td><input class="ec8-in t" style="width:210px;text-align:left" data-foco="gr-'+esc4(g.id)+'" value="'+esc4(g.rubro)+'" onchange="gastoSet(\''+q+'\',\'rubro\',this.value)"></td>'
+          +'<td><input class="ec8-in t" style="width:90px;text-align:left" value="'+esc4(g.grupo||'')+'" onchange="gastoSet(\''+q+'\',\'grupo\',this.value)"></td>'
+          +'<td class="r"><input class="ec8-in'+(g.monto==null?' p14-in':'')+'" style="width:120px" data-foco="gm-'+esc4(g.id)+'" value="'+(g.monto==null?'':fmtUSDs(g.monto))+'" placeholder="escríbelo tú" onchange="gastoSet(\''+q+'\',\'monto\',this.value)"></td>'
+          +'<td><select class="ec8-in" style="width:120px;text-align:left" onchange="gastoSet(\''+q+'\',\'periodicidad\',this.value)">'+per.map(p=>'<option value="'+p+'"'+(g.periodicidad===p?' selected':'')+'>'+perT[p]+'</option>').join('')+'</select></td>'
+          +'<td><input class="ec8-in" style="width:44px;text-align:center" value="'+(g.dia||'')+'" onchange="gastoSet(\''+q+'\',\'dia\',this.value)"></td>'
+          +'<td>'+(g.porIdentificar?'<span class="mut">no se proyecta</span>':'<input type="date" class="ec8-in d" value="'+esc4(g.desde||'')+'" title="Próximo pago pendiente" onchange="gastoSet(\''+q+'\',\'desde\',this.value)">'+(venc?' <b class="mal">Pagar ya</b>':''))+'</td>'
+          +'<td><input class="ec8-in t" style="width:190px;text-align:left" value="'+esc4(g.nota||'')+'" onchange="gastoSet(\''+q+'\',\'nota\',this.value)"></td>'
+          +'<td><button class="ec8-x" title="Borrar" onclick="gastoDel(\''+q+'\')">×</button></td></tr>'; }).join(''); }).join('')
+    +'<tr class="sec"><th colspan="8">4x1000 · 0.4 % de lo que sale en pesos cada semana · automático</th></tr>'
+    +'</tbody></table></div></div>'
+    +'<div class="p14-card dash"><b>Renta</b><small class="mut"> · Se activa cuando cargues el P&amp;G: provisiona el 35 % de la utilidad y la reparte en las cuotas de mayo y julio. Próximamente.</small></div>';
+  return h;
+}
+function renderPorPagar(){
+  const v=document.getElementById('v-porpagar'); if(!v) return;
+  let panel='';
+  try{ panel=P14.acre==='china'?_p14PanelChina():(P14.acre==='fijos'?_p14PanelFijos():_p14PanelCxp(P14.acre)); }catch(err){ console.warn(err); panel='<div class="ec8-vacio">Error: '+esc4(err.message)+'</div>'; }
+  v.innerHTML='<div class="ma-top"><div><h2 class="title">Por pagar</h2><div class="sub" style="margin-bottom:0">Todo lo que le debes a cada acreedor y la regla con la que decides pagarle. El archivo trae las facturas; la regla y las fechas planeadas son tuyas.</div></div></div>'
+    +'<div class="p14-pp"><aside class="p14-acr">'+_p14Acre()+'</aside><div class="p14-panel">'+panel+'</div></div>';
+}
+document.querySelectorAll('nav.tabs button[data-v="porpagar"]').forEach(b=>b.addEventListener('click',()=>renderPorPagar()));
+const _refAntes14=refreshAll;
+refreshAll=function(){ const r=_refAntes14.apply(this,arguments); try{ const v=document.getElementById('v-porpagar'); if(v&&v.classList.contains('on')) renderPorPagar(); }catch(err){ console.warn(err); } return r; };
+
+/* ---- guardar y recuperar ---- */
+const _serAntes14=serializeState;
+serializeState=function(){ const o=JSON.parse(_serAntes14.apply(this,arguments)); Object.assign(o,{SALDOS,CXP,CXPMIO,REGLAS,PLANCHINA,GASTOS}); return JSON.stringify(o); };
+const _appAntes14=applyState;
+applyState=function(s){ _appAntes14.apply(this,arguments);
+  SALDOS=(s&&s.SALDOS&&Array.isArray(s.SALDOS.hist))?s.SALDOS:{hist:[]};
+  CXP=(s&&s.CXP&&typeof s.CXP==='object')?s.CXP:{};
+  CXPMIO=(s&&s.CXPMIO&&typeof s.CXPMIO==='object')?s.CXPMIO:{};
+  REGLAS=Object.assign(_reglas0(),(s&&s.REGLAS)||{});
+  PLANCHINA=(s&&s.PLANCHINA&&typeof s.PLANCHINA==='object')?s.PLANCHINA:{};
+  GASTOS=(s&&Array.isArray(s.GASTOS))?s.GASTOS:_gastos0();   /* la primera vez trae los rubros precargados */
+};
+if(!REGLAS) REGLAS=_reglas0();
+if(!GASTOS) GASTOS=_gastos0();
+
+/* ===================================================================
+   v1.15 · LEGIBLE Y POR PREGUNTA
+   Pestañas: Tablero · Caja · Estados de cuenta · Pedidos · Sinosure · Ajustes.
+   - Tablero: cómo estoy hoy (4 números y totales), el cupo Sinosure en
+     barras y, debajo, el treemap de siempre. Sin listados ni alertas.
+   - Caja: botones por pregunta (Ingresos, Egresos, ¿Me alcanza para
+     todo?, Con mi plan de pagos, Solo lo que vence, Máximo a China),
+     cada uno con su respuesta en una frase; y "¿Me alcanza para…?".
+   - Estados de cuenta: Me deben (los de clientes, con "lo que te va a
+     entrar, fecha a fecha") y Debo (lo que antes era Por pagar).
+   - Pedidos: el ORDER REPORT como tabla; "Con mis decisiones" es el
+     Maestro de antes.
+   - Letra: nada por debajo de 13 px, base 15 px, etiquetas sin mayúscula.
+   - Corrección: un balance de China sin BL ni ETD no tiene fecha (antes
+     tomaba la fecha límite del anticipo y salía vencido: CFM 3-4, Siliana).
+   Sin llaves nuevas de estado.
+   =================================================================== */
+P14.vista='plan';
+var ECLADO='me', PDV='or', PDF14={tipo:'',st:'',cli:''};
+
+/* ---- un balance sin BL ni ETD espera embarque: sin fecha ---- */
+const _cjPagosAntes115=cjPagos;
+cjPagos=function(){ return _cjPagosAntes115.apply(this,arguments).map(p=>(p.tipo==='balance'&&p.e&&!p.e.bl&&!p.e.etd)?Object.assign({},p,{fecha:null}):p); };
+
+/* ---- dos maneras más de calcular la Caja: solo lo que vence y el máximo a China ---- */
+const _p14CalcAntes115=p14Calc;
+p14Calc=function(modo){
+  modo=modo||P14.modo;
+  if(modo!=='minimo') return _p14CalcAntes115.call(this,modo);
+  const guard=PLANCHINA; PLANCHINA={}; let X;
+  try{ X=_p14CalcAntes115.call(this,'pago'); } finally{ PLANCHINA=guard; }
+  X.modo=modo;
+  return X;
+};
+const _P15_VISTA={ingresos:'pago',egresos:'vence',vence:'vence',plan:'pago',minimo:'minimo',max:'max'};
+function p15Vista(v){ P14.vista=v; P14.modo=_P15_VISTA[v]==='vence'?'vence':'pago'; P14.det=null; _p14Repintar(); }
+const _p14VistaAntes115=p14Vista;
+p14Vista=function(k,v){ if(k==='modo'){ p15Vista(v==='vence'?'vence':'plan'); return; } return _p14VistaAntes115.apply(this,arguments); };
+
+/* ================= TABLERO ================= */
+function _p15Tablero(){
+  const k=document.getElementById('tbKpis'); if(!k) return;
+  const dt=document.getElementById('hoyDate'); if(dt) dt.textContent='Cómo estoy hoy';
+  const fu=document.getElementById('tbFuente'); if(fu) fu.innerHTML=esc4(TODAY.toLocaleDateString('es-CO',{weekday:'long',day:'numeric',month:'long',year:'numeric'}).replace(/^\w/,c=>c.toUpperCase()))
+    +(CONCILIA?' · China del reporte de Andrés del '+fmtD(CONCILIA.ts):'')+(CXP.magnum?' · Magnum del '+_p14F(_p14D(CXP.magnum.corte)):'');
+  const t=_p14Trm(), X=EQ.length?p14Calc('minimo'):null, TT=EQ.length?puenteTot(null):{debo:0};
+  const magV=cxpActivas('magnum').filter(f=>(_p14D(f.vence)||TODAY)<TODAY).reduce((a,f)=>a+_cxpUSD(f),0), tibV=cxpActivas('tiba').filter(f=>(_p14D(f.vence)||TODAY)<TODAY).reduce((a,f)=>a+_cxpUSD(f),0);
+  const cli=_ecClientes().map(c=>({c,t:ecTotales(c),i:esInterno(c)})), cV=cli.reduce((a,x)=>a+(x.t.vencido||0),0), cVi=cli.filter(x=>x.i).reduce((a,x)=>a+(x.t.vencido||0),0);
+  const venc=X?X.venc:0, s0=_saldoHoyUSD(), cierra=X?X.cierre[3]:0;
+  const K_=(l,v,cls,sub)=>'<div class="p15-k"><div class="l">'+l+'</div><div class="v '+(cls||'')+'">'+v+'</div><div class="s">'+sub+'</div></div>';
+  const mag=cxpActivas('magnum'), tib=cxpActivas('tiba'), cop=l=>l.filter(f=>f.moneda==='COP').reduce((a,f)=>a+f.saldo,0), usd=l=>l.filter(f=>f.moneda==='USD').reduce((a,f)=>a+f.saldo,0);
+  const par=(v,s)=>'<div><div class="v2">'+v+'</div><div class="s">'+s+'</div></div>';
+  k.className='p15-tb';
+  k.innerHTML='<div class="p15-k4">'
+      +K_('Plata en bancos hoy',(_saldoUlt()?'US$ '+fmtUSDs(s0):'—'),'',_saldoUlt()?'4 cuentas · TRM '+fmtUSDs(t)+(_saldoUlt().fecha!==_p14Iso(TODAY)?' · del '+_p14F(_p14D(_saldoUlt().fecha)):''):'escríbela en la Caja')
+      +K_('Debo vencido','US$ '+fmtUSDs(venc+magV+tibV),'mal','China '+fmtUSDs(venc)+(magV>0.5?' · Magnum '+fmtUSDs(magV):'')+(tibV>0.5?' · TIBA '+fmtUSDs(tibV):''))
+      +K_('Me deben vencido','US$ '+fmtUSDs(cV),'ok',(cVi>0.5?'Solenium '+fmtUSDs(cVi)+' · ':'')+'externos '+fmtUSDs(cV-cVi))
+      +K_('Cierras en 4 semanas',X?(cierra<0?'−':'')+'US$ '+fmtUSDs(Math.abs(cierra)):'—',cierra<0?'mal':'','si a China solo le pagas lo que vence')+'</div>'
+    +'<div class="p15-k2"><div class="p15-k"><div class="l">Debo en total</div><div class="p15-fila">'+par('US$ '+fmtUSDs(TT.debo),'China, con y sin fecha')
+      +(mag.length?par('COP '+_copM(cop(mag)),'Magnum · ≈ US$ '+fmtUSDs(mag.reduce((a,f)=>a+_cxpUSD(f),0))):'')
+      +(tib.length?par([usd(tib)?'US$ '+fmtUSDs(usd(tib)):'',cop(tib)?'COP '+_copM(cop(tib)):''].filter(Boolean).join(' + '),'TIBA'):'')+'</div></div>'
+    +'<div class="p15-k"><div class="l">Me deben en total</div><div class="p15-fila">'+cli.filter(x=>x.t.saldo>0.5).sort((a,b)=>b.t.saldo-a.t.saldo).slice(0,4).map(x=>par('US$ '+fmtUSDs(x.t.saldo),esc4(x.c))).join('')+'</div></div></div>';
+  /* cupo Sinosure, en barras */
+  let sb=document.getElementById('tbSino');
+  if(!sb){ sb=document.createElement('div'); sb.id='tbSino'; const seg=document.getElementById('tmModeSeg'); seg.parentNode.insertBefore(sb,seg); }
+  const card=(mfg,tit)=>{ const c=cupoConcilia(mfg), disp=(+c.cupo||0)-c.usado, pct=c.cupo?c.usado/c.cupo*100:0;
+    return '<section class="p15-sn"><div class="h"><h3>'+tit+'</h3><span>techo US$ '+fmtUSDs(c.cupo||0)+'</span></div>'
+      +'<div class="bar"><i style="width:'+Math.min(100,pct).toFixed(1)+'%;background:'+(disp<0?'#B3261E':'#A86500')+'"></i></div><div class="bl"><span>usado '+Math.round(pct)+' %</span><span>'+(disp<0?'sin espacio':'libre '+Math.round(100-pct)+' %')+'</span></div>'
+      +'<div class="n3"><div><div class="s">Usado</div><div class="v2">'+fmtUSDs(c.usado)+'</div></div><div><div class="s">Tu techo</div><div class="v2">'+fmtUSDs(c.cupo||0)+'</div></div><div><div class="s">Disponible</div><div class="v2 '+(disp<0?'mal':'ok')+'">'+(disp<0?'−':'')+fmtUSDs(Math.abs(disp))+'</div></div></div></section>'; };
+  sb.innerHTML='<h2 class="p15-h2">Cupo Sinosure</h2><div class="p15-sns">'+card('Singsun','Singsun · trackers')+card('Eaglerise','Eaglerise · shelters')+'</div><h3 class="p15-h3">Mapa del cupo, pedido por pedido</h3>';
+}
+document.querySelectorAll('nav.tabs button[data-v="hoy"]').forEach(b=>b.addEventListener('click',()=>{ try{ _p15Tablero(); }catch(e){} }));
+const _renderHoyAntes115=renderHoy;
+renderHoy=function(){ const r=_renderHoyAntes115.apply(this,arguments); try{ _p15Tablero(); }catch(err){ console.warn(err); } return r; };
+
+/* ================= ESTADOS DE CUENTA: ME DEBEN / DEBO ================= */
+function ecLado(l){
+  ECLADO=l==='debo'?'debo':'me';
+  const me=document.getElementById('ecMeDeben'), de=document.getElementById('v-porpagar');
+  if(me) me.style.display=ECLADO==='me'?'':'none';
+  if(de){ de.style.display=ECLADO==='debo'?'':'none'; de.classList.toggle('on',ECLADO==='debo'); }
+  document.querySelectorAll('#ecLadoSeg button').forEach(b=>b.classList.toggle('on',b.dataset.l===ECLADO));
+  if(ECLADO==='debo') renderPorPagar();
+}
+const _navToAntes115=navTo;
+navTo=function(v){ if(v==='porpagar'){ _navToAntes115('clientes'); ecLado('debo'); return; } return _navToAntes115.apply(this,arguments); };
+const _renderPorPagarAntes115=renderPorPagar;
+renderPorPagar=function(){ const r=_renderPorPagarAntes115.apply(this,arguments); const v=document.getElementById('v-porpagar'); if(v){ const t=v.querySelector(':scope>.ma-top'); if(t) t.remove(); } return r; };
+/* China en "Debo": se ve el plan; se escribe en la Caja */
+_p14PanelChina=function(){
+  if(!EQ.length) return '<div class="p14-card"><div class="ec8-vacio">Carga el detailed y el order report con <b>Cargar datos</b> para ver lo que le debes a China.</div></div>';
+  const X=p14Calc('pago'), tot=puenteTot(null).debo, K=cjCajones(), sinf=K.S(K.C.sinf.filter(p=>p.tipo!=='tercero')), nat12=X.chinaNat.reduce((a,b)=>a+b,0);
+  const K_=(l,v,cls,sub,dark)=>'<div class="ec8-k'+(dark?' p14-dark':'')+'"><div class="l">'+l+'</div><div class="v '+(cls||'')+'">'+v+'</div><small>'+sub+'</small></div>';
+  const sumP=k=>X.natProv[k].reduce((a,b)=>a+b,0);
+  const filas=_PC_PROV.map(([k,n])=>{ const d=X.vencProv[k]-X.planProv[k]; return '<tr><td><b>'+n+'</b></td><td class="r mal">'+fmtUSDs(X.vencProv[k])+'</td><td class="r">'+(sumP(k)>0.5?fmtUSDs(sumP(k)):'—')+'</td><td class="r">'+(X.planProv[k]>0.5?fmtUSDs(X.planProv[k]):'—')+'</td><td class="r"><b class="'+(d<-0.5?'mal':'')+'">'+(d<-0.5?'te pasaste '+fmtUSDs(-d):fmtUSDs(d))+'</b></td></tr>'; }).join('');
+  const sem=X.W.map((w,i)=>({w,i,v:X.chinaNat[i]})).filter(x=>x.v>0.5);
+  const quien=i=>_PC_PROV.filter(([k])=>X.natProv[k][i]>0.5).map(([k,n])=>n.split(' ')[0]+' '+_p14K(X.natProv[k][i])).join(' · ');
+  return '<div class="p14-card"><div class="p14-ph"><div><h3>China</h3><small class="mut">Eaglerise, Nexus (Singsun) y componentes · lo trae el reporte de Andrés'+(CONCILIA?' del '+fmtD(CONCILIA.ts):'')+' · USD</small></div></div>'
+    +'<div class="ma-kpis">'+K_('Le debes','US$ '+fmtUSDs(tot),'','todo, con y sin fecha',true)+K_('Vencido hoy','US$ '+fmtUSDs(X.venc),'mal','atrasado y componentes')
+    +K_('Vence en 12 semanas','US$ '+fmtUSDs(nat12),'ya','con BL o ETD')+K_('Sin fecha todavía','US$ '+fmtUSDs(sinf),'','esperan embarque')+'</div></div>'
+    +_v3ChinaProvHTML()
+    +'<div class="p14-card"><h4>Lo que te va a salir, fecha a fecha</h4><small class="mut">Fecha límite de Andrés, o BL / ETD más el plazo del fabricante.</small>'
+    +'<div class="p15-tl"><div class="it r"><b>Vencido</b><div class="v">'+fmtUSDs(X.venc)+'</div><small>ya pasó su fecha</small></div>'
+    +sem.map(x=>'<div class="it a"><b>'+_p14F(x.w)+'</b><div class="v">'+fmtUSDs(x.v)+'</div><small>'+esc4(quien(x.i))+'</small></div>').join('')
+    +(sinf>0.5?'<div class="it g"><b>Sin fecha</b><div class="v">'+fmtUSDs(sinf)+'</div><small>esperan embarque</small></div>':'')+'</div></div>';
+};
+/* Me deben: lo que te va a entrar, fecha a fecha */
+function ecEntra(c){
+  const g={}; let venc=0;
+  if(esInterno(c)) (PROM||[]).filter(p=>p.cliente===c&&!p.cumplida&&+p.monto>0).forEach(p=>{ const d=_p14D(p.fecha); if(!d) return; if(d<TODAY){ venc+=+p.monto; return; } const k=_p14Iso(d); (g[k]=g[k]||{d,v:0,n:[]}).v+=+p.monto; g[k].n.push(p.nota||'promesa'); });
+  else { const fs=ecFilas(c).filas; _ecUnidades(c).forEach(u=>{ const d=u.vence?_p14D(u.vence):null; if(!d) return; if(d<TODAY){ venc+=u.saldo; return; }
+      const k=_p14Iso(d), f=fs.find(x=>x.k===u.k); (g[k]=g[k]||{d,v:0,n:[]}).v+=u.saldo; const nm=f?(f.pedido||f.equipo||''):''; if(nm&&g[k].n.indexOf(nm)<0) g[k].n.push(nm); }); }
+  return {venc,fechas:Object.keys(g).sort().map(k=>g[k])};
+}
+function _ecEntraHTML(c){
+  const E=ecEntra(c); if(!E.fechas.length&&E.venc<0.5) return esInterno(c)?'<div class="p15-entra"><div class="h"><h3>Lo que te va a entrar, fecha a fecha</h3><span>de '+esc4(c)+' solo cuentan sus promesas de pago</span></div><div class="ec8-vacio">Sin promesas escritas: anótalas abajo en "Promesas de pago" y aparecen aquí y en la Caja.</div></div>':'';
+  let acc=E.venc;
+  return '<div class="p15-entra"><div class="h"><h3>Lo que te va a entrar, fecha a fecha</h3><span>'+(esInterno(c)?'según sus promesas de pago':'según las cuotas que tienes programadas')+'</span></div><div class="p15-tl">'
+    +(E.venc>0.5?'<div class="it r"><b>Vencido</b><div class="v">'+_ec2(E.venc)+'</div><small>ya pasó su fecha</small><div class="ac">Acumulado <b>'+fmtUSDs(acc)+'</b></div></div>':'')
+    +E.fechas.map(x=>{ acc+=x.v; return '<div class="it v"><b>'+_p14F(x.d)+'</b><div class="v">'+_ec2(x.v)+'</div><small>'+esc4(x.n.slice(0,4).join(', ')+(x.n.length>4?'…':''))+'</small><div class="ac">Acumulado <b>'+fmtUSDs(acc)+'</b></div></div>'; }).join('')
+    +'</div><small class="mut">Estas mismas fechas son las que usa la Caja en "Ingresos". Si cambias una cuota, cambia aquí y en la Caja.</small></div>';
+}
+const _ecHTMLAntes115=_ecHTML;
+_ecHTML=function(c){
+  const h=_ecHTMLAntes115.apply(this,arguments); let tl=''; try{ tl=_ecEntraHTML(c); }catch(err){ console.warn(err); }
+  if(!tl) return h;
+  const i=h.indexOf('<div class="ec9-prox">');
+  if(i>=0){ const j=h.indexOf('</div>',i); return h.slice(0,i)+tl+h.slice(j+6); }
+  const k=h.indexOf('<div class="ec8-sec'); return k>=0?h.slice(0,k)+tl+h.slice(k):h+tl;
+};
+
+/* ================= PEDIDOS: EL ORDER REPORT ================= */
+function pdVista(v){ PDV=v==='maestro'?'maestro':'or'; renderLedger(); }
+function pdFiltro(k,v){ PDF14[k]=v; renderLedger(); }
+function _pdOR(){
+  const eqs=EQ.filter(e=>!e.splitDe||true).filter(e=>(!PDF14.tipo||e.mfg===PDF14.tipo)&&(!PDF14.st||e.st===PDF14.st)&&(!PDF14.cli||(e.cliente||'Por asignar')===PDF14.cli));
+  const clis=[...new Set(EQ.map(e=>e.cliente||'Por asignar'))].sort(), sts=Object.keys(STAGE).filter(s=>EQ.some(e=>e.st===s));
+  const chip=(k,v,t)=>'<button class="'+(PDF14[k]===v?'on':'')+'" onclick="pdFiltro(\''+k+'\',\''+v+'\')">'+t+'</button>';
+  const pill=st=>'<span class="pl '+(st==='shipped'?'pl-n':(st==='shipping'||st==='booked'?'pl-ya':'pl-g'))+'">'+esc4(STAGE[st]||st)+'</span>';
+  const fd=d=>d?_p14F(new Date(d)):'<span class="mut">—</span>';
+  const grupo=(mfg,tit)=>{ const l=eqs.filter(e=>e.mfg===mfg); if(!l.length) return '';
+    const T=l.reduce((a,e)=>{ const d=deboChina(e); a.c+=d.cupo; a.o+=d.otros; return a; },{c:0,o:0});
+    return '<tr class="sec"><th colspan="11">'+tit+' · '+l.length+' pedidos</th></tr>'+l.map(e=>{ const d=deboChina(e);
+      return '<tr class="clic" onclick="maIrPedido(\''+_maQ(kOf(e))+'\');pdVista(\'maestro\')"><td><b>'+esc4(e.derrame||e.ordenId)+'</b></td><td>'+esc4(e.cliente||'Por asignar')+'</td><td>'+esc4(e.proj||'')+'</td><td class="r">'+(e.qty||1)+'</td><td>'+pill(e.st)+'</td><td>'+fd(e.etd)+'</td><td>'+fd(e.eta)+'</td><td>'+fd(e.bl)+'</td>'
+        +'<td class="r">'+(d.cupo>0.5?fmtUSDs(d.cupo):'<span class="mut">—</span>')+'</td><td class="r">'+(d.otros>0.5?fmtUSDs(d.otros):'<span class="mut">—</span>')+'</td><td class="r"><b>'+fmtUSDs(d.total)+'</b></td></tr>'; }).join('')
+      +'<tr class="tot"><td colspan="8">Total '+tit+'</td><td class="r">'+fmtUSDs(T.c)+'</td><td class="r">'+fmtUSDs(T.o)+'</td><td class="r">'+fmtUSDs(T.c+T.o)+'</td></tr>'; };
+  return '<div class="p15-pdf"><div class="ec9-seg">'+chip('tipo','','Todos')+chip('tipo','Singsun','Trackers')+chip('tipo','Eaglerise','Shelters')+'</div>'
+      +'<label>Estado <select class="ec8-in" onchange="pdFiltro(\'st\',this.value)"><option value="">Todos</option>'+sts.map(s=>'<option value="'+s+'"'+(PDF14.st===s?' selected':'')+'>'+STAGE[s]+'</option>').join('')+'</select></label>'
+      +'<label>Cliente <select class="ec8-in" onchange="pdFiltro(\'cli\',this.value)"><option value="">Todos</option>'+clis.map(c=>'<option'+(PDF14.cli===c?' selected':'')+'>'+esc4(c)+'</option>').join('')+'</select></label></div>'
+    +'<div class="ec8-wrap"><table class="ec8 p15-or"><thead><tr><th>Pedido</th><th>Cliente</th><th>Proyecto</th><th class="r">Cant.</th><th>Estado</th><th>ETD</th><th>ETA</th><th>BL</th><th class="r">Saldo fabricante</th><th class="r">Saldo componentes</th><th class="r">Debes a China</th></tr></thead><tbody>'
+    +grupo('Singsun','Trackers · Singsun (Nexus)')+grupo('Eaglerise','Shelters · Eaglerise')+'</tbody></table></div>'
+    +'<div class="ec8-pie">Una fila por pedido, como en el ORDER REPORT de Andrés'+(CONCILIA?' (corte '+fmtD(CONCILIA.ts)+')':'')+'. Clic en un pedido para abrirlo con tus decisiones: cliente, precio, cómo se cobra y derrames.</div>';
+}
+const _renderLedgerAntes115=renderLedger;
+renderLedger=function(){
+  const r=_renderLedgerAntes115.apply(this,arguments);
+  try{
+    const v=document.getElementById('v-pedidos'), m=document.getElementById('maestro'); if(!v||!m) return r;
+    let top=document.getElementById('pdTop'), or=document.getElementById('orReport');
+    if(!top){ top=document.createElement('div'); top.id='pdTop'; v.insertBefore(top,m); }
+    if(!or){ or=document.createElement('div'); or.id='orReport'; v.insertBefore(or,m); }
+    top.innerHTML='<div class="ma-top"><div><h2 class="title">Pedidos</h2><div class="sub" style="margin-bottom:0">'+(PDV==='or'?'Tu ORDER REPORT, una fila por pedido.':'Tus órdenes con tus decisiones: cliente, precio, cómo se cobra y derrames.')+'</div></div><div class="ec8-sp"></div>'
+      +'<div class="ec9-seg"><button class="'+(PDV==='or'?'on':'')+'" onclick="pdVista(\'or\')">Order report</button><button class="'+(PDV==='maestro'?'on':'')+'" onclick="pdVista(\'maestro\')">Con mis decisiones</button></div></div>';
+    or.style.display=PDV==='or'?'':'none'; m.classList.toggle('p15-oculto',PDV==='or');
+    if(PDV==='or') or.innerHTML=EQ.length?_pdOR():'<div class="ec8-vacio">Carga el detailed y el order report con <b>Cargar datos</b>.</div>';
+  }catch(err){ console.warn(err); }
+  return r;
+};
+const _maIrPedidoAntes115=maIrPedido;
+maIrPedido=function(){ PDV='maestro'; return _maIrPedidoAntes115.apply(this,arguments); };
+
+/* ===================================================================
+   v1.16 · FINKARGO, PAGOS PARCIALES Y DATOS PREPARADOS
+   - Finkargo es un acreedor más en Estados de cuenta › Debo. Cada
+     operación (préstamo) tiene orden, fecha de giro, capital, tasa,
+     fondo de garantías, servicio de giro y sus cuotas de interés
+     vencido. Se carga leyendo el PDF de la confirmación de compra o a
+     mano. "Pago el capital en la cuota N" corta el préstamo ahí: esa
+     cuota lleva el interés del mes más el capital; el fondo de
+     garantías y el giro van en la cuota 1.
+   - "Lo asume": la operación aparece sola en el estado de cuenta del
+     cliente (Otros cargos), enlazada: mismas cuotas y montos. Los
+     pagos a Finkargo salen en la Caja (fila Finkargo y otros cargos);
+     al cliente le quedan por cobrar hasta que registres su abono.
+   - Pagos parciales planeados en una factura de Magnum o TIBA:
+     CXPMIO[k].partes = [{fecha, monto}]; lo que no esté en partes sigue
+     la regla.
+   - Giro a China pagado con plata que no pasa por tus bancos (p. ej.
+     Finkargo): PLANCHINA[lunes].fuera. Cuenta en tu plan (baja el
+     vencido) pero no sale de tu Caja.
+   - Datos preparados: un archivo .json que se AGREGA (nunca borra) con
+     operaciones de Finkargo, plan a China, fechas planeadas y promesas.
+   Llave nueva del estado: FINK = {ops:[…]}.
+   =================================================================== */
+var FINK={ops:[]}, FKPREV=null, PKPREV=null;
+const _r2=n=>Math.round((+n||0)*100)/100;
+function fkCuotas(op){
+  const all=op.cuotas||[]; if(!all.length) return [];
+  const n=Math.max(1,Math.min(+op.capitalEn||all.length,all.length));
+  return all.slice(0,n).map((q,i)=>{ const o={n:i+1,fecha:q.fecha||'',interes:_r2(q.interes),extra:i===0?_r2((+op.fondo||0)+(+op.giroFee||0)):0,capital:i===n-1?_r2(op.capital):0,pagada:!!q.pagada};
+    o.total=_r2(o.interes+o.extra+o.capital); return o; });
+}
+const fkTotal=op=>_r2(fkCuotas(op).reduce((a,q)=>a+q.total,0));
+const fkPendiente=op=>_r2(fkCuotas(op).filter(q=>!q.pagada).reduce((a,q)=>a+q.total,0));
+/* el cargo enlazado en el estado de cuenta del cliente que la asume */
+function _fkConcepto(q){ return 'Cuota '+q.n+' · '+(q.capital?'interés + capital':(q.extra?'interés + fondo de garantías + giro':'interés')); }
+function fkSync(){
+  ECX=(ECX||[]).filter(x=>!x.fink||FINK.ops.some(o=>o.id===x.fink&&o.asume));
+  FINK.ops.forEach(op=>{ if(!op.asume) return;
+    let x=ECX.find(r=>r.fink===op.id);
+    if(!x){ x={id:'ecxfk'+op.id,cliente:op.asume,tipo:'cargo',fink:op.id,pedido:'',equipo:'',proyecto:'',etd:'',valor:0,abonado:0,vence:'',nota:'',tercero:'',pagoT:false,cuotas:[]}; ECX.push(x); }
+    const cs=fkCuotas(op), ab=(x.cuotas||[]).map(q=>+q.abonado||0);
+    Object.assign(x,{cliente:op.asume,pedido:'Finkargo · '+(op.orden||''),equipo:'Préstamo US$ '+fmtUSDs(op.capital)+(op.para?' · '+op.para:''),valor:fkTotal(op),tercero:'',pagoT:false});
+    x.cuotas=cs.map((q,i)=>({concepto:_fkConcepto(q),monto:q.total,vence:q.fecha,abonado:Math.min(ab[i]||0,q.total)}));
+    const sobra=ab.slice(cs.length).reduce((a,b)=>a+b,0)+ab.slice(0,cs.length).reduce((a,v,i)=>a+Math.max(0,v-cs[i].total),0);
+    if(sobra>0.005&&x.cuotas.length) x.cuotas[x.cuotas.length-1].abonado=_r2(x.cuotas[x.cuotas.length-1].abonado+sobra);
+  });
+}
+function _fkListo(){ fkSync(); guardar4(); refreshAll(); _p14Repintar(); }
+function fkSet(id,campo,v){ const op=FINK.ops.find(o=>o.id===id); if(!op) return;
+  if(['capital','fondo','giroFee','tasa'].indexOf(campo)>=0){ const n=_ecNum(v,0); op[campo]=n==null?0:n; }
+  else if(campo==='capitalEn'){ op.capitalEn=Math.max(1,parseInt(v,10)||1); }
+  else op[campo]=(''+v).trim();
+  _fkListo(); }
+function fkCuotaSet(id,i,campo,v){ const op=FINK.ops.find(o=>o.id===id); if(!op||!op.cuotas[i]) return;
+  if(campo==='interes'){ const n=_ecNum(v,0); op.cuotas[i].interes=n==null?0:n; }
+  else if(campo==='pagada') op.cuotas[i].pagada=!!v;
+  else if(campo==='fecha'){ if(v&&+(''+v).slice(0,4)<2000) return; op.cuotas[i].fecha=v; }
+  _fkListo(); }
+function fkCuotaAdd(id){ const op=FINK.ops.find(o=>o.id===id); if(!op) return; const u=op.cuotas[op.cuotas.length-1];
+  let f=''; if(u&&_p14D(u.fecha)){ const d=_p14D(u.fecha); f=_p14Iso(new Date(d.getFullYear(),d.getMonth()+1,d.getDate())); }
+  op.cuotas.push({fecha:f,interes:0,pagada:false}); _fkListo(); }
+function fkNueva(){ FINK.ops.push({id:'fk'+Date.now().toString(36),orden:'',fecha:_p14Iso(TODAY),capital:0,tasa:0,fondo:0,giroFee:0,capitalEn:1,asume:'',para:'',cuotas:[{fecha:'',interes:0,pagada:false}]}); P14.acre='finkargo'; _fkListo(); }
+function fkBorrar(id){ const op=FINK.ops.find(o=>o.id===id); if(!op) return; if(!confirm('¿Borrar la operación '+(op.orden||'')+' de Finkargo? Si la asume un cliente, también sale de su estado de cuenta.')) return;
+  FINK.ops=FINK.ops.filter(o=>o.id!==id); _fkListo(); }
+/* Finkargo · PDF de la confirmación de compra */
+function fkLeerLineas(L){
+  const t=L.join('\n'), num=s=>_num14(s), mes={enero:0,febrero:1,marzo:2,abril:3,mayo:4,junio:5,julio:6,agosto:7,septiembre:8,setiembre:8,octubre:9,noviembre:10,diciembre:11};
+  const tras=(re)=>{ const m=re.exec(t); return m?num(m[1]):null; };
+  const orden=(/Orden de Compra:\s*([A-Z]{2}:[\d:]+)/.exec(t)||[])[1]||'';
+  const g=/Fecha de Giro:\s*(\d{1,2})\s+de\s+(\w+)\s+del?\s+(\d{4})/i.exec(t);
+  const fecha=g&&mes[g[2].toLowerCase()]!=null?_p14Iso(new Date(+g[3],mes[g[2].toLowerCase()],+g[1])):'';
+  const capital=tras(/Valor del Instrumento de Pago:[\s\S]*?USD\s*\$([\d,.]+)/);
+  const tasa=tras(/Tasa de Inter[ée]s:\s*([\d.]+)\s*%/);
+  const giroFee=tras(/Servicio de Giro:[^\n]*?USD\s*\$([\d,.]+)/)||0;
+  const fondo=tras(/Fondo de Garant[íi]as[^\n]*?USD\s*\$([\d,.]+)/)||0;
+  const adeudado=tras(/Valor Adeudado:[^\n]*?USD\s*\$([\d,.]+)/);
+  const para=((/Mercanc[íi]a:\s*([^\n]+)/.exec(t)||[])[1]||'').trim();
+  const cuotas=[]; L.forEach(l=>{ const m=/^(\d{1,2})\s+([\d.]+)\s*%\s+\$([\d,.]+)\s+(\d{4}-\d{2}-\d{2})/.exec(l.trim()); if(m) cuotas.push({fecha:m[4],interes:num(m[3]),pagada:false}); });
+  if(!capital||!cuotas.length) throw new Error('No encontré el capital o la tabla de intereses: ¿es una confirmación de compra de Finkargo?');
+  const op={id:'fk'+(orden||Date.now().toString(36)).replace(/[^\w]/g,''),orden,fecha,capital,tasa,fondo,giroFee,capitalEn:cuotas.length,asume:'',para,cuotas};
+  const suma=fkTotal(op);
+  if(adeudado!=null&&Math.abs(suma-adeudado)>1) throw new Error('La suma leída ('+_ec2(suma)+') no cuadra con el valor adeudado del PDF ('+_ec2(adeudado)+').');
+  op.adeudado=adeudado; return op;
+}
+async function fkCargarPdf(input){
+  const file=input&&input.files&&input.files[0]; if(input) try{ input.value=''; }catch(e){}
+  if(!file) return;
+  try{ FKPREV={op:fkLeerLineas(await _pdfLineas(file)),archivo:file.name}; }catch(err){ FKPREV={error:String(err&&err.message||err)}; }
+  P14.acre='finkargo'; renderPorPagar(); }
+function fkAprobar(){ if(!FKPREV||!FKPREV.op) return; const op=FKPREV.op, ya=FINK.ops.find(o=>o.id===op.id||(op.orden&&o.orden===op.orden));
+  if(ya){ op.asume=ya.asume; op.capitalEn=ya.capitalEn; op.cuotas.forEach((q,i)=>{ if(ya.cuotas[i]) q.pagada=!!ya.cuotas[i].pagada; }); FINK.ops[FINK.ops.indexOf(ya)]=Object.assign(op,{id:ya.id}); }
+  else FINK.ops.push(op);
+  FKPREV=null; _fkListo(); }
+function fkCancelar(){ FKPREV=null; renderPorPagar(); }
+
+/* ---- los pagos a Finkargo salen en la Caja ---- */
+const _cjTercAntes116=cjPagosTerceros;
+cjPagosTerceros=function(){ const out=_cjTercAntes116.apply(this,arguments);
+  FINK.ops.forEach(op=>fkCuotas(op).forEach(q=>{ if(q.pagada||q.total<0.005) return;
+    out.push({e:{derrame:'Finkargo',proj:op.orden||'',cliente:op.asume||'',ordenId:''},monto:q.total,fecha:_ecFecha(q.fecha),tipo:'tercero',concepto:'Pago a Finkargo · '+_fkConcepto(q).toLowerCase()+(op.orden?' · '+op.orden:''),quien:'Finkargo'}); }));
+  return out; };
+/* el cargo enlazado no se edita en el estado de cuenta: se edita en Finkargo */
+const _ecFilaAntes116=_ecFilaHTML;
+_ecFilaHTML=function(f){ let h=_ecFilaAntes116.apply(this,arguments);
+  if(f&&f.tipo==='x'&&f.x&&f.x.fink){ h=h.replace(/<div class="ec13-t">[\s\S]*?<\/div><\/td><\/tr>$/,'<div class="ec13-t"><span class="p16-enl">Enlazado con Finkargo: lo que pagas a Finkargo sale en tu Caja; las cuotas, montos y fechas se cambian en Estados de cuenta › Debo › Finkargo.</span></div></td></tr>'); }
+  return h; };
+
+/* ---- pagos parciales planeados (Magnum, TIBA) ---- */
+const _cxpActivasAntes116=cxpActivas;
+cxpActivas=function(acre){ const out=[];
+  _cxpActivasAntes116.apply(this,arguments).forEach(f=>{ const m=CXPMIO[_mioK(acre,f)]; const ps=(m&&Array.isArray(m.partes))?m.partes.filter(p=>+p.monto>0):[];
+    if(!ps.length){ out.push(f); return; }
+    let resto=+f.saldo; ps.forEach((p,j)=>{ const mo=Math.min(resto,+p.monto); if(mo<=0.005) return; resto-=mo; out.push(Object.assign({},f,{saldo:mo,_planFecha:p.fecha,_parte:(j+1)+'/'+ps.length})); });
+    if(resto>0.5) out.push(Object.assign({},f,{saldo:resto,_parte:'resto'})); });
+  return out; };
+const _cxpFechaAntes116=cxpFecha;
+cxpFecha=function(acre,f,modo){ if(f&&f._planFecha&&modo!=='vence'){ const d=_p14D(f._planFecha); if(d) return d<TODAY?TODAY:d; } return _cxpFechaAntes116.apply(this,arguments); };
+
+/* ---- giros a China que no salen de tus bancos ---- */
+const _p14CalcAntes116=p14Calc;
+p14Calc=function(modo){ const X=_p14CalcAntes116.apply(this,arguments);
+  if((modo||P14.modo)!=='pago'||X.modo!=='pago') return X;
+  let hay=false;
+  /* v2.4: el plan va por fecha exacta y lo de semanas pasadas cae en esta semana; lo girado con Finkargo también */
+  const W0=X.W[0], N=X.W.length;
+  Object.keys(PLANCHINA||{}).forEach(iso=>{ const v=PLANCHINA[iso], d=_p14D(iso); if(!v||typeof v!=='object'||!d) return;
+    let i=Math.floor(days(W0,_p14Lun(d))/7); if(i<0) i=0; if(i>=N) return;
+    const plan=['eagle','nexus','comp','sin'].reduce((a,k)=>a+(+v[k]||0),0), f=Math.min(+v.fuera||0,plan);
+    if(f>0.5){ X.R.china.v[i]-=f; X.R.china.it[i].push({txt:'Girado directo con Finkargo: no sale de tus bancos',usd:-f}); X.fuera=(X.fuera||0)+f; hay=true; } });
+  if(hay){ const R=X.R; let s=X.s0; X.ini=[]; X.neto=[]; X.cierre=[];
+    X.W.forEach((w,i)=>{ X.ini.push(s); const n=R.ext.v[i]+R.sole.v[i]-R.china.v[i]-R.mag.v[i]-R.tiba.v[i]-R.otros.v[i]-R.fij.v[i]-R.imp.v[i]; X.neto.push(n); s+=n; X.cierre.push(s); }); }
+  return X; };
+
+/* ---- Finkargo en Estados de cuenta › Debo ---- */
+const _p14AcreAntes116=_p14Acre;
+_p14Acre=function(){ let h=_p14AcreAntes116.apply(this,arguments);
+  const pend=FINK.ops.reduce((a,o)=>a+fkPendiente(o),0), prox=FINK.ops.map(o=>fkCuotas(o).find(q=>!q.pagada)).filter(Boolean).sort((a,b)=>(''+a.fecha).localeCompare(''+b.fecha))[0];
+  const card='<a href="#" class="p14-ac'+(P14.acre==='finkargo'?' on':'')+'" onclick="P14.acre=\'finkargo\';renderPorPagar();return false"><div class="t"><b>Finkargo</b><b>'+(FINK.ops.length?'US$ '+fmtUSDs(pend):'sin operaciones')+'</b></div>'
+    +'<div class="s"><span>'+(prox?'próximo '+_p14F(_p14D(prox.fecha))+' · '+fmtUSDs(prox.total):'carga una confirmación de compra')+'</span><span class="mut">'+FINK.ops.length+' operación'+(FINK.ops.length===1?'':'es')+'</span></div></a>';
+  const i=h.indexOf('<a href="#" class="p14-ac'+(P14.acre==='fijos'?' on':'')+'" onclick="P14.acre=\'fijos\'');
+  return i>=0?h.slice(0,i)+card+h.slice(i):h+card; };
+function _p16PanelFinkargo(){
+  const clis=_ecClientes();
+  let h='<div class="p14-card"><div class="p14-ph"><div><h3>Finkargo</h3><small class="mut">Préstamos con interés mensual vencido. Cada operación se carga con el PDF de la confirmación de compra.</small></div>'
+    +'<div class="btns"><label class="ec8-b">Cargar confirmación de compra (PDF)<input type="file" id="fkFile" accept=".pdf" style="display:none" onchange="fkCargarPdf(this)"></label><button class="ec8-b" onclick="fkNueva()">+ operación a mano</button></div></div>';
+  if(FKPREV){ if(FKPREV.error) h+='<div class="p14-alert">No cargué el PDF: '+esc4(FKPREV.error)+' <button class="ec8-b" onclick="fkCancelar()">Cerrar</button></div>';
+    else { const o=FKPREV.op; h+='<div class="p14-prev"><b>Revisa antes de aprobar · '+esc4(FKPREV.archivo||'')+'</b> · orden '+esc4(o.orden)+' · giro '+_p14F(_p14D(o.fecha))+' · capital US$ '+_ec2(o.capital)+' · tasa '+o.tasa+' % mes · '+o.cuotas.length+' cuotas · fondo de garantías '+_ec2(o.fondo)+' · giro '+_ec2(o.giroFee)+' · total US$ '+_ec2(fkTotal(o))
+      +'<div class="p14-acc"><button class="ec8-b on" onclick="fkAprobar()">Aprobar</button><button class="ec8-b" onclick="fkCancelar()">Cancelar</button><small class="mut">Si la operación ya existe, se actualiza conservando a quién se la cargas, en qué cuota pagas el capital y lo que marcaste pagado.</small></div></div>'; } }
+  if(!FINK.ops.length) return h+'<div class="ec8-vacio">Sin operaciones. Carga el PDF de la confirmación de compra o agrega una a mano. Si te prepararon un archivo de datos, cárgalo en Ajustes › Agregar datos preparados.</div></div>';
+  const pend=FINK.ops.reduce((a,o)=>a+fkPendiente(o),0), cap=FINK.ops.reduce((a,o)=>a+(+o.capital||0)*(fkCuotas(o).some(q=>q.capital&&!q.pagada)?1:0),0);
+  const prox=FINK.ops.map(o=>fkCuotas(o).find(q=>!q.pagada)).filter(Boolean).sort((a,b)=>(''+a.fecha).localeCompare(''+b.fecha))[0];
+  const K_=(l,v,cls,sub,dark)=>'<div class="ec8-k'+(dark?' p14-dark':'')+'"><div class="l">'+l+'</div><div class="v '+(cls||'')+'">'+v+'</div><small>'+sub+'</small></div>';
+  h+='<div class="ma-kpis">'+K_('Le debes','US$ '+fmtUSDs(pend),'','capital, intereses y cargos sin pagar',true)+K_('Próximo pago',prox?'US$ '+fmtUSDs(prox.total):'—','ya',prox?_p14F(_p14D(prox.fecha))+' · '+_fkConcepto(prox).toLowerCase():'')
+    +K_('Capital por devolver','US$ '+fmtUSDs(cap),'',FINK.ops.length+' operación'+(FINK.ops.length===1?'':'es'))+'</div></div>';
+  FINK.ops.forEach(op=>{ const q=_maQ(op.id), cs=fkCuotas(op), costo=_r2(fkTotal(op)-(+op.capital||0));
+    h+='<div class="p14-card"><div class="p14-ph"><div><h4>Orden '+esc4(op.orden||'(sin número)')+'</h4><small class="mut">Giro '+_p14F(_p14D(op.fecha))+(op.para?' · '+esc4(op.para):'')+' · costo financiero US$ '+_ec2(costo)+'</small></div><button class="ec8-x" title="Borrar operación" onclick="fkBorrar(\''+q+'\')">×</button></div>'
+      +'<div class="p16-grid">'
+      +'<label>Capital US$<input class="ec8-in" value="'+_ec2(op.capital)+'" onchange="fkSet(\''+q+'\',\'capital\',this.value)"></label>'
+      +'<label>Tasa % mes<input class="ec8-in" value="'+(op.tasa||'')+'" onchange="fkSet(\''+q+'\',\'tasa\',this.value)"></label>'
+      +'<label>Fondo de garantías<input class="ec8-in" value="'+_ec2(op.fondo)+'" onchange="fkSet(\''+q+'\',\'fondo\',this.value)"></label>'
+      +'<label>Servicio de giro<input class="ec8-in" value="'+_ec2(op.giroFee)+'" onchange="fkSet(\''+q+'\',\'giroFee\',this.value)"></label>'
+      +'<label>Pago el capital en<select class="ec8-in" onchange="fkSet(\''+q+'\',\'capitalEn\',this.value)">'+op.cuotas.map((c,i)=>'<option value="'+(i+1)+'"'+(cs.length===i+1?' selected':'')+'>la cuota '+(i+1)+' ('+_p14F(_p14D(c.fecha))+')</option>').join('')+'</select></label>'
+      +'<label>Lo asume<select class="ec8-in" onchange="fkSet(\''+q+'\',\'asume\',this.value)"><option value="">Nadie: lo asumes tú</option>'+clis.map(c=>'<option'+(op.asume===c?' selected':'')+'>'+esc4(c)+'</option>').join('')+'</select></label>'
+      +'<label>Orden<input class="ec8-in t" value="'+esc4(op.orden||'')+'" onchange="fkSet(\''+q+'\',\'orden\',this.value)"></label>'
+      +'<label>Fecha de giro<input type="date" class="ec8-in d" value="'+esc4(op.fecha||'')+'" onchange="fkSet(\''+q+'\',\'fecha\',this.value)"></label>'
+      +'</div>'
+      +'<div class="ec8-wrap" style="margin-top:10px"><table class="ec8 p14-ft"><thead><tr><th>Cuota</th><th>Fecha</th><th class="r">Interés</th><th class="r">Fondo + giro</th><th class="r">Capital</th><th class="r">Total</th><th></th></tr></thead><tbody>'
+      +op.cuotas.map((c,i)=>{ const x=cs[i]; if(!x) return '<tr class="mut"><td>'+(i+1)+'</td><td>'+_p14F(_p14D(c.fecha))+'</td><td class="r">'+_ec2(c.interes)+'</td><td colspan="4">no se paga: el capital va en la cuota '+cs.length+'</td></tr>';
+        return '<tr'+(x.pagada?' class="pagado"':'')+'><td><b>'+x.n+'</b></td><td><input type="date" class="ec8-in d" value="'+esc4(c.fecha||'')+'" onchange="fkCuotaSet(\''+q+'\','+i+',\'fecha\',this.value)"></td>'
+          +'<td class="r"><input class="ec8-in" value="'+_ec2(c.interes)+'" onchange="fkCuotaSet(\''+q+'\','+i+',\'interes\',this.value)"></td><td class="r">'+(x.extra?_ec2(x.extra):'—')+'</td><td class="r">'+(x.capital?_ec2(x.capital):'—')+'</td><td class="r"><b>'+_ec2(x.total)+'</b></td>'
+          +'<td><label class="ec13-chk"><input type="checkbox"'+(x.pagada?' checked':'')+' onchange="fkCuotaSet(\''+q+'\','+i+',\'pagada\',this.checked)"> pagada</label></td></tr>'; }).join('')
+      +'<tr class="tot"><td colspan="5">Total a pagarle a Finkargo</td><td class="r">'+_ec2(fkTotal(op))+'</td><td></td></tr></tbody></table></div>'
+      +'<div class="p16-pie"><button class="ec8-b" onclick="fkCuotaAdd(\''+q+'\')">+ cuota</button><small class="mut">'+(op.asume?'Enlazado: el estado de cuenta de <b>'+esc4(op.asume)+'</b> muestra estas mismas cuotas en Otros cargos. Lo que marques pagado aquí sale de tu Caja; a '+esc4(op.asume)+' le sigue por cobrar hasta que registres su abono.':'Lo asumes tú: solo sale en tu Caja.')+'</small></div></div>'; });
+  return h;
+}
+const _renderPorPagarAntes116=renderPorPagar;
+renderPorPagar=function(){ if(P14.acre!=='finkargo') return _renderPorPagarAntes116.apply(this,arguments);
+  const v=document.getElementById('v-porpagar'); if(!v) return;
+  let panel=''; try{ panel=_p16PanelFinkargo(); }catch(err){ console.warn(err); panel='<div class="ec8-vacio">Error: '+esc4(err.message)+'</div>'; }
+  v.innerHTML='<div class="p14-pp"><aside class="p14-acr">'+_p14Acre()+'</aside><div class="p14-panel">'+panel+'</div></div>'; };
+
+/* ---- datos preparados: se agregan, nunca se borra nada ---- */
+function pkLeer(obj){
+  if(!obj||obj.tipo!=='zentrack-datos') throw new Error('Este archivo no es de datos preparados para Zentrack.');
+  const res=[], d=obj.datos||{};
+  (d.FINK&&d.FINK.ops||[]).forEach(o=>res.push('Finkargo · operación '+(o.orden||o.id)+' · US$ '+_ec2(fkTotal(o))+(o.asume?' · la asume '+o.asume:'')));
+  const pc=Object.keys(d.PLANCHINA||{}); if(pc.length) res.push('Plan de giros a China · '+pc.length+' semanas · US$ '+_ec2(pc.reduce((a,k)=>a+['eagle','nexus','comp','sin'].reduce((b,p)=>b+(+d.PLANCHINA[k][p]||0),0),0)));
+  const cm=Object.keys(d.CXPMIO||{}); if(cm.length) res.push('Fechas planeadas · '+cm.filter(k=>/^magnum:/.test(k)).length+' facturas de Magnum y '+cm.filter(k=>/^tiba:/.test(k)).length+' de TIBA');
+  (d.PROM||[]).length&&res.push('Promesas de pago · '+d.PROM.length+' · US$ '+_ec2(d.PROM.reduce((a,p)=>a+(+p.monto||0),0)));
+  const rep=(d.FINK&&d.FINK.ops||[]).filter(o=>o.asume).map(o=>(ECX||[]).filter(x=>x.cliente===o.asume&&x.tipo==='cargo'&&!x.fink&&/finkargo/i.test((x.pedido||'')+' '+(x.equipo||'')+' '+(x.tercero||'')))).reduce((a,b)=>a.concat(b),[]);
+  rep.forEach(x=>res.push('Reemplaza tu cargo manual "'+(x.pedido||'Finkargo')+'" de '+x.cliente+' (US$ '+_ec2(x.valor||(x.cuotas||[]).reduce((a,q)=>a+(+q.monto||0),0))+') por el enlazado; lo abonado se pasa'));
+  return {obj,res,rep};
+}
+async function pkCargar(input){
+  const file=input&&input.files&&input.files[0]; if(input) try{ input.value=''; }catch(e){}
+  if(!file) return;
+  try{ PKPREV=Object.assign(pkLeer(JSON.parse(await file.text())),{archivo:file.name}); }catch(err){ PKPREV={error:String(err&&err.message||err)}; }
+  _pkPintar(); }
+function pkAplicar(){
+  if(!PKPREV||!PKPREV.obj) return; const d=PKPREV.obj.datos||{};
+  (d.FINK&&d.FINK.ops||[]).forEach(o=>{ const i=FINK.ops.findIndex(x=>x.id===o.id||(o.orden&&x.orden===o.orden)); if(i>=0) FINK.ops[i]=Object.assign({},o,{id:FINK.ops[i].id}); else FINK.ops.push(JSON.parse(JSON.stringify(o))); });
+  Object.keys(d.PLANCHINA||{}).forEach(k=>{ PLANCHINA[k]=Object.assign({},d.PLANCHINA[k]); });
+  Object.keys(d.CXPMIO||{}).forEach(k=>{ CXPMIO[k]=Object.assign({},CXPMIO[k]||{},d.CXPMIO[k]); });
+  (d.PROM||[]).forEach(p=>{ if(!PROM.some(x=>x.id===p.id)) PROM.push(Object.assign({cumplida:false,nota:''},p)); });
+  fkSync();
+  /* el cargo manual de Finkargo se reemplaza: lo abonado pasa al enlazado */
+  (PKPREV.rep||[]).forEach(x=>{ const op=FINK.ops.find(o=>o.asume===x.cliente&&ECX.some(r=>r.fink===o.id)); const y=op&&ECX.find(r=>r.fink===op.id); if(!y) return;
+    let ab=(x.cuotas&&x.cuotas.length)?x.cuotas.reduce((a,q)=>a+(+q.abonado||0),0):(+x.abonado||0);
+    y.cuotas.forEach(q=>{ const m=Math.min(ab,q.monto-(+q.abonado||0)); if(m>0){ q.abonado=_r2((+q.abonado||0)+m); ab-=m; } });
+    (ECA||[]).forEach(a=>(a.aplicado||[]).forEach(p=>{ if(p.k===x.id){ p.k=y.id; p.i=Math.max(0,Math.min(p.i,y.cuotas.length-1)); } }));
+    ECX=ECX.filter(r=>r!==x); });
+  PKPREV={hecho:true,res:PKPREV.res}; fkSync(); guardar4(); refreshAll(); _pkPintar();
+}
+function _pkPintar(){ const b=document.getElementById('pkBox'); if(!b) return;
+  const p=PKPREV; let h='<div class="p16-pk"><h3>Agregar datos preparados</h3><small class="mut">Un archivo .json con operaciones de Finkargo, tu plan de giros, fechas planeadas y promesas. Se agrega a lo que ya tienes: no borra nada.</small>'
+    +'<div class="btns" style="margin-top:8px"><label class="ec8-b">Elegir archivo<input type="file" id="pkFile" accept=".json" style="display:none" onchange="pkCargar(this)"></label></div>';
+  if(p&&p.error) h+='<div class="p14-alert">No lo cargué: '+esc4(p.error)+'</div>';
+  else if(p&&p.hecho) h+='<div class="p14-prev"><b>Listo. Se agregó:</b><ul>'+p.res.map(r=>'<li>'+esc4(r)+'</li>').join('')+'</ul></div>';
+  else if(p) h+='<div class="p14-prev"><b>Esto se va a agregar ('+esc4(p.archivo||'')+'):</b><ul>'+p.res.map(r=>'<li>'+esc4(r)+'</li>').join('')+'</ul><div class="p14-acc"><button class="ec8-b on" onclick="pkAplicar()">Agregar</button><button class="ec8-b" onclick="PKPREV=null;_pkPintar()">Cancelar</button></div></div>';
+  b.innerHTML=h+'</div>'; }
+const _renderConfigAntes116=renderConfig;
+renderConfig=function(){ const r=_renderConfigAntes116.apply(this,arguments);
+  try{ const v=document.getElementById('v-config'); if(v&&!document.getElementById('pkBox')){ const d=document.createElement('div'); d.id='pkBox'; v.insertBefore(d,v.children[1]||null); } _pkPintar(); }catch(err){ console.warn(err); }
+  return r; };
+
+/* ---- TRM: si hoy no la escribiste, la del último abono en pesos antes que la de Ajustes ---- */
+function _p16TrmFuente(){ const r=_saldoUlt(); if(r&&+r.trm>0) return {trm:+r.trm,de:r.fecha===_p14Iso(TODAY)?'hoy':'saldos del '+_p14F(_p14D(r.fecha))};
+  const a=(ECA||[]).filter(x=>+x.trm>1000).sort((x,y)=>(''+y.fecha).localeCompare(''+x.fecha))[0]; if(a) return {trm:+a.trm,de:'abono del '+_p14F(_p14D(a.fecha))};
+  const c=+(CONFIG&&CONFIG.trmProy)||0; return {trm:c>1000?c:4000,de:'Ajustes'}; }
+_p14Trm=function(){ return _p16TrmFuente().trm; };
+/* ---- guardar y recuperar ---- */
+const _serAntes116=serializeState;
+serializeState=function(){ const o=JSON.parse(_serAntes116.apply(this,arguments)); o.FINK=FINK; return JSON.stringify(o); };
+const _appAntes116=applyState;
+applyState=function(s){ _appAntes116.apply(this,arguments); FINK=(s&&s.FINK&&Array.isArray(s.FINK.ops))?s.FINK:{ops:[]}; };
+
+</script>

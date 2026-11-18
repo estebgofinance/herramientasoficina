@@ -1,0 +1,20 @@
+/* ===== v2.8 · precios provisionales y facturados ===== */
+.pr28{background:var(--card);border:1px solid var(--rule);border-radius:var(--z-r2);margin:12px 0 16px}
+.pr28>summary{display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:12px 16px;cursor:pointer;font-size:14px}
+.pr28>summary b{font-size:16px}
+.pr28 table.z-t td{vertical-align:middle}
+.pr28 table.z-t td.w{white-space:normal;min-width:160px}
+.pr28 td small{display:block;font-size:13px;color:var(--ink3);font-weight:400}
+.pr28 .pr28-in{width:92px;height:30px}
+.pr28 .pr28-in.pct{width:52px}
+.pr28 tbody tr:not(.pr28-ff):not(.pr28-h) td:first-child{cursor:pointer}
+.pr28 tr.pr28-ff td,.pr28 tr.pr28-h td{background:var(--bg);white-space:normal;font-size:13px;color:var(--ink2)}
+.pr28 .pr28-f{font-size:13px}
+.pr28-pie{padding:10px 16px;border-top:1px solid var(--rule);font-size:13px;color:var(--ink2)}
+.pr28-p{display:inline-block;margin-left:6px;padding:1px 6px;border-radius:4px;background:var(--z-info-s);color:var(--z-info);font-size:13px;font-weight:600}
+.pr28>summary .pr28-res{color:var(--ink2);margin-left:12px}
+.pr28 .pr28-w{color:var(--z-warn)}
+.pr28 .z-reg label{min-width:110px}
+.pr28 .z-reg .pr28-in{width:110px}
+.pr28 .z-reg .pr28-in.pct{width:70px}
+.pr28 table.z-t tr.sec td{position:static}

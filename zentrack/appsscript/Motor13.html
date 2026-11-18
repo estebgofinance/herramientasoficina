@@ -1,0 +1,588 @@
+<script>
+
+/* ===================================================================
+   v2.3 · PLANES SEMANA A SEMANA Y CAJA LIMPIA
+   Esteban aprobó el prototipo "Planes Zentrack" (5-nov-2026) y la Caja
+   limpia del lienzo v2 (tablero "2b").
+   - Planes, dos vistas. "Semana a semana": Atrasado + 12 semanas en
+     columnas; cada pago es una ficha que se arrastra a otra semana o se
+     abre para cambiar monto y semana. Lo que se calcula solo (fechas de
+     Andrés, regla de Magnum y TIBA, cuotas de un contrato) lleva candado.
+     "Cronograma por contraparte": versiones como pestañas, fecha y monto
+     exactos por pago, "Repartir un monto", "Cuotas iguales" y, en China,
+     qué pedidos paga cada giro (el más vencido primero).
+   - Contrapartes: cliente del grupo (versión "a" = PROM), clientes
+     externos (base = cuotas del estado de cuenta), Eaglerise, Nexus y
+     componentes (base = fechas de Andrés, versión "a" = PLANCHINA),
+     Magnum y TIBA (base = regla de días) y Finkargo y otros cargos
+     (base = cuotas). "Negociar" crea una versión editable desde la base.
+   - China en la Caja con plan: los giros del plan pagan los pedidos en
+     orden (vencido primero, luego por fecha); lo que vence y el plan no
+     cubre sale en su fecha; lo vencido que el plan no cubre no sale y se
+     ve como "vencido sin plan".
+   - Real: lo girado de verdad va por giro en PLANES.real[id] y la Caja
+     cuenta solo lo que falta. Lo recibido de un cliente sale de sus
+     abonos (ECA): esta semana descuenta sus promesas.
+   - Las versiones de pagos (China, Magnum, TIBA, otros) solo cuentan en
+     "Con mi plan de pagos"; las de cobros cuentan en las dos vistas.
+   - Caja: solo lee. 4 indicadores, saldo al cierre contra el colchón y
+     tabla plegable con la fuente de cada fila (lleva a Planes).
+   - Magnum y TIBA, factura por factura, se deciden en Cuentas › Debo.
+   Sin llaves nuevas: PLANES gana "real" y planes para externos, Magnum,
+   TIBA y otros; las líneas de PLANES ganan "id"; PROM gana "dest".
+   =================================================================== */
+var V3={vista:'sem',dir:'todos',sel:null,add:null,addCp:'',addM:'',cp:null,ver:null,tool:null,tp:{monto:'',a:'0',b:'3',k:'1',v:'4'},drag:null,borrar:null};
+var _V3PROV={eagle:'Eaglerise',nexus:'Nexus · Singsun',comp:'Componentes'};
+var _V3DEST=[['','—'],['china','China · equipos'],['magnum','Magnum'],['nac','Nacional']];
+const _V3LOCK='<svg class="v3-lock" width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" aria-label="se calcula solo"><rect x="3" y="7" width="10" height="7" rx="1.5"/><path d="M5.5 7V5a2.5 2.5 0 015 0v2"/></svg>';
+const _V3XI='<svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M5 5l10 10M15 5L5 15"/></svg>';
+const _V3FL='<svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 2.5L7.5 6 4 9.5"/></svg>';
+let _V3NN=0;
+function _v3Nid(){ return 'l'+Date.now().toString(36)+'-'+(++_V3NN); }
+function _v3n(v){ return Math.abs(v)<0.5?'—':(v<0?'−':'')+fmtUSDs(Math.abs(v)); }
+function _v3k(v){ if(Math.abs(v)<0.5) return '—'; const a=Math.abs(v)/1000; return (v<0?'−':'')+(a>=100?Math.round(a):Math.round(a*10)/10)+'k'; }
+function _v3F(f){ const d=f instanceof Date?f:_p14D(f); return d?_p14F(d):'—'; }
+function _v3L0(){ return _p14Lun(TODAY); }
+function _v3W(){ const L0=_v3L0(), W=[]; for(let i=0;i<12;i++) W.push(addD(L0,7*i)); return W; }
+function _v3Lab(i){ if(i<0) return 'Atrasado'; if(i===0) return 'Esta semana'; const d=addD(_v3L0(),7*i); return d.getDate()+' '+_p14Mes[d.getMonth()]; }
+/* -1 = antes de este lunes; 0 = esta semana; 1… las siguientes */
+function _v3Wk(f){ const d=f instanceof Date?f:_p14D(f); if(!d) return null; const L0=_v3L0(); if(d<L0) return -1; return Math.floor(days(L0,_p14Lun(d))/7); }
+function _v3FechaSem(i){ const d=addD(_v3L0(),7*i+3); return _p14Iso(d<TODAY?TODAY:d); }
+/* llevar una fecha a la semana i, el mismo día de la semana */
+function _v3Mover(f,i){ const d=_p14D(f)||TODAY, off=(d.getDay()+6)%7; let n=addD(_v3L0(),7*i+off); if(i===0&&n<TODAY) n=TODAY; return _p14Iso(n); }
+function _v3Num(s){ return Math.max(0,_ecNum(s,0)||0); }
+function _v3Real(){ if(!PLANES.real||typeof PLANES.real!=='object') PLANES.real={}; return PLANES.real; }
+function _v3EsNeg(p){ if(!p) return false; if(p.dir==='cobro') return esInterno(p.cp); return !!(_V3PROV||{})[p.prov]; }
+function _v3SigId(p){ const usadas=(_v3EsNeg(p)?['a']:[]).concat((p.versiones||[]).map(v=>v.id)); for(let c=97;c<123;c++){ const id=String.fromCharCode(c); if(usadas.indexOf(id)<0) return id; } return 'v'+Date.now().toString(36); }
+
+/* ---- lo que se debe a China, pago por pago, con una llave estable ---- */
+function _v3Claves(l){ const seen={}; return l.map(p=>{ let key=kOf(p.e)+'|'+p.tipo; seen[key]=(seen[key]||0)+1; if(seen[key]>1) key+='|'+seen[key]; return {key,p}; }); }
+function _v3Deudas(prov,todos){
+  return _v3Claves(todos||cjPagos()).filter(x=>x.p.tipo!=='tercero'&&_pcProvDe(x.p.quien)===prov&&+x.p.monto>0.005).map(({key,p})=>{
+    const f=p.tipo==='otros'?null:(p.fecha?_p14D(p.fecha):null), venc=p.tipo==='otros'||!!(f&&f<TODAY);
+    return {key,ped:p.e.derrame||p.e.ordenId||'',proy:p.e.proj||'',tipo:p.concepto,m:+p.monto,f,venc,sinf:!f&&p.tipo!=='otros'};
+  }).sort((a,b)=>{ const r=x=>x.venc?0:(x.f?1:2); if(r(a)!==r(b)) return r(a)-r(b); return (a.f?+a.f:0)-(b.f?+b.f:0); });
+}
+/* cada giro paga los pedidos en orden: lo más vencido primero */
+function _v3Fifo(D,L){
+  const R=(D||[]).map(d=>({d,rest:d.m,por:[]})), cub={};
+  L.forEach((l,i)=>{ let m=l.m; const lst=[];
+    for(const r of R){ if(m<0.005) break; if(r.rest<0.005) continue; const t=Math.min(m,r.rest); r.rest-=t; m-=t; r.por.push('#'+(i+1)+' '+_v3F(l.f)); lst.push({r,t,full:r.rest<0.5}); }
+    cub[l.id]={lst,sobra:m}; });
+  return {R,cub};
+}
+function _v3BaseChina(D){
+  const v=D.filter(x=>x.venc).reduce((a,x)=>a+x.m,0), out=[];
+  if(v>0.5) out.push({id:'b|venc',f:_p14Iso(TODAY),m:v,c:'Vencido a hoy',sint:true});
+  D.filter(x=>!x.venc&&x.f).forEach(x=>out.push({id:'b|'+x.key,f:_p14Iso(x.f),m:x.m,c:(x.ped+' · '+x.tipo)}));
+  return out;
+}
+function _v3BaseCxp(acre){
+  const g={}; cxpActivas(acre).filter(f=>!(CXPMIO[_mioK(acre,f)]||{}).fuera).forEach(f=>{ const d=cxpFecha(acre,f,'pago'), iso=d?_p14Iso(d):''; if(!iso) return;
+    const o=(g[iso]=g[iso]||{m:0,n:0}); o.m+=_cxpUSD(f); o.n++; });
+  return Object.keys(g).sort().map(iso=>({id:'b|'+iso,f:iso,m:g[iso].m,c:g[iso].n+' factura'+(g[iso].n===1?'':'s'),n:g[iso].n}));
+}
+function _v3CuotasCli(c){
+  const fs=ecFilas(c).filas;
+  return _ecUnidades(c).map((u,i)=>{ const f=fs.find(x=>x.k===u.k), d=u.vence?_p14D(u.vence):null;
+    return {id:'b|'+i,f:d?_p14Iso(d):'',m:+u.saldo||0,c:f?[f.pedido,f.proyecto].filter(Boolean).join(' · '):'Cuota'}; }).filter(l=>l.m>0.5);
+}
+
+/* ---- las contrapartes, con su base, sus versiones y lo que cuenta en la Caja ---- */
+function _v3Cps(){
+  _v2PlanesBase(); _v3Real();
+  const out=[], P=id=>_v2Plan(id), ex=PLANES.excl||{}, cl=_ecClientes();
+  const internos=cl.filter(c=>esInterno(c)); (PROM||[]).forEach(x=>{ if(esInterno(x.cliente)&&internos.indexOf(x.cliente)<0) internos.push(x.cliente); });
+  internos.forEach(c=>{ const p=P('cobro:'+c); out.push({id:'cobro:'+c,n:c,dir:'c',tipo:'Negociado',p,base:null,baseT:'',act:(p&&p.activa)||'a',enCaja:!p||p.enCaja!==false}); });
+  cl.filter(c=>!esInterno(c)).forEach(c=>{ const p=P('cobro:'+c), b=_v3CuotasCli(c); if(!b.length&&!(p&&(p.versiones||[]).length)) return;
+    out.push({id:'cobro:'+c,n:c,dir:'c',tipo:'Contrato',p,base:b,baseT:'Cuotas del contrato',act:(p&&p.activa)||'base',enCaja:!ex['cli:'+c]&&(!p||p.enCaja!==false),exK:'cli:'+c}); });
+  const todos=EQ.length?cjPagos():[];
+  Object.keys(_V3PROV).forEach(k=>{ const p=P('pago:'+k), D=EQ.length?_v3Deudas(k,todos):[];
+    out.push({id:'pago:'+k,n:_V3PROV[k],dir:'p',tipo:'Negociado',prov:k,p,deudas:D,base:_v3BaseChina(D),baseT:'Fechas de Andrés',act:(p&&p.activa)||'a',enCaja:!p||p.enCaja!==false}); });
+  [['magnum','Magnum'],['tiba','TIBA']].forEach(([k,n])=>{ const p=P('pago:'+k); if(!cxpActivas(k).length&&!(p&&(p.versiones||[]).length)) return;
+    out.push({id:'pago:'+k,n,dir:'p',tipo:'Regla',prov:k,p,base:_v3BaseCxp(k),baseT:'Regla · máx. '+((REGLAS&&REGLAS[k]&&REGLAS[k].dias)||30)+' días',act:(p&&p.activa)||'base',enCaja:!ex[k]&&(!p||p.enCaja!==false),exK:k}); });
+  const ter=(typeof cjPagosTerceros==='function')?cjPagosTerceros():[], po=P('pago:otros');
+  if(ter.length||(po&&(po.versiones||[]).length)) out.push({id:'pago:otros',n:'Finkargo y otros cargos',dir:'p',tipo:'Contrato',prov:'otros',p:po,
+    base:ter.filter(t=>t.fecha).map((t,i)=>({id:'b|'+i,f:_p14Iso(t.fecha<TODAY?TODAY:t.fecha),m:+t.monto||0,c:t.concepto})),baseT:'Cuotas del contrato',act:(po&&po.activa)||'base',enCaja:!ex.otros&&(!po||po.enCaja!==false),exK:'otros'});
+  out.forEach(c=>{ if(c.act!=='base'&&!_v3VerExiste(c,c.act)) c.act=c.tipo==='Negociado'?'a':'base'; });
+  return out;
+}
+function _v3VerExiste(c,vid){ if(vid==='base') return !!c.base||c.tipo==='Negociado'; if(vid==='a'&&c.tipo==='Negociado') return true; const p=c.p||_v2Plan(c.id); return !!(p&&(p.versiones||[]).some(v=>v.id===vid)); }
+function _v3Cp(id){ return _v3Cps().find(c=>c.id===id)||null; }
+function _v3Vers(c){
+  const p=c.p||_v2Plan(c.id), L=[];
+  if(c.base) L.push({id:'base',t:c.tipo==='Negociado'?'Fechas de Andrés':'Base',sub:c.tipo==='Negociado'?'se calcula sola':(c.baseT||'se calcula sola')});
+  if(c.tipo==='Negociado') L.push({id:'a',t:'a · '+(c.dir==='c'?'Promesas':'Plan de giros'),sub:c.dir==='c'?'promesas de pago':'tu plan de giros'});
+  ((p&&p.versiones)||[]).forEach(v=>L.push({id:v.id,t:v.id+' · '+(v.nombre||'Versión'),sub:(v.fecha?_v3F(v.fecha)+' · ':'')+(v.estado||'borrador')}));
+  return L;
+}
+/* líneas de una versión: [{id,f,m,c}] */
+function _v3Lin(c,vid){
+  if(vid==='base') return (c.base||[]).map(l=>Object.assign({},l));
+  if(vid==='a'&&c.tipo==='Negociado'){
+    if(c.dir==='c') return (PROM||[]).filter(x=>x.cliente===c.n).map(x=>({id:x.id,f:x.fecha||'',m:+x.monto||0,c:x.dest||'',cump:!!x.cumplida}));
+    const out=[]; Object.keys(PLANCHINA||{}).forEach(iso=>{ const v=_pcVal(iso)[c.prov]; if(v!=null&&v!=='') out.push({id:'pc|'+iso+'|'+c.prov,f:iso,m:+v||0,c:''}); }); return out;
+  }
+  const p=c.p||_v2Plan(c.id), v=p&&(p.versiones||[]).find(x=>x.id===vid); if(!v) return [];
+  return v.lineas.map(l=>{ if(!l.id) l.id=_v3Nid(); return {id:l.id,f:l.fecha||l.sem||'',m:+l.monto||0,c:l.dest||''}; });
+}
+/* lo que cuenta: la versión activa (la base de un plan negociado no trae pagos: es "sin plan") */
+function _v3Act(c){ if(!c.enCaja) return []; if(c.act==='base') return c.tipo==='Negociado'?[]:(c.base||[]); return _v3Lin(c,c.act).filter(l=>!l.cump); }
+const _v3PorF=(a,b)=>(a.f||'9')<(b.f||'9')?-1:((a.f||'9')>(b.f||'9')?1:0);
+
+/* ---- escribir: la versión "a" va a PLANCHINA o a PROM; las demás, a PLANES ---- */
+function _v3PlanDe(c){ let p=_v2Plan(c.id); if(p) return p;
+  p={id:c.id,cp:c.n,dir:c.dir==='c'?'cobro':'pago',activa:c.tipo==='Negociado'?'a':'base',enCaja:true,versiones:[]}; if(c.prov) p.prov=c.prov; PLANES.planes.push(p); return p; }
+function _v3PcSet(iso,prov,m){ const o=Object.assign({},_pcVal(iso)); if(m==null) delete o[prov]; else o[prov]=Math.round(m*100)/100; if(Object.keys(o).length) PLANCHINA[iso]=o; else delete PLANCHINA[iso]; }
+function _v3LinSet(c,vid,id,campo,val){
+  const R=_v3Real();
+  if(vid==='a'&&c.tipo==='Negociado'){
+    if(c.dir==='c'){ const x=PROM.find(y=>y.id===id); if(!x) return; if(campo==='m') x.monto=Math.round(val*100)/100; else if(campo==='f'){ if(val) x.fecha=val; } else if(campo==='c') x.dest=val; return; }
+    const ps=id.split('|'), iso=ps[1], prov=ps[2], cur=+_pcVal(iso)[prov]||0;
+    if(campo==='m') _v3PcSet(iso,prov,val);
+    else if(campo==='f'&&val&&val!==iso){ _v3PcSet(iso,prov,null); _v3PcSet(val,prov,(+_pcVal(val)[prov]||0)+cur); const nid='pc|'+val+'|'+prov; if(R[id]!=null){ R[nid]=(+R[nid]||0)+(+R[id]||0); delete R[id]; } }
+    return;
+  }
+  const p=_v3PlanDe(c), v=(p.versiones||[]).find(x=>x.id===vid), l=v&&v.lineas.find(y=>y.id===id); if(!l) return;
+  if(campo==='m') l.monto=Math.round(val*100)/100;
+  else if(campo==='f'){ if(val){ l.fecha=val; const d=_p14D(val); l.sem=d?_p14Iso(_p14Lun(d)):val; } }
+  else if(campo==='c') l.dest=val;
+}
+function _v3LinAdd(c,vid,f,m,dest){
+  if(vid==='a'&&c.tipo==='Negociado'){
+    if(c.dir==='c'){ const id=_v2Nuevo(); PROM.push({id,cliente:c.n,fecha:f,monto:Math.round(m*100)/100,nota:'',cumplida:false,dest:dest||''}); return id; }
+    _v3PcSet(f,c.prov,(+_pcVal(f)[c.prov]||0)+m); return 'pc|'+f+'|'+c.prov;
+  }
+  const p=_v3PlanDe(c), v=(p.versiones||[]).find(x=>x.id===vid); if(!v) return null; const d=_p14D(f), id=_v3Nid();
+  v.lineas.push({id,sem:d?_p14Iso(_p14Lun(d)):f,fecha:f,monto:Math.round(m*100)/100,dest:dest||(c.dir==='p'&&_V3PROV[c.prov]?'china':'')}); return id;
+}
+function _v3LinDel(c,vid,id){
+  if(vid==='a'&&c.tipo==='Negociado'){ if(c.dir==='c') PROM=PROM.filter(x=>x.id!==id); else { const ps=id.split('|'); _v3PcSet(ps[1],ps[2],null); } }
+  else { const p=_v2Plan(c.id), v=p&&(p.versiones||[]).find(x=>x.id===vid); if(v) v.lineas=v.lineas.filter(l=>l.id!==id); }
+  delete _v3Real()[id];
+}
+/* versión nueva a partir de otra (o de la base) */
+function v3Negociar(cpId,desde){
+  const c=_v3Cp(cpId); if(!c) return null; const p=_v3PlanDe(c), vid=_v3SigId(p);
+  const src=_v3Lin(c,desde||'base').filter(l=>!l.cump&&l.m>0.005);
+  const v={id:vid,nombre:'Nueva versión',fecha:_p14Iso(TODAY),origen:'Zentrack',estado:'borrador',lineas:src.map(l=>{ const f=l.sint||!l.f?_p14Iso(TODAY):l.f, d=_p14D(f);
+    return {id:_v3Nid(),sem:d?_p14Iso(_p14Lun(d)):f,fecha:f,monto:Math.round(l.m*100)/100,dest:(l.c&&_V3DEST.some(x=>x[0]===l.c))?l.c:(c.dir==='p'&&_V3PROV[c.prov]?'china':'')}; })};
+  p.versiones=p.versiones||[]; p.versiones.push(v);
+  V3.vista='cp'; V3.cp=cpId; V3.ver=vid; V3.sel=null; V3.tool=null; _v3Listo(); return v;
+}
+function v3Activar(cpId,vid){ const c=_v3Cp(cpId); if(!c) return; const p=_v3PlanDe(c); v2PlActivar(p.id,vid); }
+function v3EnCaja(cpId,on){ const c=_v3Cp(cpId); if(!c) return; const p=_v2Plan(cpId); if(p) p.enCaja=!!on;
+  if(c.exK){ if(on) delete PLANES.excl[c.exK]; else PLANES.excl[c.exK]=true; } else if(!p&&!on){ _v3PlanDe(c).enCaja=false; }
+  _v3Listo(); }
+function v3Abrir(cpId,vid){ V3.vista='cp'; V3.cp=cpId; V3.ver=vid||null; V3.sel=null; V3.tool=null; navTo('planes'); renderPlanes(); }
+function _v3Listo(){ _v2Listo(); }
+
+/* ---- lo recibido de un cliente esta semana (sus abonos) ---- */
+function _v3RecSem(c){ const L0=_v3L0(), fin=addD(L0,7); return (ECA||[]).filter(a=>a.cliente===c).filter(a=>{ const d=_ecFecha(a.fecha); return d&&d>=L0&&d<fin; }).reduce((s,a)=>s+(+a.usd||0),0); }
+
+/* ---- la Caja usa los planes activos ---- */
+const _p14CalcAntes23=p14Calc;
+p14Calc=function(modo){
+  modo=modo||P14.modo; const plan=modo==='pago';
+  const C=_v3Cps(), ex=PLANES.excl||{}, R=_v3Real(), pend=l=>Math.max(0,l.m-(+R[l.id]||0));
+  const sPC=PLANCHINA, sPR=PROM, sCx=cxpActivas, sCo=cjCobros, sT=cjPagosTerceros, sPg=cjPagos;
+  /* China: lo que falta de cada giro del plan, y lo que el plan ya cubre de lo que vence */
+  const pc={}, cub={};
+  Object.keys(sPC||{}).forEach(iso=>{ const v=_pcVal(iso), o={}; if(v.sin!=null) o.sin=v.sin; if(v.fuera!=null) o.fuera=v.fuera; if(Object.keys(o).length) pc[iso]=o; });
+  C.filter(c=>c.dir==='p'&&_V3PROV[c.prov]).forEach(c=>{ const L=_v3Act(c).filter(l=>l.m>0.005&&l.f).sort(_v3PorF); if(!L.length) return;
+    L.forEach(l=>{ const x=pend(l); if(x<0.005) return; const o=(pc[l.f]=pc[l.f]||{}); o[c.prov]=Math.round(((+o[c.prov]||0)+x)*100)/100; });
+    _v3Fifo(c.deudas,L).R.forEach(r=>{ if(!r.d.venc&&r.d.m-r.rest>0.005) cub[r.d.key]=(cub[r.d.key]||0)+(r.d.m-r.rest); }); });
+  /* clientes del grupo: la versión activa; esta semana, menos lo ya recibido */
+  const prom=[];
+  C.filter(c=>c.dir==='c'&&c.tipo==='Negociado').forEach(c=>{ let rec=_v3RecSem(c.n);
+    _v3Act(c).filter(l=>l.m>0.005).sort(_v3PorF).forEach(l=>{ let m=l.m; if(_v3Wk(l.f)===0&&rec>0.005){ const t=Math.min(m,rec); m-=t; rec-=t; }
+      if(m>0.005) prom.push({id:l.id,cliente:c.n,fecha:l.f,monto:m,nota:'',cumplida:false}); }); });
+  /* clientes externos con una versión negociada */
+  const cobV={}; C.filter(c=>c.dir==='c'&&c.tipo==='Contrato').forEach(c=>{ if(!c.enCaja) cobV[c.n]=[]; else if(c.act!=='base') cobV[c.n]=_v3Act(c).filter(l=>l.m>0.005).map(l=>({cliente:c.n,monto:l.m,fecha:_p14D(l.f),pedido:'Plan '+c.act,proyecto:''})); });
+  /* Magnum, TIBA y otros cargos con una versión negociada */
+  const cxV={}; C.filter(c=>c.tipo==='Regla').forEach(c=>{ if(!c.enCaja) cxV[c.prov]=[]; else if(plan&&c.act!=='base') cxV[c.prov]=_v3Act(c).filter(l=>l.m>0.005&&l.f).map(l=>({id:'Plan '+c.act+' · '+_v3F(l.f),empresa:c.n,moneda:'USD',saldo:l.m,vence:l.f,_planFecha:l.f})); });
+  let terV=null; const co=C.find(c=>c.prov==='otros'); if(co){ if(!co.enCaja) terV=[]; else if(plan&&co.act!=='base') terV=_v3Act(co).filter(l=>l.m>0.005).map(l=>({e:{derrame:'Plan '+co.act,proj:'',cliente:'',ordenId:''},monto:l.m,fecha:_p14D(l.f),tipo:'tercero',concepto:'Plan '+co.act+' · '+co.n,quien:co.n})); }
+  try{
+    PLANCHINA=pc; PROM=prom;
+    if(plan) cjPagos=function(){ return _v3Claves(sPg.apply(this,arguments)).map(({key,p})=>{ const c=cub[key]; if(!(c>0.005)) return p; const m=p.monto-c; return m>0.005?Object.assign({},p,{monto:m}):null; }).filter(Boolean); };
+    cjCobros=function(){ return sCo.apply(this,arguments).filter(x=>!cobV[x.cliente]&&!ex['cli:'+x.cliente]).concat(...Object.values(cobV)); };
+    cxpActivas=function(acre){ if(ex[acre]) return []; if(cxV[acre]) return cxV[acre]; return sCx.apply(this,arguments).filter(f=>!(CXPMIO[_mioK(acre,f)]||{}).fuera); };
+    if(terV) cjPagosTerceros=function(){ return terV; };
+    const X=_p14CalcAntes23.call(this,modo);
+    X.v3={cps:C,cli:_v3PorCliente(X)};
+    return X;
+  } finally { PLANCHINA=sPC; PROM=sPR; cxpActivas=sCx; cjCobros=sCo; cjPagosTerceros=sT; cjPagos=sPg; }
+};
+function _v3PorCliente(X){ const N=X.W.length, L0=X.W[0], o={};
+  cjCobros().forEach(c=>{ const d=c.fecha?_p14D(c.fecha):null; if(!d||d<TODAY) return; const i=Math.floor(days(L0,_p14Lun(d))/7); if(i>=N) return; (o[c.cliente]=o[c.cliente]||new Array(N).fill(0))[i]+=c.monto; });
+  return o; }
+
+/* ---- las fichas del tablero: lo mismo que usa la Caja, semana por semana ---- */
+function _v3Fichas(){
+  const C=_v3Cps(), F=[];
+  C.forEach(c=>{
+    if(c.dir==='p'&&_V3PROV[c.prov]){
+      const L=_v3Act(c).filter(l=>l.m>0.005&&l.f).sort(_v3PorF);
+      L.forEach(l=>{ const w=_v3Wk(l.f); if(w!=null&&w<12) F.push({c,l,w,m:l.m,lock:false,key:c.id+'|'+l.id}); });
+      const Fi=_v3Fifo(c.deudas,L), g={}; let sin=0;
+      Fi.R.forEach(r=>{ if(r.rest<0.5) return; if(r.d.venc){ sin+=r.rest; return; } if(!r.d.f) return; const w=_v3Wk(r.d.f); if(w>11) return;
+        const o=(g[w]=g[w]||{m:0,n:0}); o.m+=r.rest; o.n++; });
+      Object.keys(g).forEach(w=>F.push({c,w:+w,m:g[w].m,lock:true,nat:true,n:g[w].n,key:c.id+'|g|'+w}));
+      c.sinPlan=sin; c.fifo=Fi;
+    } else {
+      const L=_v3Act(c), lock=c.act==='base';
+      if(lock){ const g={}; L.forEach(l=>{ if(!(l.m>0.005)) return; const w=_v3Wk(l.f); if(w==null||w>11) return; const o=(g[w]=g[w]||{m:0,n:0,refs:[]}); o.m+=l.m; o.n+=l.n||1;
+          const r=c.prov==='otros'?(l.c||'').split(' · ').slice(0,2).join(' · '):(l.c||'').split(' · ')[0]; if(c.tipo!=='Regla'&&r&&o.refs.indexOf(r)<0) o.refs.push(r); });
+        Object.keys(g).forEach(w=>F.push({c,w:+w,m:g[w].m,lock:true,n:g[w].n,refs:g[w].refs,key:c.id+'|g|'+w})); }
+      else L.forEach(l=>{ if(!(l.m>0.005)) return; const w=_v3Wk(l.f); if(w==null||w>11) return; F.push({c,l,w,m:l.m,lock,key:c.id+'|'+l.id}); });
+    }
+  });
+  return {C,F};
+}
+function _v3Vis(c){ return V3.dir==='todos'||(V3.dir==='cobrar'&&c.dir==='c')||(V3.dir==='pagar'&&c.dir==='p'); }
+function _v3Sumas(F,dir){ const a=new Array(13).fill(0); F.filter(x=>x.c.dir===dir).forEach(x=>{ a[x.w+1]+=x.m; }); return a; }
+
+/* ---- indicadores: cambian con "Me pagan" / "Yo pago" ---- */
+function _v3KpisHTML(M){
+  const {C,F}=M, E=_v3Sumas(F,'c'), Sa=_v3Sumas(F,'p'), S=a=>a.reduce((x,y)=>x+y,0), s4=a=>S(a.slice(1,5)), s12=a=>S(a.slice(1));
+  const R=_v3Real(), china=C.filter(c=>c.dir==='p'&&_V3PROV[c.prov]);
+  const plan0=F.filter(x=>x.c.dir==='p'&&!x.lock&&x.w===0), sPl=plan0.reduce((a,x)=>a+x.m,0), sRe=plan0.reduce((a,x)=>a+(+R[x.l.id]||0),0), hayR=plan0.some(x=>R[x.l.id]!=null);
+  const eRe=C.filter(c=>c.dir==='c').reduce((a,c)=>a+_v3RecSem(c.n),0);
+  const pct=(r,p)=>p>0.5?Math.round(r/p*100)+' %':'—', pico=a=>{ let m=1; for(let i=1;i<13;i++) if(a[i]>a[m]) m=i; return m; };
+  const sp=china.reduce((a,c)=>a+(c.sinPlan||0),0);
+  let ks;
+  if(V3.dir==='cobrar'){
+    const debe=C.filter(c=>c.dir==='c').reduce((a,c)=>a+(ecTotales(c.n).saldo||0),0), con=E[0]+s12(E), ip=pico(E);
+    ks=[['Esta semana · entra',_v3n(E[1]),'recibido '+_v3n(eRe)+' · '+pct(eRe,E[1]),'v3-in'],
+      ['Próximas 4 semanas',_v3n(s4(E)),'la más fuerte '+_v3Lab(ip-1)+' · '+_v3n(E[ip]),'v3-in'],
+      ['12 semanas',_v3n(s12(E)),C.filter(c=>c.dir==='c').length+' contrapartes','v3-in'],
+      ['Atrasado sin recibir',_v3n(E[0]),'promesas y cuotas vencidas',E[0]>0.5?'v3-bad':'v3-in',E[0]>0.5],
+      ['Te deben sin fecha',_v3n(Math.max(0,debe-con)),Math.round(con/Math.max(1,debe)*100)+' % de '+_v3k(debe)+' tiene fecha','v3-acc']];
+  } else if(V3.dir==='pagar'){
+    const ip=pico(Sa), deb=china.reduce((a,c)=>a+(c.deudas||[]).filter(d=>d.venc||(d.f&&_v3Wk(d.f)<12)).reduce((s,d)=>s+d.m,0),0);
+    const chi=F.filter(x=>x.c.dir==='p'&&_V3PROV[x.c.prov]).reduce((a,x)=>a+x.m,0), chi12=F.filter(x=>x.c.dir==='p'&&_V3PROV[x.c.prov]&&x.w>=0).reduce((a,x)=>a+x.m,0);
+    ks=[['Esta semana · sale',_v3n(Sa[1]),hayR?'pagado '+_v3n(sRe)+' de '+_v3n(sPl)+' · '+pct(sRe,sPl):'pagado sin registrar','v3-out'],
+      ['Próximas 4 semanas',_v3n(s4(Sa)),'pico '+_v3Lab(ip-1)+' · '+_v3n(Sa[ip]),'v3-out'],
+      ['12 semanas',_v3n(s12(Sa)),'China '+_v3k(chi12)+' · resto '+_v3k(s12(Sa)-chi12),'v3-out'],
+      ['Vencido sin plan',_v3n(sp),sp>0.5?china.filter(c=>c.sinPlan>0.5).map(c=>c.n.split(' ')[0]+' '+_v3n(c.sinPlan)).join(' · '):'todo tiene fecha',sp>0.5?'v3-bad':'v3-in',sp>0.5],
+      ['Cobertura China',deb>0.5?Math.round(chi/deb*100)+' %':'—','plan ÷ vencido y lo que vence en 12 sem','']];
+  } else {
+    let mi=1; for(let i=1;i<13;i++) if(E[i]-Sa[i]<E[mi]-Sa[mi]) mi=i;
+    ks=[['Esta semana · neto',_v3n(E[1]-Sa[1]),(hayR||eRe>0.5)?'real: entró '+_v3k(eRe)+' · salió '+_v3k(sRe):'entra '+_v3k(E[1])+' · sale '+_v3k(Sa[1]),E[1]-Sa[1]<0?'v3-bad':'v3-in'],
+      ['Próximas 4 semanas',_v3n(s4(E)-s4(Sa)),'entra '+_v3k(s4(E))+' · sale '+_v3k(s4(Sa)),s4(E)-s4(Sa)<0?'v3-bad':'v3-in'],
+      ['12 semanas',_v3n(s12(E)-s12(Sa)),'entra '+_v3k(s12(E))+' · sale '+_v3k(s12(Sa)),s12(E)-s12(Sa)<0?'v3-bad':'v3-in'],
+      ['Atrasado',_v3n(E[0]+Sa[0]+sp),'por cobrar '+_v3k(E[0])+' · por pagar '+_v3k(Sa[0]+sp),'v3-bad',E[0]+Sa[0]+sp>0.5],
+      ['Semana más apretada',_v3Lab(mi-1),'neto '+_v3n(E[mi]-Sa[mi]),'']];
+  }
+  return '<section class="v3-kpis" aria-label="Indicadores">'+ks.map(x=>'<div class="v3-kpi'+(x[4]?' mal':'')+'"><p class="v2-lbl">'+x[0]+'</p><b class="'+x[3]+'">'+esc4(x[1])+'</b><span>'+esc4(x[2])+'</span></div>').join('')+'</section>';
+}
+
+/* ---- vista "Semana a semana" ---- */
+function _v3DestLab(d){ const x=_V3DEST.find(y=>y[0]===d); return x&&d?x[1]:''; }
+function _v3TableroHTML(M){
+  const {C,F}=M, R=_v3Real(), negs=C.filter(c=>_v3Vis(c)&&(c.tipo==='Negociado'||c.act!=='base'));
+  const semOpts=[[-1,'Atrasado']].concat([...Array(12)].map((x,i)=>[i,_v3Lab(i)]));
+  let h='';
+  for(let col=0;col<13;col++){ const w=col-1; let en=0,sa=0,body='';
+    ['c','p'].forEach(dir=>{ if((dir==='c'&&V3.dir==='pagar')||(dir==='p'&&V3.dir==='cobrar')) return;
+      let chips=''; const yaRec={};
+      F.filter(x=>x.w===w&&x.c.dir===dir).sort((a,b)=>(a.c.n<b.c.n?-1:(a.c.n>b.c.n?1:0))||(a.lock-b.lock)||_v3PorF(a.l||{},b.l||{})).forEach(x=>{
+        const c=x.c, l=x.l, sel=V3.sel===x.key; if(dir==='c') en+=x.m; else sa+=x.m;
+        const sub=x.nat?'vence según Andrés · '+x.n+' pago'+(x.n===1?'':'s'):(x.lock&&c.tipo==='Regla'?x.n+' factura'+(x.n===1?'':'s')+' · '+c.baseT.toLowerCase():
+          x.lock&&x.refs?x.n+' cuota'+(x.n===1?'':'s')+(x.refs.length?' · '+x.refs.slice(0,3).join(', ')+(x.refs.length>3?'…':''):''):
+          (l?((dir==='c'&&_v3DestLab(l.c)?'→ '+_v3DestLab(l.c)+' · ':'')+_v3F(l.f)+(x.lock&&l.c&&dir==='c'?' · '+l.c:'')+(x.lock&&dir==='p'&&l.c?' · '+l.c:'')):''));
+        let extra='';
+        if(dir==='p'&&!x.lock&&w<=0){ const r=R[l.id]; const v=r==null||r===''?null:+r;
+          const est=v==null?['sin registrar','']:(v>=x.m-0.5?['cumplido','ok']:(v>0.5?['parcial','par']:['no pasó','no']));
+          extra='<div class="v3-real"><label for="v3r-'+esc4(l.id)+'">Real</label><input class="v3-inp" id="v3r-'+esc4(l.id)+'" inputmode="decimal" data-c="real" data-id="'+esc4(l.id)+'" value="'+(v==null?'':fmtUSDs(v))+'" placeholder="—"><span class="v3-pill '+est[1]+'">'+est[0]+'</span></div>'; }
+        if(dir==='c'&&w===0&&!yaRec[c.id]){ yaRec[c.id]=1; const plan=F.filter(y=>y.c===c&&y.w===0).reduce((a,y)=>a+y.m,0), rec=_v3RecSem(c.n);
+          const est=rec<0.5?['sin recibir','']:(rec>=plan-0.5?['cumplido','ok']:['parcial','par']);
+          extra='<div class="v3-real"><span class="v3-nota">Recibido</span><b style="margin-left:auto;font-variant-numeric:tabular-nums">'+_v3n(rec)+'</b><span class="v3-pill '+est[1]+'">'+est[0]+'</span></div>'; }
+        let ed='';
+        if(sel){ if(x.lock) ed='<div class="v3-edit"><span class="v3-nota">'+esc4(x.nat?'Fechas de Andrés':c.baseT)+' · se calcula solo</span><div class="v3-row">'
+            +(x.nat?'':'<button class="v3-b dk" data-a="neg" data-cp="'+esc4(c.id)+'">Negociar este plan</button>')+'<button class="v3-b" data-a="crono" data-cp="'+esc4(c.id)+'">Ver cronograma</button></div></div>';
+          else ed='<div class="v3-edit"><div class="v3-g2"><label class="v3-fl">Monto<input class="v3-inp" inputmode="decimal" data-c="lm" data-cp="'+esc4(c.id)+'" data-id="'+esc4(l.id)+'" value="'+fmtUSDs(l.m)+'"></label>'
+            +'<label class="v3-fl">Semana<select class="v3-sel" data-c="lw" data-cp="'+esc4(c.id)+'" data-id="'+esc4(l.id)+'">'+semOpts.map(o=>'<option value="'+o[0]+'"'+(o[0]===w?' selected':'')+'>'+o[1]+'</option>').join('')+'</select></label></div>'
+            +'<div class="v3-row"><button class="v3-b" data-a="ldel" data-cp="'+esc4(c.id)+'" data-id="'+esc4(l.id)+'">Borrar</button><button class="v3-b" data-a="crono" data-cp="'+esc4(c.id)+'">Ver cronograma</button></div></div>'; }
+        chips+='<div class="v3-pago'+(dir==='c'?' in':'')+(sel?' sel':'')+'" draggable="'+(!x.lock)+'"'+(x.lock?'':' data-drag="'+esc4(l.id)+'" data-cp="'+esc4(c.id)+'"')+'>'
+          +'<button class="v3-ph" data-a="pick" data-k="'+esc4(x.key)+'" aria-expanded="'+sel+'"><span class="r"><span class="n">'+(x.lock?_V3LOCK:'')+esc4(c.n)+'</span><span class="m '+(dir==='c'?'v3-in':'v3-out')+'">'+_v3n(x.m)+'</span></span><span class="s">'+esc4(sub)+'</span></button>'
+          +extra+ed+'</div>'; });
+      if(col===0&&dir==='p') C.filter(c=>c.dir==='p'&&(c.sinPlan||0)>0.5).forEach(c=>{ sa+=0;
+        chips+='<div class="v3-ghost"><div class="r"><span>'+esc4(c.n)+'</span><span class="v3-out" style="font-variant-numeric:tabular-nums">'+_v3n(c.sinPlan)+'</span></div><span class="v3-nota v3-bad">vencido sin plan</span>'
+          +'<button class="v3-b" data-a="'+(c.act==='base'?'neg':'crono')+'" data-cp="'+esc4(c.id)+'">Hacerle plan</button></div>'; });
+      if(chips) body+='<div class="v3-sec '+(dir==='c'?'v3-in':'v3-acc')+'">'+(dir==='c'?'Me pagan':'Yo pago')+'</div>'+chips; });
+    const res=[]; if(V3.dir!=='pagar') res.push(['Entra',_v3n(en),en>0.5?'v3-in':'v2-mut']); if(V3.dir!=='cobrar') res.push(['Sale',_v3n(sa),sa>0.5?'v3-out':'v2-mut']); if(V3.dir==='todos') res.push(['Neto',_v3n(en-sa),en-sa<-0.5?'v3-bad':(en-sa>0.5?'v3-in':'v2-mut')]);
+    let add='';
+    if(col>0&&negs.length){ if(V3.add===col){ const cp=negs.some(c=>c.id===V3.addCp)?V3.addCp:negs[0].id;
+        add='<div class="v3-add"><label class="v3-fl">Contraparte<select class="v3-sel" data-c="addCp">'+negs.map(c=>'<option value="'+esc4(c.id)+'"'+(c.id===cp?' selected':'')+'>'+esc4(c.n)+'</option>').join('')+'</select></label>'
+          +'<label class="v3-fl">Monto US$<input class="v3-inp" inputmode="decimal" data-c="addM" value="'+esc4(V3.addM)+'" placeholder="0"></label><div class="v3-row"><button class="v3-b dk" data-a="addok" data-col="'+col+'">Agregar</button><button class="v3-b" data-a="addx">Cancelar</button></div></div>'; }
+      else add='<button class="v3-b dash" data-a="add" data-col="'+col+'">+ Pago</button>'; }
+    const L0=addD(_v3L0(),7*w), L6=addD(L0,6);
+    h+='<section class="v3-col'+(col===0?' atr':'')+(w===0?' hoy':'')+'" data-col="'+col+'" aria-label="'+_v3Lab(w)+'">'
+      +'<div class="v3-colh"><div class="v3-colt"><b class="'+(col===0?'v3-bad':(w===0?'v3-acc':''))+'">'+_v3Lab(w)+'</b><span class="v3-nota">'+(col===0?'antes del '+_v3F(_v3L0()):_v3F(L0)+' – '+_v3F(L6))+'</span></div>'
+      +(col===0&&V3.dir!=='cobrar'?'<span class="v3-nota">Lo que falta pagar entra a esta semana en la Caja</span>':'')
+      +'<div class="v3-colr">'+res.map(r=>'<div><span>'+r[0]+'</span><strong class="'+r[2]+'">'+r[1]+'</strong></div>').join('')+'</div></div>'
+      +'<div class="v3-colb">'+body+add+'</div></section>';
+  }
+  return '<section class="v3-bcard"><div class="v3-bhead"><span>Arrastra un pago a otra semana o dale clic para cambiar monto o semana. Los del candado se calculan solos.</span><span class="v2-sp"></span>'
+    +'<span class="v3-leg"><i style="background:#2E6E5A"></i>Me pagan</span><span class="v3-leg"><i style="background:#C87A00"></i>Yo pago</span></div>'
+    +'<div class="v3-board" id="v3Board"><div class="v3-cols">'+h+'</div></div></section>';
+}
+
+/* ---- vista "Cronograma por contraparte" ---- */
+function _v3CronoHTML(M){
+  const {C}=M, vis=C.filter(_v3Vis); if(!vis.length) return '<div class="ec8-vacio">Sin contrapartes para mostrar.</div>';
+  const c=vis.find(x=>x.id===V3.cp)||vis[0]; V3.cp=c.id;
+  const vers=_v3Vers(c), vk=vers.some(v=>v.id===V3.ver)?V3.ver:c.act; V3.ver=vk;
+  const esBase=vk==='base', edit=!esBase, cobro=c.dir==='c', china=!!_V3PROV[c.prov], storeA=vk==='a'&&c.tipo==='Negociado';
+  const Lc=_v3Lin(c,vk).sort(_v3PorF), pagos=Lc.filter(l=>!l.sint), act=vk===c.act;
+  const Fi=china?_v3Fifo(c.deudas,esBase?[]:pagos.filter(l=>l.m>0.005&&l.f)):null;
+  const deudaTot=china?(c.deudas||[]).reduce((a,d)=>a+d.m,0):(cobro?(ecTotales(c.n).saldo||0):0);
+  let acc=0;
+  const filas=Lc.map((l,i)=>{ if(!l.sint) acc+=l.m; const ed=edit&&!l.sint, cp=Fi&&Fi.cub[l.id];
+    let cubre='';
+    if(china&&edit){ if(cp) cubre=cp.lst.slice(0,6).map(x=>'<span class="v3-pill '+(x.full?'ok':'par')+'">'+esc4(x.r.d.ped+(x.full?'':' parcial'))+'</span>').join('')+(cp.lst.length>6?'<span class="v3-pill">+'+(cp.lst.length-6)+' más</span>':'')+(cp.sobra>0.5?'<span class="v3-pill lk">adelanto '+_v3n(cp.sobra)+'</span>':''); }
+    else if(cobro&&edit) cubre='<select class="v3-sel" style="width:auto" data-c="pc" data-id="'+esc4(l.id)+'" aria-label="Destino">'+_V3DEST.map(o=>'<option value="'+o[0]+'"'+(o[0]===(l.c||'')?' selected':'')+'>'+o[1]+'</option>').join('')+'</select>'+(l.cump?' <span class="v3-pill ok">cumplida</span>':'');
+    else cubre='<span class="v3-pill">'+esc4(l.sint?'vencido a hoy':(l.c||'—'))+'</span>';
+    const desp=deudaTot>0?deudaTot-acc:null, past=_v3Wk(l.f)===-1;
+    return '<tr class="'+(past?'atr':'')+'"><td class="v2-mut">'+(i+1)+'</td>'
+      +'<td>'+(ed?'<input class="v3-txt" type="date" data-c="pf" data-id="'+esc4(l.id)+'" value="'+esc4(l.f)+'" aria-label="Fecha del pago '+(i+1)+'">':(l.sint?'vencido':_v3F(l.f)))+'</td>'
+      +'<td class="r">'+(ed?'<input class="v3-inp" inputmode="decimal" data-c="pm" data-id="'+esc4(l.id)+'" value="'+fmtUSDs(l.m)+'" aria-label="Monto del pago '+(i+1)+'">':'<b>'+_v3n(l.m)+'</b>')+'</td>'
+      +'<td><div class="v3-chips">'+cubre+'</div></td><td class="r" style="font-weight:600">'+(desp==null?'—':_v3n(desp))+'</td>'
+      +'<td>'+(ed?'<button class="v3-x" data-a="pdel" data-id="'+esc4(l.id)+'" aria-label="Borrar pago '+(i+1)+'">'+_V3XI+'</button>':'')+'</td></tr>'; }).join('');
+  const totPag=pagos.reduce((a,l)=>a+l.m,0);
+  let deuda;
+  if(china){ const D=c.deudas||[], v=D.filter(d=>d.venc), f=D.filter(d=>!d.venc&&d.f), s=D.filter(d=>d.sinf);
+    deuda=[['Vencido',_v3n(v.reduce((a,d)=>a+d.m,0)),v.length+' pagos','v3-bad'],['Vence con fecha',_v3n(f.reduce((a,d)=>a+d.m,0)),f.length+' pagos',''],['Sin fecha (sin BL)',_v3n(s.reduce((a,d)=>a+d.m,0)),s.length+' balances','v2-mut'],['Total a '+c.n,_v3n(deudaTot),'según Andrés','']]; }
+  else if(cobro){ const t=ecTotales(c.n); deuda=[['Te debe',_v3n(t.saldo),'estado de cuenta',''],['Vencido',_v3n(t.vencido),'ya pasó su fecha','v3-bad'],['En esta versión',_v3n(totPag),deudaTot>0.5?Math.round(totPag/deudaTot*100)+' % de la deuda':'—','v3-in']]; }
+  else { const b=(c.base||[]).reduce((a,l)=>a+l.m,0); deuda=[['Base',_v3n(b),c.baseT,''],['Esta versión',_v3n(totPag),pagos.length+' pagos','v3-out']]; }
+  const venc=china?(c.deudas||[]).filter(d=>d.venc).reduce((a,d)=>a+d.m,0):0, pedCub=Fi?Fi.R.filter(r=>r.rest<0.5).length:0;
+  const tot=[['Total',_v3n(totPag),cobro?'v3-in':'v3-out'],['Pagos',String(pagos.length),''],['Último',pagos.length?_v3F(pagos[pagos.length-1].f):'—','']]
+    .concat(china&&venc>0.5&&!esBase?[['Cubre lo vencido',Math.min(100,Math.round(totPag/venc*100))+' %',totPag>=venc-0.5?'v3-in':'v3-bad']]:[])
+    .concat(china&&edit?[['Pedidos pagados',pedCub+' de '+(c.deudas||[]).length,'']]:[]);
+  const tp=V3.tp, opt=v=>[...Array(12)].map((x,i)=>'<option value="'+i+'"'+(String(i)===String(v)?' selected':'')+'>'+_v3Lab(i)+'</option>').join('');
+  const ra=Math.min(+tp.a,+tp.b), rb=Math.max(+tp.a,+tp.b), rn=rb-ra+1, rm=_v3Num(tp.monto);
+  const cuoN=[]; for(let w=+tp.a,i=0;i<Math.max(0,Math.round(_v3Num(tp.v)))&&w<12;w+=Math.max(1,+tp.k),i++) cuoN.push(w);
+  let tool='';
+  if(edit&&V3.tool==='rep') tool='<div class="v3-tool"><label class="v3-fl">Monto total<input class="v3-inp" inputmode="decimal" data-c="tp-monto" value="'+esc4(tp.monto)+'" placeholder="490,000"></label><label class="v3-fl">Desde<select class="v3-sel" data-c="tp-a">'+opt(tp.a)+'</select></label><label class="v3-fl">Hasta<select class="v3-sel" data-c="tp-b">'+opt(tp.b)+'</select></label>'
+    +'<div class="v3-fl">Por semana<span class="big">'+(rm>0?_v3n(Math.round(rm/rn/100)*100):'—')+'</span></div><button class="v3-b dk" data-a="rep">Poner en el cronograma</button></div>';
+  if(edit&&V3.tool==='cuo') tool='<div class="v3-tool"><label class="v3-fl">Cuota<input class="v3-inp" inputmode="decimal" data-c="tp-monto" value="'+esc4(tp.monto)+'" placeholder="100,000"></label><label class="v3-fl">Desde<select class="v3-sel" data-c="tp-a">'+opt(tp.a)+'</select></label>'
+    +'<label class="v3-fl">Cada<select class="v3-sel" data-c="tp-k"><option value="1"'+(tp.k==='1'?' selected':'')+'>semana</option><option value="2"'+(tp.k==='2'?' selected':'')+'>2 semanas</option><option value="4"'+(tp.k==='4'?' selected':'')+'>4 semanas</option></select></label>'
+    +'<label class="v3-fl" style="min-width:80px">Veces<input class="v3-inp" inputmode="numeric" data-c="tp-v" value="'+esc4(tp.v)+'"></label><div class="v3-fl">Total<span class="big">'+(_v3Num(tp.monto)>0?_v3n(_v3Num(tp.monto)*cuoN.length):'—')+'</span></div><button class="v3-b dk" data-a="cuo">Poner en el cronograma</button></div>';
+  const pedT=china&&edit&&Fi?'<div class="v3-bar"><h4>Pedidos según Andrés · qué paga cada giro</h4><span class="v3-nota">el más vencido primero</span></div><div class="v3-tw"><table class="v3-t"><thead><tr><th>Pedido</th><th>Proyecto</th><th>Concepto</th><th class="r">Monto</th><th>Fecha límite</th><th>Lo paga</th></tr></thead><tbody>'
+    +Fi.R.map(r=>'<tr><td><b>'+esc4(r.d.ped)+'</b></td><td><div class="v3-trunc">'+esc4(r.d.proy)+'</div></td><td>'+esc4(r.d.tipo)+'</td><td class="r"><b>'+_v3n(r.d.m)+'</b></td><td class="'+(!r.d.f?'v2-mut':(r.d.venc?'v3-bad':''))+'" style="font-weight:600">'+(r.d.f?_v3F(r.d.f):(r.d.venc?'pagar ya':'sin BL'))+'</td>'
+      +'<td><span class="v3-pill '+(r.rest<0.5?'ok':(r.por.length?'par':'no'))+'">'+esc4(r.rest<0.5?r.por.join(' + '):(r.por.length?'parcial · falta '+_v3n(r.rest):'sin cubrir'))+'</span></td></tr>').join('')+'</tbody></table></div>':'';
+  const F12=M.F;
+  const lista=vis.map(q=>{ const t=F12.filter(x=>x.c===q).reduce((a,x)=>a+x.m,0);
+    const sub=!q.enCaja?'fuera de la Caja':(q.tipo==='Negociado'&&(q.act==='base'||!_v3Act(q).length)?'sin plan'+(q.sinPlan>0.5?' · vencido '+_v3n(q.sinPlan):''):(q.act==='base'?q.baseT:(_v3Vers(q).find(v=>v.id===q.act)||{t:q.act}).t));
+    return '<button class="'+(q.id===c.id?'on':'')+'" data-a="cp" data-cp="'+esc4(q.id)+'"><span class="r"><span class="n"><i class="v3-dot'+(q.dir==='c'?' in':'')+'"></i>'+esc4(q.n)+'</span><span class="'+(q.dir==='c'?'v3-in':'v3-out')+'" style="font-weight:700;font-variant-numeric:tabular-nums">'+_v3n(t)+'</span></span><span class="v3-nota">'+esc4(sub)+'</span></button>'; }).join('');
+  const pv=c.p&&(c.p.versiones||[]).find(v=>v.id===vk);
+  const nombre=edit&&pv?'<label class="v3-fl" style="min-width:220px;flex:0 1 280px">Nombre de la versión<input class="v3-txt" data-c="vnom" value="'+esc4(pv.nombre||'')+'"></label>':'';
+  const borrable=edit&&!storeA&&!act;
+  return '<div class="v3-crono"><nav class="v3-lista" aria-label="Contrapartes">'+lista+'</nav><section class="v3-panel">'
+    +'<div class="v3-pnh"><h3>'+esc4(c.n)+'</h3><span class="v3-pill '+(cobro?'ok':'par')+'">'+(cobro?'Me paga':'Le pago')+'</span>'
+    +'<label class="v3-chk"><input type="checkbox" data-c="encaja" '+(c.enCaja?'checked':'')+'> Cuenta en la Caja</label><span class="v2-sp"></span>'
+    +(act?'<span class="v3-pill ok" style="min-height:30px">En la Caja</span>':'<button class="v3-b dk" data-a="activar">Usar esta versión en la Caja</button>')
+    +(borrable?'<button class="v3-b warn" data-a="vdel">'+(V3.borrar===vk?'¿Seguro? Borrar '+esc4(vk):'Borrar versión')+'</button>':'')+'</div>'
+    +'<div class="v3-tabs" role="tablist" aria-label="Versiones">'+vers.map(t=>'<button class="v3-tab'+(t.id===vk?' on':'')+'" role="tab" aria-selected="'+(t.id===vk)+'" data-a="ver" data-k="'+esc4(t.id)+'"><b>'+esc4(t.t+(t.id===c.act?' · en la Caja':''))+'</b><span>'+esc4(t.sub)+'</span></button>').join('')
+    +'<button class="v3-b" data-a="vnew">+ Nueva versión</button></div>'
+    +'<div class="v3-deuda">'+deuda.map(d=>'<div><span class="v2-lbl">'+esc4(d[0])+'</span><b class="'+d[3]+'">'+d[1]+'</b><span>'+esc4(d[2])+'</span></div>').join('')+'</div>'
+    +'<div class="v3-bar"><h4>'+(esBase?(c.tipo==='Negociado'?'Lo que vence según Andrés':'Lo que se calcula solo'):'Cronograma de pagos')+'</h4>'
+    +(edit?nombre+'<button class="v3-b" data-a="padd">+ Pago</button><button class="v3-b'+(V3.tool==='rep'?' on':'')+'" data-a="tool" data-t="rep">Repartir un monto</button><button class="v3-b'+(V3.tool==='cuo'?' on':'')+'" data-a="tool" data-t="cuo">Cuotas iguales</button>'
+      :'<span class="v3-pill lk" style="min-height:30px">'+esc4(c.baseT||'automático')+' · automático</span><button class="v3-b dk" data-a="neg" data-cp="'+esc4(c.id)+'">Negociar sobre esto</button>')+'</div>'
+    +tool
+    +'<div class="v3-tw"><table class="v3-t"><thead><tr><th>#</th><th>Fecha</th><th class="r">Monto US$</th><th>'+(china&&edit?'Paga estos pedidos':(cobro?'Destino':'Concepto'))+'</th><th class="r">'+(cobro?'Te deberá':(deudaTot>0?'Deuda después':''))+'</th><th></th></tr></thead><tbody>'
+    +(filas||'<tr><td colspan="6" class="v2-mut">Sin pagos todavía. Usa "+ Pago", "Repartir un monto" o "Cuotas iguales".</td></tr>')+'</tbody></table></div>'
+    +'<div class="v3-tot">'+tot.map(d=>'<div><span class="v2-lbl">'+d[0]+'</span><b class="'+d[2]+'">'+d[1]+'</b></div>').join('')+'</div>'
+    +pedT+'</section></div>';
+}
+
+/* ---- la pestaña ---- */
+function renderPlanes(){
+  const v=document.getElementById('v-planes'); if(!v) return;
+  _v3Eventos(v);
+  const sx=(document.getElementById('v3Board')||{}).scrollLeft||0;
+  if(!EQ.length&&!_ecClientes().length){ v.innerHTML='<div class="v2-top"><h2>Planes</h2></div><div class="ec8-vacio">Carga el detailed y el order report con <b>Cargar archivo</b>.</div>'; return; }
+  const M=_v3Fichas();
+  const seg=(k,val,t)=>'<button class="'+(V3[k]===val?'on':'')+'" data-a="'+k+'" data-v="'+val+'">'+t+'</button>';
+  v.innerHTML='<div class="v2-top"><h2>Planes</h2><div class="v2-seg" role="group" aria-label="Vista">'+seg('vista','sem','Semana a semana')+seg('vista','cp','Cronograma por contraparte')+'</div>'
+    +'<div class="v2-seg" role="group" aria-label="Qué ver">'+seg('dir','todos','Todos')+seg('dir','cobrar','Me pagan')+seg('dir','pagar','Yo pago')+'</div></div>'
+    +_v3KpisHTML(M)+(V3.vista==='cp'?_v3CronoHTML(M):_v3TableroHTML(M));
+  const b=document.getElementById('v3Board'); if(b) b.scrollLeft=sx;
+}
+function _v3Hecho(){ guardar4(); _p14Repintar(); renderPlanes(); }
+function _v3CpSel(){ return _v3Cp(V3.cp); }
+function _v3Clic(e){
+  const t=e.target.closest('[data-a]'); if(!t||!this.contains(t)) return; const a=t.dataset.a, d=t.dataset;
+  if(a!=='vdel') V3.borrar=null;
+  if(a==='vista'){ V3.vista=d.v; V3.sel=null; V3.add=null; }
+  else if(a==='dir'){ V3.dir=d.v; V3.add=null; }
+  else if(a==='pick'){ V3.sel=V3.sel===d.k?null:d.k; V3.add=null; }
+  else if(a==='ldel'){ const c=_v3Cp(d.cp); if(c){ _v3LinDel(c,c.act,d.id); V3.sel=null; return _v3Hecho(); } }
+  else if(a==='crono'){ const c=_v3Cp(d.cp); V3.vista='cp'; V3.cp=d.cp; V3.ver=c?c.act:null; V3.sel=null; }
+  else if(a==='neg'){ v3Negociar(d.cp,'base'); return; }
+  else if(a==='add'){ V3.add=+d.col; V3.addM=''; V3.sel=null; }
+  else if(a==='addx'){ V3.add=null; }
+  else if(a==='addok'){ const w=+d.col-1, m=_v3Num(V3.addM), negs=_v3Cps().filter(c=>_v3Vis(c)&&(c.tipo==='Negociado'||c.act!=='base')), c=negs.find(x=>x.id===V3.addCp)||negs[0];
+    if(!(m>0)||!c){ toast('Escribe el monto'); return; }
+    let vid=c.act; if(vid==='base'){ vid='a'; v2PlActivar(_v3PlanDe(c).id,'a'); }
+    _v3LinAdd(c,vid,_v3FechaSem(w),m,(c.dir==='c'&&c.tipo==='Negociado')?'china':''); V3.add=null; V3.addM=''; return _v3Hecho(); }
+  else if(a==='cp'){ V3.cp=d.cp; const c=_v3Cp(d.cp); V3.ver=c?c.act:null; V3.tool=null; }
+  else if(a==='ver'){ V3.ver=d.k; V3.tool=null; }
+  else if(a==='activar'){ v3Activar(V3.cp,V3.ver); return; }
+  else if(a==='vnew'){ v3Negociar(V3.cp,V3.ver); return; }
+  else if(a==='vdel'){ const c=_v3CpSel(); if(!c) return; if(V3.borrar!==V3.ver){ V3.borrar=V3.ver; }
+    else { const p=_v2Plan(c.id); if(p&&V3.ver!==c.act&&!(V3.ver==='a'&&c.tipo==='Negociado')){ p.versiones=(p.versiones||[]).filter(x=>x.id!==V3.ver); V3.ver=c.act; V3.borrar=null; return _v3Hecho(); } V3.borrar=null; } }
+  else if(a==='padd'){ const c=_v3CpSel(); if(!c) return; const L=_v3Lin(c,V3.ver).filter(l=>!l.sint&&l.f).map(l=>l.f).sort(), last=L.pop();
+    let f=last?_p14Iso(addD(_p14D(last),7)):_v3FechaSem(1); if(_p14D(f)<TODAY) f=_p14Iso(TODAY);
+    _v3LinAdd(c,V3.ver,f,0,c.dir==='c'?'china':''); return _v3Hecho(); }
+  else if(a==='pdel'){ const c=_v3CpSel(); if(c){ _v3LinDel(c,V3.ver,d.id); return _v3Hecho(); } }
+  else if(a==='tool'){ V3.tool=V3.tool===d.t?null:d.t; }
+  else if(a==='rep'||a==='cuo'){ const c=_v3CpSel(); if(!c) return; const tp=V3.tp, pares=[];
+    if(a==='rep'){ const ra=Math.min(+tp.a,+tp.b), rb=Math.max(+tp.a,+tp.b), rn=rb-ra+1, rm=_v3Num(tp.monto); if(!(rm>0)){ toast('Escribe el monto'); return; }
+      const q=Math.round(rm/rn/100)*100; for(let w=ra;w<=rb;w++) pares.push([w,w===rb?rm-q*(rn-1):q]); }
+    else { const m=_v3Num(tp.monto); if(!(m>0)){ toast('Escribe la cuota'); return; } for(let w=+tp.a,i=0;i<Math.max(0,Math.round(_v3Num(tp.v)))&&w<12;w+=Math.max(1,+tp.k),i++) pares.push([w,m]); }
+    pares.forEach(([w,m])=>{ if(m>0.005) _v3LinAdd(c,V3.ver,_v3FechaSem(w),m,c.dir==='c'?'china':''); }); V3.tool=null; return _v3Hecho(); }
+  renderPlanes();
+}
+function _v3Cambio(e){
+  const t=e.target.closest('[data-c]'); if(!t||!this.contains(t)) return; const k=t.dataset.c, d=t.dataset, val=t.type==='checkbox'?t.checked:t.value;
+  if(k==='real'){ const R=_v3Real(); if((''+val).trim()==='') delete R[d.id]; else R[d.id]=_v3Num(val); return _v3Hecho(); }
+  if(k==='lm'||k==='lw'){ const c=_v3Cp(d.cp); if(!c) return; if(k==='lm') _v3LinSet(c,c.act,d.id,'m',_v3Num(val));
+    else { const l=_v3Lin(c,c.act).find(x=>x.id===d.id); if(l) _v3LinSet(c,c.act,d.id,'f',_v3Mover(l.f,+val)); }
+    V3.sel=null; return _v3Hecho(); }
+  if(k==='addCp'){ V3.addCp=val; return; }
+  if(k==='addM'){ V3.addM=val; return; }
+  if(k==='pf'||k==='pm'||k==='pc'){ const c=_v3CpSel(); if(!c) return;
+    if(k==='pf'){ if(!val||+(''+val).slice(0,4)<2000) return; _v3LinSet(c,V3.ver,d.id,'f',val); } else if(k==='pm') _v3LinSet(c,V3.ver,d.id,'m',_v3Num(val)); else _v3LinSet(c,V3.ver,d.id,'c',val);
+    return _v3Hecho(); }
+  if(k==='vnom'){ const c=_v3CpSel(), p=c&&_v2Plan(c.id), v=p&&(p.versiones||[]).find(x=>x.id===V3.ver); if(v){ v.nombre=(''+val).trim()||v.nombre; return _v3Hecho(); } return; }
+  if(k==='encaja'){ v3EnCaja(V3.cp,!!val); return; }
+  if(k.indexOf('tp-')===0){ V3.tp[k.slice(3)]=val; renderPlanes(); }
+}
+function _v3Eventos(v){
+  if(v._v3) return; v._v3=true;
+  v.addEventListener('click',_v3Clic);
+  v.addEventListener('change',_v3Cambio);
+  v.addEventListener('dragstart',e=>{ const t=e.target.closest('[data-drag]'); if(!t||t.getAttribute('draggable')!=='true') return; V3.drag={cp:t.dataset.cp,id:t.dataset.drag}; t.classList.add('drag');
+    try{ e.dataTransfer.setData('text/plain',t.dataset.drag); e.dataTransfer.effectAllowed='move'; }catch(x){} });
+  v.addEventListener('dragend',e=>{ V3.drag=null; v.querySelectorAll('.v3-col.over').forEach(x=>x.classList.remove('over')); const t=e.target.closest('[data-drag]'); if(t) t.classList.remove('drag'); });
+  v.addEventListener('dragover',e=>{ const col=e.target.closest('.v3-col'); if(!col||!V3.drag||col.dataset.col==='0') return; e.preventDefault(); v.querySelectorAll('.v3-col.over').forEach(x=>{ if(x!==col) x.classList.remove('over'); }); col.classList.add('over'); });
+  v.addEventListener('drop',e=>{ const col=e.target.closest('.v3-col'); if(!col||!V3.drag||col.dataset.col==='0') return; e.preventDefault(); const g=V3.drag; V3.drag=null;
+    v3MoverPago(g.cp,g.id,(+col.dataset.col)-1); });
+}
+/* mover un pago a la semana i (-1 = atrasado), el mismo día de la semana */
+function v3MoverPago(cpId,id,i){ const c=_v3Cp(cpId); if(!c||c.act==='base') return; const l=_v3Lin(c,c.act).find(x=>x.id===id); if(!l) return;
+  const f=_v3Mover(l.f,i); if(f===l.f){ renderPlanes(); return; } _v3LinSet(c,c.act,id,'f',f); V3.sel=c.id+'|'+(c.act==='a'&&c.tipo==='Negociado'&&c.dir==='p'?'pc|'+f+'|'+c.prov:id); _v3Hecho(); }
+
+/* ---- la Caja: solo lee ---- */
+function _v3GrafSaldo(cierre,col,etq,h){
+  h=h||230; const pad=24, top=Math.max(0,col,...cierre), bot=Math.min(0,...cierre), esc=(h-2*pad)/Math.max(1,top-bot), y0=Math.round(pad+top*esc);
+  let mi=0; cierre.forEach((v,i)=>{ if(v<cierre[mi]) mi=i; });
+  const bars=cierre.map(v=>{ const hh=Math.max(2,Math.round(Math.abs(v)*esc)), c=v<0?'#B3261E':(v<col?'#C87A00':'#2E6E5A'), t=v<0?'#B3261E':(v<col?'#7A4A00':'#245747');
+    return '<div><i style="top:'+(v>=0?y0-hh:y0)+'px;height:'+hh+'px;background:'+c+';border-radius:'+(v>=0?'4px 4px 0 0':'0 0 4px 4px')+'"></i><small style="top:'+(v>=0?y0-hh-20:y0+hh+3)+'px;color:'+t+'">'+_p14K(v)+'</small></div>'; }).join('');
+  return '<div style="overflow-x:auto"><div class="v3-plot" style="height:'+h+'px"><div style="position:absolute;left:0;right:0;top:'+y0+'px;border-top:1px solid #A2A7AD"></div>'
+    +'<div style="position:absolute;left:0;right:0;top:'+Math.round(y0-col*esc)+'px;border-top:2px dashed #17181A;opacity:.55"></div><div class="b">'+bars+'</div></div>'
+    +'<div class="v3-etq">'+etq.map((t,i)=>'<div style="'+(i===mi?'font-weight:700;color:#B3261E':'')+'">'+t+'</div>').join('')+'</div></div>';
+}
+function _v3LeyGraf(col){ const s=(c,t)=>'<span class="v3-leg" style="font-size:13px;color:var(--ink2)"><i style="background:'+c+'"></i>'+t+'</span>';
+  return s('#2E6E5A','Sobre el colchón')+s('#C87A00','Bajo el colchón')+s('#B3261E','Negativo')+'<span class="v3-leg" style="font-size:13px;color:var(--ink2)"><span style="width:18px;border-top:2px dashed #17181A;display:inline-block"></span>Colchón '+_p14K(col)+'</span>'; }
+function v3CajaTg(k){ P14.abre=P14.abre||{}; P14.abre[k]=!P14.abre[k]; _p14Repintar(); }
+function v3CajaTodo(){ const ab=P14.abre||{}, todo=ab.entra&&ab.sale&&ab.china; P14.abre={entra:!todo,sale:!todo,china:!todo}; _p14Repintar(); }
+function v3Banco(on){ P14.banco=on==null?!P14.banco:!!on; _p14Repintar(); }
+_p14Caja=function(){
+  if(P14.vista!=='minimo') P14.vista='plan';
+  const V=P14.vista, X=p14Calc(V==='minimo'?'minimo':'pago'), N=X.W.length, R=X.R, col=(REGLAS&&+REGLAS.colchon)||21500, K=_p14K, Fu=_p14Full, S=a=>a.reduce((x,y)=>x+y,0);
+  const ab=P14.abre||{}, lab=i=>i===0?'Esta semana':X.W[i].getDate()+' '+_p14Mes[X.W[i].getMonth()];
+  const ent=X.W.map((w,i)=>R.ext.v[i]+R.sole.v[i]), sal=X.W.map((w,i)=>R.china.v[i]+R.mag.v[i]+R.tiba.v[i]+R.otros.v[i]+R.fij.v[i]+R.imp.v[i]);
+  let mi=0; X.cierre.forEach((v,i)=>{ if(v<X.cierre[mi]) mi=i; }); const minV=X.cierre[mi], bajo=X.cierre.filter(v=>v<col).length, fin=X.cierre[N-1];
+  const seg=(k,v,t,dk)=>'<button class="'+(P14[k]===v?'on':'')+(dk?' dk':'')+'" onclick="'+(k==='vista'?'p15Vista(\''+v+'\')':'p14Vista(\''+k+'\',\''+v+'\')')+'">'+t+'</button>';
+  const u=_saldoUlt()||{cuentas:{}}, hoy=_p14Iso(TODAY);
+  const top='<div class="v2-top"><h2>Caja</h2><div class="v2-seg" role="group" aria-label="Qué cuento">'+seg('vista','minimo','Solo lo que vence')+seg('vista','plan','Con mi plan de pagos')+'</div>'
+    +'<div class="v2-seg" role="group" aria-label="Moneda">'+seg('mon','usd','USD',1)+seg('mon','cop','COP',1)+'</div><span class="v2-sp"></span>'
+    +'<button class="v2-b" onclick="v3Banco()" aria-expanded="'+!!P14.banco+'"><span class="v2-mut" style="font-weight:500">Bancos hoy</span> <span class="v2-num">'+Fu(X.s0)+'</span><span class="v2-mut" style="font-weight:500;font-size:13px">'+(u.fecha?(u.fecha===hoy?'hoy':_v3F(u.fecha)):'sin registrar')+'</span></button>'
+    +'<button class="v2-b" onclick="v2CajaExportar()">Exportar</button></div>';
+  const banco=P14.banco?'<section class="v2-card v3-banco">'+_P14_CUENTAS.map(([k,n,m])=>'<label class="v2-fld">'+n+' · '+m+'<input class="v2-in v2-num" style="text-align:right" data-foco="sal-'+k+'" value="'+(u.cuentas&&u.cuentas[k]!=null?fmtUSDs(u.cuentas[k]):'')+'" placeholder="0" onchange="saldoSet(\''+k+'\',this.value)"></label>').join('')
+    +'<label class="v2-fld">TRM<input class="v2-in v2-num" style="text-align:right" data-foco="sal-trm" value="'+(u.trm?u.trm:'')+'" placeholder="'+_p14Trm()+'" onchange="saldoSet(\'trm\',this.value)"></label><button class="v2-b neg" onclick="v3Banco(false)">Listo</button></section>':'';
+  const KP=(t,v,s,cls)=>'<div class="v2-k '+(cls||'')+'"><p class="v2-lbl">'+t+'</p><div class="v">'+v+'</div><div class="s">'+s+'</div></div>';
+  const kpis='<div class="v3-ck">'+KP('Mínimo',Fu(minV),'semana '+_p14F(X.W[mi]),minV<0?'mal':(minV<col?'ya':'ok'))
+    +KP('Semanas bajo el colchón',bajo+' de '+N,'colchón '+Fu(col),bajo?'mal':'ok')
+    +KP('Falta para el colchón',Fu(Math.max(0,col-minV)),'colchón − mínimo',col-minV>0.5?'mal':'ok')
+    +KP('Saldo en '+N+' semanas',Fu(fin),'entra '+K(S(ent))+' · sale '+K(S(sal)),fin<0?'mal':'')+'</div>';
+  const graf='<section class="v2-card v3-graf"><div style="display:flex;flex-wrap:wrap;align-items:baseline;gap:16px"><h3>Saldo al cierre de cada semana</h3><span class="v2-mut" style="font-size:13px">'+(P14.mon==='cop'?'COP':'US$')+'</span><span class="v2-sp"></span>'+_v3LeyGraf(col)+'</div>'
+    +_v3GrafSaldo(X.cierre,col,X.W.map((w,i)=>lab(i)))+'</section>';
+  /* tabla */
+  const C=(X.v3&&X.v3.cps)||[], cpOf=id=>C.find(c=>c.id===id);
+  const fte=(id,t)=>'<button class="v3-fte" onclick="event.stopPropagation();v3Abrir(\''+_maQ(id)+'\')" title="Ver en Planes">'+esc4(t)+'</button>';
+  const verT=c=>!c?'':(!c.enCaja?'fuera':((c.tipo==='Negociado'&&!_v3Act(c).length)?'sin plan':c.act==='base'?(c.tipo==='Negociado'?'sin plan':(c.tipo==='Regla'?'regla '+((REGLAS&&REGLAS[c.prov]&&REGLAS[c.prov].dias)||30)+' d':'cuotas')):'plan '+c.act));
+  const det=P14.det;
+  const celdas=(arr,signo,fila)=>arr.map((v,i)=>{ const on=det&&det.fila===fila&&det.i===i, hay=fila&&Math.abs(v)>0.5&&R[fila]&&R[fila].it[i]&&R[fila].it[i].length;
+    return '<td class="'+(on?'on ':'')+(hay?'clic':'')+'"'+(hay?' onclick="p14Det(\''+fila+'\','+i+')"':'')+' style="color:'+(Math.abs(v)<0.5?'var(--ink3)':(signo>0?'#245747':'#8E1E17'))+'">'+(Math.abs(v)>0.5?K(signo*v):'—')+'</td>'; }).join('');
+  const fila=(t,arr,signo,o)=>{ o=o||{}; const tg=o.tg?'<button class="v3-tg" onclick="v3CajaTg(\''+o.tg+'\')" aria-expanded="'+!!ab[o.tg]+'">'+_V3FL+t+'</button>':t;
+    return '<tr class="'+(o.cls||'')+'"><td style="padding-left:'+(o.s||14)+'px">'+tg+(o.fte||'')+'</td>'+celdas(arr,signo,o.fila)+'<td style="font-weight:700;color:'+(signo>0?'#245747':'#8E1E17')+'">'+(Math.abs(S(arr))>0.5?K(signo*S(arr)):'—')+'</td></tr>'; };
+  const saldoF=(t,arr)=>'<tr class="sal"><td style="padding-left:14px">'+t+'</td>'+arr.map(v=>'<td style="color:'+(v<0?'#B3261E':(v<col?'#7A4A00':'#245747'))+'">'+K(v)+'</td>').join('')+'<td></td></tr>';
+  let rows=saldoF('Saldo al empezar',X.ini)+fila('Entra',ent,1,{tg:'entra',cls:'g'});
+  if(ab.entra){ const cli=(X.v3&&X.v3.cli)||{}; Object.keys(cli).sort((a,b)=>S(cli[b])-S(cli[a])).forEach(n=>{ const c=cpOf('cobro:'+n); rows+=fila(esc4(n),cli[n],1,{s:36,fila:esInterno(n)?'sole':'ext',fte:c?fte(c.id,verT(c)):''}); }); }
+  rows+=fila('Sale',sal,-1,{tg:'sale',cls:'g'});
+  if(ab.sale){
+    rows+=fila('China',R.china.v,-1,{s:36,tg:'china',fila:'china'});
+    if(ab.china){ const nat=X.W.map((w,i)=>['eagle','nexus','comp'].reduce((a,k)=>a+((X.natProv[k]||[])[i]||0),0)), resto=X.W.map((w,i)=>R.china.v[i]-nat[i]-['eagle','nexus','comp'].reduce((a,k)=>a+((X.chPlan[k]||[])[i]||0),0));
+      if(V!=='minimo') ['eagle','nexus','comp'].forEach(k=>{ const c=cpOf('pago:'+k); rows+=fila(esc4(_V3PROV[k]),X.chPlan[k]||new Array(N).fill(0),-1,{s:62,fte:c?fte(c.id,verT(c)):''}); });
+      rows+=fila(V==='minimo'?'Vence · fecha de Andrés':'Vence y el plan no cubre',nat,-1,{s:62});
+      if(resto.some(v=>Math.abs(v)>0.5)) rows+=fila('Sin asignar y girado con Finkargo',resto,-1,{s:62}); }
+    const cm=cpOf('pago:magnum'), ct=cpOf('pago:tiba'), co=cpOf('pago:otros');
+    rows+=fila('Magnum',R.mag.v,-1,{s:36,fila:'mag',fte:cm?fte(cm.id,verT(cm)):''})+fila('TIBA',R.tiba.v,-1,{s:36,fila:'tiba',fte:ct?fte(ct.id,verT(ct)):''});
+    if(R.otros.v.some(v=>v>0.5)||co) rows+=fila('Finkargo y otros cargos',R.otros.v,-1,{s:36,fila:'otros',fte:co?fte(co.id,verT(co)):''});
+    rows+=fila('Nómina y fijos',R.fij.v,-1,{s:36,fila:'fij'})+fila('Impuestos y 4x1000',R.imp.v,-1,{s:36,fila:'imp'}); }
+  rows+=saldoF('Saldo al cerrar',X.cierre);
+  const tabla='<section class="v2-card" style="overflow-x:auto;margin-bottom:14px"><div style="display:flex;flex-wrap:wrap;align-items:center;gap:12px;padding:14px 14px 8px"><h3 style="margin:0;font-size:17px">Semana a semana</h3><span class="v2-mut" style="font-size:13px">'+(P14.mon==='cop'?'COP en millones':'US$ en miles')+'</span><span class="v2-sp"></span>'
+    +'<button class="v2-b" onclick="v3CajaTodo()">'+(ab.entra&&ab.sale&&ab.china?'Cerrar todo':'Abrir todo')+'</button></div>'
+    +'<table class="v3-ct p15-t"><thead><tr><th>Concepto</th>'+X.W.map((w,i)=>'<th'+(i===0?' style="color:#7A4A00"':'')+'>'+lab(i)+'</th>').join('')+'<th>'+N+' sem</th></tr></thead><tbody>'+rows+'</tbody></table></section>';
+  let detH='';
+  if(det&&R[det.fila]){ const it=R[det.fila].it[det.i]||[], nom={ext:'Clientes externos',sole:'Cliente del grupo',china:'China',mag:'Magnum',tiba:'TIBA',otros:'Finkargo y otros cargos',fij:'Nómina y fijos',imp:'Impuestos y 4x1000'}[det.fila]||'';
+    detH='<section class="v2-drawer"><div class="v2-sec" style="padding:14px;display:flex;flex-wrap:wrap;gap:10px;align-items:center"><p class="v2-lbl" style="margin:0">Detalle · '+nom+' · '+lab(det.i)+'</p><span class="v2-sp"></span>'
+      +((det.fila==='mag'||det.fila==='tiba')?'<a href="#" class="v2-b" onclick="P14.acre=\''+(det.fila==='mag'?'magnum':'tiba')+'\';navTo(\'porpagar\');return false">Decidir factura por factura en Cuentas › Debo</a>':'')
+      +'<a href="#" class="v2-b" onclick="p14Det(\''+det.fila+'\','+det.i+');return false">Cerrar</a></div><div class="v2-wrap"><table class="v2-t"><tbody>'
+      +it.slice().sort((a,b)=>b.usd-a.usd).map(x=>'<tr><td>'+esc4(x.txt)+'</td><td class="r"><b>'+Fu(x.usd)+'</b></td></tr>').join('')+'</tbody></table></div></section>'; }
+  return top+banco+kpis+graf+tabla+detH;
+};
+
+/* ---- Cuentas: el plan del cliente del grupo, en una línea ---- */
+function _v3PlanResumenHTML(c){
+  const cp=_v3Cp('cobro:'+c); if(!cp) return '';
+  const vers=_v3Vers(cp), v=vers.find(x=>x.id===cp.act)||vers[0], L=_v3Act(cp), W12=addD(_v3L0(),84);
+  const t12=L.filter(l=>{ const d=_p14D(l.f); return d&&d>=TODAY&&d<W12; }).reduce((a,l)=>a+l.m,0);
+  const p=_v2Plan(cp.id), q=p?_v2Cumpl(p,cp.act):{plan:0,rec:0};
+  return '<div class="ec8-sec">Plan de pagos · '+esc4(c)+'<span>'+esc4(cp.enCaja?(v?v.t:'—')+' · en la Caja':'fuera de la Caja')+'</span>'
+    +'<button class="ec8-b" onclick="v3Abrir(\''+_maQ(cp.id)+'\')">Abrir en Planes</button></div>'
+    +'<div class="v2-kpis k5" style="margin:10px 0">'
+    +'<div class="v2-k"><p class="v2-lbl">Próximas 12 semanas</p><div class="v">'+_v3n(t12)+'</div><div class="s">'+L.filter(l=>{ const d=_p14D(l.f); return d&&d>=TODAY; }).length+' pagos con fecha</div></div>'
+    +'<div class="v2-k '+(q.plan-q.rec>0.5?'mal':'ok')+'"><p class="v2-lbl">Vencido sin recibir</p><div class="v">'+_v3n(Math.max(0,q.plan-q.rec))+'</div><div class="s">'+(q.desde?'desde '+_p14F(q.desde):'—')+'</div></div>'
+    +'<div class="v2-k '+(q.plan>0.5&&q.rec<q.plan?'mal':'ok')+'"><p class="v2-lbl">Cumplimiento</p><div class="v">'+(q.plan>0.5?Math.round(q.rec/q.plan*100)+' %':'—')+'</div><div class="s">'+_v3n(q.rec)+' / '+_v3n(q.plan)+'</div></div>'
+    +'<div class="v2-k ya"><p class="v2-lbl">Esta semana</p><div class="v">'+_v3n(L.filter(l=>_v3Wk(l.f)===0).reduce((a,l)=>a+l.m,0))+'</div><div class="s">recibido '+_v3n(_v3RecSem(c))+'</div></div>'
+    +'<div class="v2-k"><p class="v2-lbl">Versiones</p><div class="v">'+vers.length+'</div><div class="s">'+esc4(vers.map(x=>x.id).join(' · '))+'</div></div></div>';
+}
+_promHTML=function(c){ try{ return _v3PlanResumenHTML(c); }catch(err){ console.warn(err); return ''; } };
+
+/* ---- Cuentas › Debo › China: lo que debes por proveedor y su plan (se hace en Planes) ---- */
+function _v3ChinaProvHTML(){
+  const C=_v3Fichas().C.filter(c=>c.dir==='p'&&_V3PROV[c.prov]); let tv=0,tf=0,tp=0,ts=0;
+  const fil=C.map(c=>{ const D=c.deudas||[], v=D.filter(d=>d.venc).reduce((a,d)=>a+d.m,0), f=D.filter(d=>!d.venc&&d.f&&_v3Wk(d.f)<12).reduce((a,d)=>a+d.m,0), pl=_v3Act(c).reduce((a,l)=>a+l.m,0), s=c.sinPlan||0, vt=_v3Vers(c).find(x=>x.id===c.act);
+    tv+=v; tf+=f; tp+=pl; ts+=s;
+    return '<tr><td><b>'+esc4(c.n)+'</b></td><td class="r mal">'+fmtUSDs(v)+'</td><td class="r">'+(f>0.5?fmtUSDs(f):'—')+'</td><td class="r">'+(pl>0.5?fmtUSDs(pl):'—')+'</td>'
+      +'<td><a href="#" onclick="v3Abrir(\''+_maQ(c.id)+'\');return false">'+esc4(!c.enCaja?'fuera de la Caja':(c.act==='base'?'sin plan':(vt?vt.t:c.act)))+'</a></td><td class="r"><b class="'+(s>0.5?'mal':'')+'">'+(s>0.5?fmtUSDs(s):'—')+'</b></td></tr>'; }).join('');
+  return '<div class="p14-card"><div class="p14-ph"><h4>Por proveedor</h4><a href="#" onclick="v3Abrir(\'pago:eagle\');return false">Ver los cronogramas en Planes</a></div>'
+    +'<div class="ec8-wrap"><table class="ec8 p14-ft"><thead><tr><th>Proveedor</th><th class="r">Vencido</th><th class="r">Vence en 12 semanas</th><th class="r">En tu plan</th><th>Versión en la Caja</th><th class="r">Vencido sin plan</th></tr></thead><tbody>'+fil
+    +'<tr class="tot"><td>Total</td><td class="r">'+fmtUSDs(tv)+'</td><td class="r">'+fmtUSDs(tf)+'</td><td class="r">'+fmtUSDs(tp)+'</td><td></td><td class="r">'+fmtUSDs(ts)+'</td></tr></tbody></table></div></div>';
+}
+
+/* ---- Tablero: el flujo de 12 semanas queda en la barra de saldo; clic lleva a la Caja ---- */
+function _v3TableroSaldo(X){
+  const col=(REGLAS&&+REGLAS.colchon)||21500, lab=i=>i===0?'Esta sem.':_p14F(X.W[i]);
+  return '<section class="v2-card v3-graf v3-tbsaldo" onclick="navTo(\'caja\')" title="Abrir la Caja"><div style="display:flex;flex-wrap:wrap;align-items:baseline;gap:16px"><h3>Saldo al cierre · 12 semanas</h3><span class="v2-mut" style="font-size:13px">con tu plan · clic para abrir la Caja</span><span class="v2-sp"></span>'+_v3LeyGraf(col)+'</div>'
+    +_v3GrafSaldo(X.cierre,col,X.W.map((w,i)=>lab(i)),170)+'</section>';
+}
+
+/* ---- arranque ---- */
+(function v3Init(){ try{ const v=document.getElementById('v-planes'); if(v) _v3Eventos(v); }catch(err){ console.warn('v3 init',err); } })();
+</script>

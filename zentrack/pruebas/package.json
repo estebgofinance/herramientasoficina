@@ -1,9 +1,14 @@
 {
   "name": "zentrack-pruebas",
   "private": true,
-  "scripts": { "test": "node correr.js" },
+  "scripts": {
+    "test": "node correr.js"
+  },
   "dependencies": {
+    "exceljs": "^4.4.0",
     "jsdom": "^26.0.0",
+    "jszip": "^3.10.2",
+    "pdfjs-dist": "^3.11.174",
     "playwright-core": "^1.50.0",
     "xlsx": "^0.18.5"
   }

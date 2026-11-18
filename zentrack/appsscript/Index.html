@@ -9,27 +9,31 @@
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&display=swap" rel="stylesheet">
 <?!= include('Estilos1'); ?>
 <?!= include('Estilos2'); ?>
+<?!= include('Estilos3'); ?>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script>if(window["pdfjsLib"]){pdfjsLib.GlobalWorkerOptions.workerSrc="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";}</script>
 <body>
 <div class="shell">
   <header class="bar">
     <div class="brand"><span class="mark"></span><h1>Zentrack</h1><span>Control de cartera y cupo</span></div>
-    <button class="loadbtn" onclick="verifyOpen()"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" style="width:14px;height:14px"><path d="M8 2v8M5 7l3 3 3-3M3 13h10"/></svg> Cargar datos</button>
-    <button class="loadbtn" style="margin-left:6px;background:#0d9488;color:#fff;border-color:#0d9488" onclick="facWizOpen()"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" style="width:14px;height:14px"><path d="M4 2h6l3 3v9H4V2zM10 2v3h3"/></svg> Cargar facturas</button>
+    <button class="loadbtn v2-cargar" onclick="v2Cargar()" title="Detailed y order report, Magnum (Excel o PDF), TIBA, Finkargo o datos preparados"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" style="width:14px;height:14px"><path d="M8 2v8M5 7l3 3 3-3M3 13h10"/></svg> Cargar archivo</button>
+    <input type="file" id="v2File" multiple accept=".xlsx,.xls,.pdf,.json" style="display:none" onchange="v2CargarArchivos(this)">
+    <button class="loadbtn" style="display:none" onclick="facWizOpen()">Cargar facturas</button>
     <div class="corte">
-      <b id="verTag">v1.6.2</b>
+      <b id="verTag">v2.13.2</b>
     </div>
   </header>
 
   <nav class="tabs">
     <button data-v="hoy" class="on">Tablero</button>
+    <button data-v="caja">Caja</button>
+    <button data-v="planes">Planes</button>
+    <button data-v="salidas">Salidas</button>
+    <button data-v="clientes">Cuentas</button>
     <button data-v="pedidos">Pedidos</button>
-    <button data-v="clientes">Clientes</button>
-    <button data-v="pagos">Pagos</button>
-    <button data-v="precios">Precios y clientes</button>
-    <button data-v="sinosure">Sinosure</button>
-    <button data-v="config">Ajustes</button>
+    <button data-v="precios" style="display:none">Precios y clientes</button>
+    <button data-v="sinosure" style="display:none">Sinosure</button>
+    <button data-v="config" class="v2-cfgtab" aria-label="Ajustes"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true" style="width:16px;height:16px;vertical-align:-3px"><circle cx="10" cy="10" r="3"/><path d="M10 1.5v3M10 15.5v3M1.5 10h3M15.5 10h3M4 4l2.1 2.1M13.9 13.9L16 16M4 16l2.1-2.1M13.9 6.1L16 4"/></svg> Ajustes</button>
   </nav>
 
   <div class="cmd">
@@ -42,6 +46,9 @@
 
   <main>
     <!-- ============ HOY ============ -->
+    <section class="view" id="v-caja"></section>
+    <section class="view" id="v-planes"></section>
+    <section class="view" id="v-salidas"></section>
     <section class="view on" id="v-hoy">
       <h2 class="title" id="hoyDate"></h2>
       <div class="tb-sub" id="tbFuente"></div>
@@ -69,54 +76,25 @@
 
     <!-- ============ PEDIDOS ============ -->
     <section class="view" id="v-pedidos">
-      <h2 class="title">Órdenes y pedidos</h2>
-
-      <div class="filters" id="filters">
-        <button class="chip on" data-f="todos">Todas</button>
-        <button class="chip" data-f="Tracker">Trackers</button>
-        <button class="chip" data-f="Shelter">Shelters</button>
-        <button class="chip" data-f="pipeline">Con equipos sin embarcar</button>
-        <button class="chip" data-f="vencida">Balance a China vencido</button>
-        <button class="chip" data-f="sinprecio">Sin precio</button>
-      </div>
-
-      <table class="ledger">
-        <thead><tr>
-          <th style="width:120px">Orden</th>
-          <th>Cliente</th>
-          <th>Estado de los equipos</th>
-          <th class="r">Cupo comprometido</th>
-          <th class="r">Balance por pagar</th>
-        </tr></thead>
-        <tbody id="ledger"></tbody>
-      </table>
+      <div id="maestro"></div>
+      <!-- tabla vieja: se deja escondida porque código viejo la busca por id -->
+      <div style="display:none"><div id="filters"></div><table><tbody id="ledger"></tbody></table></div>
     </section>
 
     <!-- ============ CLIENTES ============ -->
     <section class="view" id="v-clientes">
-      <h2 class="title">Clientes</h2>
-      <div class="sub">Lo que te deben. Solenium va por el ORDER REPORT (anticipo, balance y logística de cada pedido); los clientes externos van por factura. Previsualiza el estado de cuenta como lo va a ver el cliente y sácalo en PDF o Excel.</div>
+      <div class="ma-top"><div><h2 class="title">Estados de cuenta</h2><div class="sub" style="margin-bottom:0">Lo que te deben tus clientes y lo que les debes a tus proveedores, cada uno con su estado de cuenta.</div></div><div class="ec8-sp"></div>
+        <div class="ec9-seg" id="ecLadoSeg"><button data-l="me" class="on" onclick="ecLado('me')">Me deben</button><button data-l="debo" onclick="ecLado('debo')">Debo</button></div></div>
+      <div id="ecMeDeben">
       <div class="cl-grid">
         <div class="cl-list" id="clList"></div>
         <div class="cl-detail" id="clDetail"></div>
       </div>
+      </div>
+      <div id="v-porpagar" style="display:none"></div>
     </section>
 
     <!-- ============ PLANIFICADOR ============ -->
-    <section class="view" id="v-pagos">
-      <h2 class="title">Pagos</h2>
-      <div class="sub">Lo que entra de tus clientes y lo que le giras a China (Nexus por los trackers, Eaglerise por los shelters, y los otros componentes). La herramienta propone cómo repartir el giro y tú lo confirmas; todo admite abonos parciales y se puede reversar.</div>
-      <div class="pagos-grid">
-        <div class="pagos-form">
-          <div class="seg" id="pagoTipoSeg">
-            <button data-t="in" class="on">Entra · cliente</button>
-            <button data-t="out">Sale · China</button>
-          </div>
-          <div id="pagoForm"></div>
-        </div>
-        <div class="pagos-hist"><div class="ph">Historial de pagos</div><div id="pagoHist"></div></div>
-      </div>
-    </section>
 
     <!-- ============ CONFIG CUPO ============ -->
     <section class="view" id="v-precios"></section>
@@ -175,6 +153,20 @@
 <?!= include('Motor4'); ?>
 <?!= include('Motor5'); ?>
 <?!= include('Motor6'); ?>
+<?!= include('Motor7'); ?>
+<?!= include('Motor8'); ?>
+<?!= include('Motor9'); ?>
+<?!= include('Motor10'); ?>
+<?!= include('Motor11'); ?>
+<?!= include('Motor12'); ?>
+<?!= include('Motor13'); ?>
+<?!= include('Motor14'); ?>
+<?!= include('Motor15'); ?>
+<?!= include('Motor16'); ?>
+<?!= include('Motor17'); ?>
+<?!= include('Motor18'); ?>
+<?!= include('Motor19'); ?>
+<?!= include('Motor20'); ?>
 
 </body>
 </html>

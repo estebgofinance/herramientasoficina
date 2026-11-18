@@ -73,7 +73,8 @@ let ok=0,mal=0;const T=(c,m)=>{if(c){ok++;console.log('  OK   '+m);}else{mal++;c
   await p.evaluate(()=>wdifFiltro('idos')); await p.waitForTimeout(400);
   const idos=await p.evaluate(()=>document.getElementById('reconBody').innerText);
   T(/9-7/.test(idos)&&/Desapareci/.test(idos),'el 9-7 que saque sale como desaparecido');
-  T(/se va de la herramienta/.test(idos),'y avisa que si apruebas se pierde');
+  /* desde la v1.17.1 se conserva por defecto; quitarlo es una decisión tuya */
+  T(/Se conserva como estaba/.test(idos)&&/Quitar de la herramienta/.test(idos),'y dice que se conserva, con la opción de quitarlo');
 
   T(errs.length===0,'sin errores de JS'+(errs.length?': '+errs[0]:''));
   console.log(`\n${ok} OK · ${mal} fallas`);

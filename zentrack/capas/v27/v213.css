@@ -1,0 +1,52 @@
+/* v2.13 · Planes por cuotas */
+.z13-seg{margin-left:4px}
+.z13-hub{display:grid;grid-template-columns:248px minmax(0,1fr);gap:16px;align-items:start}
+.z13-cps{background:var(--card);border:1px solid var(--rule);border-radius:var(--z-r2);padding:6px;display:flex;flex-direction:column;gap:2px;position:sticky;top:12px;max-height:calc(100vh - 24px);overflow:auto}
+.z13-g{font-size:13px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--ink2);padding:12px 10px 4px}
+.z13-cp{display:grid;grid-template-columns:8px minmax(0,1fr) auto;column-gap:8px;row-gap:2px;align-items:center;text-align:left;border:0;background:none;font:inherit;color:var(--ink);padding:8px 10px;border-radius:var(--z-r1);cursor:pointer}
+.z13-cp:hover{background:var(--hover)}
+.z13-cp:focus-visible{outline:2px solid var(--z-info);outline-offset:1px}
+.z13-cp.on{background:var(--z-info-s);box-shadow:inset 3px 0 0 var(--z-info)}
+.z13-cp b{font-size:14px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.z13-cp .n{font-size:14px;font-variant-numeric:tabular-nums}
+.z13-cp small{grid-column:2/4;font-size:13px;color:var(--ink2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.z13-dot{width:8px;height:8px;border-radius:50%;background:#A0A7AE}
+.z13-dot.crit{background:var(--z-crit)}.z13-dot.warn{background:#C98A1B}.z13-dot.ok{background:var(--z-ok)}
+.z13-det{overflow:hidden}
+.z13-dh{padding:14px 16px;border-bottom:1px solid var(--rule);display:flex;flex-direction:column;gap:8px}
+.z13-dh .rw{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.z13-dh h3{margin:0;font-size:20px;font-weight:700}
+.z13-kp{display:flex;gap:6px 20px;flex-wrap:wrap;font-size:14px;color:var(--ink2)}
+.z13-kp b{color:var(--ink);font-variant-numeric:tabular-nums}
+.z13-kp .z13-crit,.z13-kp .z13-crit b{color:var(--z-crit)}
+.z13-auto{margin:0;font-size:13px;color:var(--ink2)}
+.z13-add{display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:12px 16px;border-bottom:1px solid var(--rule);background:var(--bg)}
+.z13-add input[type=date].z-in{width:150px}
+.z13-con{width:240px}
+.z13-mo{width:118px}
+.z13-bulk{display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:8px 16px;background:var(--z-info-s);border-bottom:1px solid var(--rule);font-size:14px}
+.z13-bulk label{display:flex;gap:6px;align-items:center}
+table.z13-t td{vertical-align:middle;padding:6px 8px}
+table.z13-t th{padding-left:8px;padding-right:8px}
+table.z13-t th.ck,table.z13-t td.ck{width:34px;text-align:center}
+table.z13-t td input[type=date].z-in{width:132px;padding:0 6px}
+.z13-mon{display:inline-flex;gap:4px;align-items:center;justify-content:flex-end}
+.z13-mon select.z-in{width:66px;padding:0 4px}
+.z13-usd{font-size:13px;color:var(--ink2);padding:0 6px}
+table.z13-t td.z13-c{white-space:normal;min-width:150px}
+table.z13-t td.z13-c .z13-con{width:100%;min-width:140px}
+table.z13-t td.z13-e{white-space:normal}
+table.z13-t tr.wk td{background:var(--bg);font-size:13px;font-weight:700;color:var(--ink2);padding-top:8px;padding-bottom:8px}
+table.z13-t tr.done td,table.z13-t tr.done .z-in{color:var(--ink2)}
+table.z13-t tr.done .z13-con,table.z13-t tr.done .z13-mo{text-decoration:line-through}
+table.z13-t tr.sel td{background:var(--z-info-s)}
+table.z13-t .z-acc{display:inline-flex;flex-wrap:nowrap;gap:4px;align-items:center;justify-content:flex-end}
+.z13-x{color:var(--ink2)}
+.z13-nota{display:block;font-size:13px;color:var(--ink2);margin-top:3px;font-weight:400}
+.z13-vacio{padding:18px 16px;color:var(--ink2);font-size:14px}
+.z13-f{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:10px 16px;border-top:1px solid var(--rule);font-size:14px;color:var(--ink2)}
+.z13-f b{color:var(--ink);font-variant-numeric:tabular-nums}
+.z13-log{margin:0 16px 14px;border:1px solid var(--rule);border-radius:var(--z-r1);padding:8px 10px;font-size:14px}
+.z13-log summary{cursor:pointer;font-weight:600}
+.z13-log table{margin-top:8px}
+@media (max-width:900px){.z13-hub{grid-template-columns:1fr}.z13-cps{position:static;max-height:none}}

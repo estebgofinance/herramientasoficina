@@ -1,0 +1,18 @@
+/* ===== v2.10 · diálogo de la hoja de necesidad de efectivo ===== */
+.z-dlg.ne-dlg{width:min(660px,calc(100vw - 32px));max-width:min(660px,calc(100vw - 32px))}
+.ne-f{display:grid;gap:6px;margin-top:14px}
+.ne-f>label{font-size:13px;font-weight:600;color:var(--ink2)}
+.ne-seg{display:grid;grid-template-columns:repeat(3,1fr);width:100%}
+.ne-seg button{height:auto;min-height:48px;padding:6px 10px;display:grid;gap:2px;text-align:left;align-content:center}
+.ne-seg button b{font-weight:600;color:inherit}
+.ne-seg button small{font-size:13px;opacity:.75}
+.ne-trmr{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.ne-trmr .z-in{width:130px;font-variant-numeric:tabular-nums}
+.ne-res{display:grid;grid-template-columns:repeat(5,1fr);gap:0;margin-top:14px;border:1px solid var(--rule);border-radius:var(--z-r1)}
+.ne-res:empty{display:none}
+.ne-res div{display:grid;gap:2px;padding:8px 10px;border-right:1px solid var(--rule)}
+.ne-res div:last-child{border-right:0}
+.ne-res span{font-size:13px;color:var(--ink3)}
+.ne-res b{font-variant-numeric:tabular-nums;font-weight:600}
+.ne-err{color:var(--z-crit);font-size:13px;margin:8px 0 0}
+@media (max-width:560px){ .ne-seg{grid-template-columns:1fr} .ne-res{grid-template-columns:repeat(2,1fr)} }

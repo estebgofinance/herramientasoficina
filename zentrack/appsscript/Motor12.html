@@ -1,0 +1,155 @@
+<script>
+
+/* ===================================================================
+   v2.2 · SALIDAS
+   ¿Cuánto cuesta que salga y llegue lo que quieren? Un renglón por
+   pedido que no ha llegado (en el mar, listo para zarpar, en producción)
+   con: anticipo pendiente, componentes, contenedores, flete (tarifa por
+   contenedor + % de Magnum), aduana y transporte al llegar. Aparte, lo
+   vencido que frena los zarpes (balances vencidos, por pedido) y lo de
+   Magnum según la regla de días a una fecha. Abajo: cuándo se paga cada
+   cosa, lo que hay que pedirle a Sole (China, Magnum, logística) contra
+   cualquier versión de su plan, y lo que falta por confirmar.
+   Reglas de logística en REGLAS.logistica (Ajustes › Reglas o aquí).
+   Llave nueva: SALIDAS = {sel, cont, magFecha, magDias, magSeguro,
+   margen, comparar, sem}. "Llevar a Planes" crea una versión borrador
+   en el plan del cliente con lo que hay que pedir.
+   =================================================================== */
+var SALIDAS={sel:{},cont:{},magFecha:'',magDias:null,magSeguro:false,margen:false,comparar:'',sem:1,cli:''};
+function _v2SalCli(){ if(SALIDAS.cli==='*') return null; if(SALIDAS.cli) return SALIDAS.cli; const i=_ecClientes().find(c=>esInterno(c)); return i||null; }
+function _v2SalItems(){
+  const L=_v2Log(), venc=_v2VencEq(), out=[], cli=_v2SalCli(), ok=e=>!cli||(e.cliente||'Por asignar')===cli;
+  EQ.forEach(e=>{ const col=_v2Col(e); if(col==='col'||!ok(e)) return;
+    const k=kOf(e), q=+e.qty||1, def=e.mfg==='Singsun'?{c20:0,c40:(+L.c40t||3)*q,cfr:0}:{c20:q/(+L.c20s||2),c40:0,cfr:0}, c=Object.assign({},def,SALIDAS.cont[k]||{});
+    const llega=e.eta?new Date(e.eta):(e.etd?addD(new Date(e.etd),35):null);
+    out.push({k,e,g:col,ant:+e.antSaldo||0,comp:+e.otrosSaldo||0,venc:0,c20:+c.c20||0,c40:+c.c40||0,cfr:+c.cfr||0,llega,est:!e.eta});
+  });
+  const G={}; EQ.filter(ok).forEach(e=>{ const v=venc[kOf(e)]; if(!(v>0.5)) return; const b=e.mfg+'|'+_v2Base(e)+'|'+(e.cliente||''); (G[b]=G[b]||{b:_v2Base(e),mfg:e.mfg,v:0,p:new Set()}).v+=v; G[b].p.add(e.proj||''); });
+  Object.keys(G).forEach(b=>out.push({k:'v:'+b,e:null,g:'venc',nombre:G[b].b+' · '+(G[b].mfg==='Singsun'?'Nexus':'Eaglerise'),proj:[...G[b].p].filter(Boolean).join(', '),ant:0,comp:0,venc:G[b].v,c20:0,c40:0,cfr:0,llega:null}));
+  return out;
+}
+function _v2SalOn(it){ const s=SALIDAS.sel[it.k]; return s==null?(it.g==='mar'||it.g==='listo'):!!s; }
+function _v2SalCalc(it){
+  const L=_v2Log(), T=_p14Trm(), cont=it.c20+it.c40+it.cfr;
+  const adu=it.c20*(+L.a20||0)+it.c40*(+L.a40||0)+it.cfr*(+L.aFR||0), tr=cont*(+L.tr||0);
+  const falta=(it.c20>0&&!(+L.f20>0))||(it.c40>0&&!(+L.f40>0))||(it.cfr>0&&!(+L.fFR>0));
+  const flete=cont>0?(falta?null:(it.c20*L.f20+it.c40*L.f40+it.cfr*(+L.fFR||0))*(1+(+L.fee||0)/100)):0;
+  return {adu,tr,flete,falta,china:it.ant+it.comp+it.venc,total:it.ant+it.comp+it.venc+adu+(flete||0)+tr/T};
+}
+function _v2SalMag(){
+  const dias=SALIDAS.magDias!=null?+SALIDAS.magDias:((REGLAS&&REGLAS.magnum&&REGLAS.magnum.dias)||30);
+  const f=_p14D(SALIDAS.magFecha)||addD(_p14Lun(TODAY),11), fs=cxpActivas('magnum');
+  const llega=fs.filter(x=>{ const v=_p14D(x.vence); return v&&days(v,f)>=dias; }), casi=fs.filter(x=>{ const v=_p14D(x.vence); const d=v?days(v,f):-1; return d>=dias-5&&d<dias; });
+  const S=l=>l.reduce((a,x)=>a+(x.moneda==='COP'?x.saldo:x.saldo*_p14Trm()),0);
+  return {f,dias,n:llega.length,cop:S(llega),nCasi:casi.length,copCasi:S(casi),hay:fs.length>0};
+}
+function renderSalidas(){
+  const v=document.getElementById('v-salidas'); if(!v) return;
+  const top='<div class="v2-top"><h2>Salidas</h2>';
+  if(!EQ.length){ v.innerHTML=top+'</div><div class="ec8-vacio">Carga el detailed y el order report con <b>Cargar archivo</b>.</div>'; return; }
+  const L=_v2Log(), T=_p14Trm(), n=fmtUSDs, mM=x=>(x/1e6).toLocaleString('en-US',{minimumFractionDigits:1,maximumFractionDigits:1})+' M', cliA=_v2SalCli();
+  const its=_v2SalItems().map(it=>Object.assign(it,_v2SalCalc(it),{on:_v2SalOn(it)})), on=its.filter(x=>x.on);
+  const S=f=>on.reduce((a,x)=>a+(f(x)||0),0), M=_v2SalMag(), mg=M.cop+(SALIDAS.magSeguro?M.copCasi:0);
+  const c20=S(x=>x.c20), c40=S(x=>x.c40), cfr=S(x=>x.cfr), cont=c20+c40+cfr, falta=on.some(x=>x.falta), china=S(x=>x.china), adu=S(x=>x.adu), tr=S(x=>x.tr), fl=S(x=>x.flete);
+  const ctxt=[c20?(Math.round(c20*10)/10)+' × 20GP':'',c40?c40+' × 40HQ':'',cfr?cfr+' FR':''].filter(Boolean).join(' · ');
+  const tar=(k,t)=>'<label class="v2-fld" style="flex-direction:row;align-items:center;gap:6px">'+t+'<input class="v2-in v2-num" style="width:96px;text-align:right" value="'+(L[k]>0?n(L[k]):'')+'" placeholder="falta" onchange="v2Regla(\''+k+'\',this.value)"></label>';
+  const K_=(t,vv,s,cls)=>'<div class="v2-k '+(cls||'')+'"><p class="v2-lbl">'+t+'</p><div class="v">'+vv+'</div><div class="s">'+s+'</div></div>';
+  const kpis='<div class="v2-kpis">'+K_('China · antes de zarpar','US$ '+n(china),'anticipos · componentes · vencidos','ya')
+    +K_('Flete internacional',falta?'Falta tarifa':'US$ '+n(fl),'+ '+(+L.fee||0)+' % Magnum',falta?'mal':'ya')
+    +K_('Aduana al llegar','US$ '+n(adu),n(L.a20)+' / 20GP · '+n(L.a40)+' / 40HQ','ya')
+    +K_('Transporte terrestre','COP '+mM(tr),_copM(L.tr)+' / contenedor','ya')
+    +K_('Contenedores',''+(Math.round(cont*10)/10),ctxt||'—','')
+    +K_('Magnum · estado de cuenta','COP '+mM(mg),M.hay?M.n+(SALIDAS.magSeguro?' + '+M.nCasi:'')+' facturas · '+M.dias+' d al '+_p14F(M.f):'sin cargar','ya')+'</div>';
+  /* la tabla por equipo */
+  const grupos=[['mar','En el mar · por nacionalizar'],['listo','Listos para zarpar'],['prod','En producción'],['venc','Vencido que frena los zarpes']];
+  const fd=d=>d?_p14F(d):'—';
+  const fila=it=>{ const e=it.e, q=_maQ(it.k), c=it.g==='venc';
+    const main=e?(e.mfg==='Singsun'?'c40':'c20'):null, unid=main==='c40'?'40HQ':'20GP';
+    const fech=e?(it.g==='mar'?(it.llega?'llega '+fd(it.llega)+(it.est?' (estimado)':''):'sin fecha'):(it.g==='listo'?(e.etd?'zarpa '+fd(new Date(e.etd)):'sin ETD'):(e.prodFin?'termina '+fd(new Date(e.prodFin)):'sin fecha'))):'';
+    return '<tr'+(it.on?'':' style="color:var(--ink3)"')+'><td><input type="checkbox" '+(it.on?'checked':'')+' onchange="v2SalSel(\''+q+'\',this.checked)" style="width:18px;height:18px;accent-color:#FD9C10" aria-label="Incluir"></td>'
+      +'<td><b>'+esc4(c?it.nombre:(e.derrame||e.ordenId)+' · '+(e.proj||''))+'</b><br><span class="v2-mut" style="font-size:13px">'+esc4(c?it.proj:(e.cliente||'Por asignar')+' · '+(e.mfg==='Singsun'?'tracker':'shelter')+((+e.qty||1)>1?' × '+e.qty:''))+'</span></td>'
+      +'<td style="font-size:13px">'+esc4(fech)+'</td>'
+      +'<td>'+(main?'<input class="v2-cell ed" style="width:56px;display:inline-block" value="'+(Math.round(it[main]*10)/10)+'" onchange="v2SalCont(\''+q+'\',\''+main+'\',this.value)" aria-label="Contenedores"> <span class="v2-mut" style="font-size:13px">'+unid+'</span>':'—')+'</td>'
+      +'<td class="r">'+(it.ant>0.5?n(it.ant):'—')+'</td><td class="r">'+(it.comp>0.5?n(it.comp):'—')+'</td><td class="r '+(it.venc>0.5?'neg':'')+'">'+(it.venc>0.5?n(it.venc):'—')+'</td>'
+      +'<td class="r '+(it.flete===null?'neg':'')+'">'+(it.flete===null?'falta':(it.flete>0.5?n(it.flete):'—'))+'</td><td class="r">'+(it.adu>0.5?n(it.adu):'—')+'</td><td class="r">'+(it.tr>0.5?mM(it.tr):'—')+'</td><td class="r"><b>'+n(it.total)+'</b></td></tr>'; };
+  const tabla='<section class="v2-card" style="margin-bottom:14px"><div class="v2-sec"><h3>Qué cuesta que salga y llegue cada equipo</h3><span class="v2-mut" style="font-size:13px">US$ · transporte en COP</span><span class="v2-sp"></span>'
+      +'<span class="v2-lbl">Flete por contenedor</span>'+tar('f20','20GP')+tar('f40','40HQ')+tar('fFR','Flat rack')+'</div>'
+    +'<div class="v2-wrap"><table class="v2-t" style="min-width:1250px"><thead><tr><th></th><th>Equipo</th><th>Fechas</th><th>Contenedores</th><th class="r">Anticipo</th><th class="r">Componentes</th><th class="r">Vencido</th><th class="r">Flete</th><th class="r">Aduana</th><th class="r">Transp. COP</th><th class="r">Total US$</th></tr></thead><tbody>'
+    +grupos.map(([g,t])=>{ const l=its.filter(x=>x.g===g); if(!l.length) return ''; const tg=l.filter(x=>x.on).reduce((a,x)=>a+x.total,0), todos=l.every(x=>x.on);
+      return '<tr class="grp"><td><input type="checkbox" '+(todos?'checked':'')+' onchange="v2SalGrupo(\''+g+'\',this.checked)" style="width:18px;height:18px;accent-color:#FD9C10" aria-label="Todo el grupo"></td><td colspan="9">'+t+' <span class="v2-mut" style="font-weight:400">· '+l.length+'</span></td><td class="r">'+n(tg)+'</td></tr>'+l.map(fila).join(''); }).join('')
+    +'<tr class="tot"><td></td><td colspan="2">Total marcado</td><td style="font-size:13px">'+esc4(ctxt)+'</td><td class="r">'+n(S(x=>x.ant))+'</td><td class="r">'+n(S(x=>x.comp))+'</td><td class="r">'+n(S(x=>x.venc))+'</td><td class="r '+(falta?'neg':'')+'">'+(falta?'falta':n(fl))+'</td><td class="r">'+n(adu)+'</td><td class="r">'+mM(tr)+'</td><td class="r">'+n(S(x=>x.total))+'</td></tr>'
+    +'</tbody></table></div></section>';
+  /* cuándo se paga */
+  const W=_v2Semanas(), semI=Math.max(0,Math.min(W.length-1,+SALIDAS.sem||0)), lab=i=>i===0?'Esta semana':'Semana '+_p14F(W[i]);
+  const quien=[...new Set(on.filter(x=>x.china>0.5).map(x=>x.g==='venc'?(/Nexus/.test(x.nombre)?'Nexus':'Eaglerise'):(x.e.mfg==='Singsun'?(x.comp>0.5&&x.ant<0.5?'Componentes':'Nexus'):'Eaglerise')))].join(', ');
+  const lleg={}; on.filter(x=>x.c20+x.c40+x.cfr>0).forEach(x=>{ const d=x.llega?_p14Lun(x.llega):null, k=d?_p14Iso(d):'zz'; const o=(lleg[k]=lleg[k]||{d,nom:new Set(),usd:0,cop:0,falta:false}); o.nom.add(x.e?_v2Base(x.e):x.nombre); o.usd+=x.adu+(x.flete||0); o.cop+=x.tr; if(x.flete===null) o.falta=true; });
+  const filasA=[{c:lab(semI),q:'Anticipos · componentes · vencidos',w:quien,u:china,cop:0},{c:'Antes del '+_p14F(M.f),q:'Magnum · estado de cuenta · '+M.dias+' d',w:'Magnum',u:0,cop:mg}]
+    .concat(Object.keys(lleg).sort().map(k=>{ const o=lleg[k]; return {c:o.d?'Semana '+_p14F(o.d):'Por confirmar',q:'Llega '+[...o.nom].join(', ')+' · aduana'+(o.falta?' · flete: falta tarifa':' · flete'),w:'Magnum · transportador',u:o.usd,cop:o.cop}; }));
+  const cuando='<section class="v2-card grow"><div class="v2-sec"><h3>Cuándo se paga</h3><span class="v2-mut" style="font-size:13px">selección actual</span><span class="v2-sp"></span>'
+      +'<label class="v2-fld" style="flex-direction:row;align-items:center;gap:6px">Semana de pago a China<select class="v2-in" onchange="v2SalSet(\'sem\',this.value)">'+W.map((w,i)=>'<option value="'+i+'"'+(i===semI?' selected':'')+'>'+lab(i)+'</option>').join('')+'</select></label></div>'
+    +'<div class="v2-wrap"><table class="v2-t"><thead><tr><th>Cuándo</th><th>Qué</th><th>A quién</th><th class="r">US$</th><th class="r">COP</th></tr></thead><tbody>'
+    +filasA.map(r=>'<tr><td><b>'+esc4(r.c)+'</b></td><td>'+esc4(r.q)+'</td><td class="v2-mut">'+esc4(r.w)+'</td><td class="r"><b>'+(r.u>0.5?n(r.u):'—')+'</b></td><td class="r"><b>'+(r.cop>0.5?mM(r.cop):'—')+'</b></td></tr>').join('')+'</tbody></table></div>'
+    +'<div style="display:flex;flex-wrap:wrap;gap:8px;padding:10px 14px;font-size:13px"><span class="v2-lbl" style="align-self:center">Crédito Sinosure</span><span class="v2-chip">Shelters · 80 % · BL + '+((CONFIG.Eaglerise&&CONFIG.Eaglerise.dias)||60)+' d</span><span class="v2-chip">Trackers · 90 % · BL + '+((CONFIG.Singsun&&CONFIG.Singsun.dias)||90)+' d</span></div></section>';
+  /* pedir a Sole */
+  _v2PlanesBase(); const pc=(cliA&&_v2Plan('cobro:'+cliA))||(cliA?null:PLANES.planes.find(p=>p.dir==='cobro')), f=SALIDAS.margen?1.07:1;
+  const cmpV=pc?(_v2Ver(pc,SALIDAS.comparar||pc.activa||'a')||_v2Ver(pc,'a')):null, isoS=_p14Iso(W[semI]);
+  const pCh=cmpV?_v2Suma(cmpV.lineas,isoS,'china'):0, pMg=cmpV?_v2Suma(cmpV.lineas,isoS,'magnum'):0, pLib=cmpV?_v2Suma(cmpV.lineas,isoS,''):0;
+  const dif=(a,b,cop)=>{ const d=a-b; return '<span class="'+(d>=0?'v2-ok':'v2-mal')+'"><b>'+(d>=0?'sobran ':'faltan ')+(cop?mM(Math.abs(d)):n(Math.abs(d)))+'</b></span>'; };
+  const sole='<aside class="side v2-card" style="padding:18px;border:2px solid var(--ink);display:flex;flex-direction:column;gap:12px"><p class="v2-lbl">Pedir a '+esc4(pc?pc.cp:'Sole')+'</p>'
+    +'<dl style="display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px 12px;margin:0;font-size:14px">'
+      +'<dt>'+esc4(lab(semI))+' · China</dt><dd class="v2-num" style="font-size:17px;font-weight:700;margin:0">US$ '+n(china*f)+'</dd>'
+      +'<dt>Antes del '+_p14F(M.f)+' · Magnum</dt><dd class="v2-num" style="font-size:17px;font-weight:700;margin:0">COP '+mM(mg*f)+'</dd>'
+      +'<dt>Al llegar · aduana y flete</dt><dd class="v2-num" style="font-size:17px;font-weight:700;margin:0">US$ '+n((adu+fl)*f)+(falta?' + flete':'')+'</dd>'
+      +'<dt>Al llegar · transporte</dt><dd class="v2-num" style="font-size:17px;font-weight:700;margin:0">COP '+mM(tr*f)+'</dd></dl>'
+    +'<label style="display:flex;align-items:center;gap:8px;font-size:14px"><input type="checkbox" '+(SALIDAS.margen?'checked':'')+' onchange="v2SalSet(\'margen\',this.checked)" style="width:18px;height:18px;accent-color:#FD9C10"> Margen 7 %</label>'
+    +(cmpV?'<label class="v2-fld">Comparar con<select class="v2-in" onchange="v2SalSet(\'comparar\',this.value)">'+_v2Vers(pc).map(x=>'<option value="'+x.id+'"'+(x.id===cmpV.id?' selected':'')+'>'+x.id+' · '+esc4(x.nombre||'')+(x.id===(pc.activa||'a')?' · activa':'')+'</option>').join('')+'</select></label>'
+      +'<dl style="display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px 12px;margin:0;font-size:14px"><dt class="v2-mut">China · plan US$ '+n(pCh)+'</dt><dd style="margin:0">'+dif(pCh,china*f)+'</dd>'
+        +'<dt class="v2-mut">Magnum · plan COP '+mM(pMg*T)+'</dt><dd style="margin:0">'+dif(pMg*T,mg*f,true)+'</dd>'
+        +(pLib>0.5?'<dt class="v2-mut">Sin destino · plan</dt><dd class="v2-num" style="margin:0">US$ '+n(pLib)+'</dd>':'')
+        +'<dt class="v2-mut">Logística al llegar · fuera del plan</dt><dd class="v2-num v2-mal" style="margin:0"><b>US$ '+n((adu+fl)*f)+' + COP '+mM(tr*f)+'</b></dd></dl>':'')
+    +'<button class="v2-b neg" onclick="v2SalCopiar()">Copiar tabla para '+esc4(pc?pc.cp:'Sole')+'</button>'
+    +(pc?'<button class="v2-b" onclick="v2SalAPlan()">Llevar a Planes (borrador)</button>':'')+'</aside>';
+  /* Magnum y datos por confirmar */
+  const mag='<section class="v2-card" style="padding:16px;margin-top:14px"><div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center"><h3 style="margin:0;font-size:17px">Magnum</h3><span class="v2-mut" style="font-size:13px">'+(CXP.magnum?'estado de cuenta del '+_p14F(_p14D(CXP.magnum.corte)):'sin cargar')+'</span><span class="v2-sp"></span>'
+      +'<label class="v2-fld" style="flex-direction:row;align-items:center;gap:6px">Al<input type="date" class="v2-in" value="'+_p14Iso(M.f)+'" onchange="v2SalSet(\'magFecha\',this.value)"></label>'
+      +'<label class="v2-fld" style="flex-direction:row;align-items:center;gap:6px">ninguna con<input class="v2-in v2-num" style="width:64px;text-align:right" value="'+M.dias+'" onchange="v2SalSet(\'magDias\',this.value)">días o más</label>'
+      +'<label style="display:flex;align-items:center;gap:6px;font-size:14px"><input type="checkbox" '+(SALIDAS.magSeguro?'checked':'')+' onchange="v2SalSet(\'magSeguro\',this.checked)" style="width:18px;height:18px;accent-color:#FD9C10"> + las que quedan a 5 días ('+M.nCasi+' · COP '+mM(M.copCasi)+')</label></div>'
+    +'<div style="font-size:15px;margin-top:8px"><b>COP '+mM(mg)+'</b> <span class="v2-mut">· '+(M.n+(SALIDAS.magSeguro?M.nCasi:0))+' facturas · US$ '+n(mg/T)+'</span></div></section>';
+  const conf=[];
+  if(falta) conf.push(['Tarifa de flete por contenedor','falta','mal']);
+  const est=on.filter(x=>x.e&&x.g!=='venc'&&(x.c20+x.c40+x.cfr)>0&&x.est).map(x=>_v2Base(x.e)); if(est.length) conf.push(['Llegada estimada (ETD + 35 d) · '+[...new Set(est)].slice(0,6).join(', '),'por confirmar','ya']);
+  const nc=_v2Conciliacion().length; if(nc) conf.push(['Diferencias con Andrés · '+nc,'ver Tablero','ya']);
+  const datos='<section class="v2-card" style="padding:16px;margin-top:14px"><p class="v2-lbl">Datos por confirmar</p><div class="v2-list" style="margin-top:8px">'+(conf.length?conf.map(x=>'<div class="it"><span>'+esc4(x[0])+'</span><span class="v2-chip '+x[2]+'">'+esc4(x[1])+'</span></div>').join(''):'<div class="v2-mut">—</div>')+'</div></section>';
+  const clis=[...new Set(EQ.map(e=>e.cliente||'Por asignar'))].sort();
+  const selCli='<label class="v2-fld" style="flex-direction:row;align-items:center;gap:6px">Cliente<select class="v2-in" onchange="v2SalSet(\'cli\',this.value)"><option value="*"'+(cliA?'':' selected')+'>Todos</option>'+clis.map(c=>'<option'+(c===cliA?' selected':'')+'>'+esc4(c)+'</option>').join('')+'</select></label>';
+  v.innerHTML=top+selCli+'<span class="v2-sp"></span><span class="v2-mut" style="font-size:14px">TRM '+n(T)+'</span></div>'+kpis+tabla+'<div class="v2-row">'+cuando+sole+'</div>'+mag+datos;
+}
+function _v2SalListo(){ guardar4(); renderSalidas(); }
+function v2SalSel(k,on){ SALIDAS.sel[k]=!!on; _v2SalListo(); }
+function v2SalGrupo(g,on){ _v2SalItems().filter(x=>x.g===g).forEach(x=>{ SALIDAS.sel[x.k]=!!on; }); _v2SalListo(); }
+function v2SalCont(k,campo,v){ const n=_ecNum(v,0); const o=SALIDAS.cont[k]=SALIDAS.cont[k]||{}; if(n==null) delete o[campo]; else o[campo]=Math.max(0,n); if(!Object.keys(o).length) delete SALIDAS.cont[k]; _v2SalListo(); }
+function v2SalSet(campo,v){ if(campo==='magDias'){ const n=parseInt(v,10); SALIDAS.magDias=isFinite(n)?n:null; } else if(campo==='sem') SALIDAS.sem=+v||0; else SALIDAS[campo]=v; _v2SalListo(); }
+function _v2SalResumen(){
+  const its=_v2SalItems().map(it=>Object.assign(it,_v2SalCalc(it),{on:_v2SalOn(it)})).filter(x=>x.on), M=_v2SalMag(), f=SALIDAS.margen?1.07:1, S=g=>its.reduce((a,x)=>a+(g(x)||0),0);
+  return {china:S(x=>x.china)*f,mag:(M.cop+(SALIDAS.magSeguro?M.copCasi:0))*f,log:(S(x=>x.adu)+S(x=>x.flete))*f,tr:S(x=>x.tr)*f,falta:its.some(x=>x.falta),its,M};
+}
+function v2SalCopiar(){
+  const R=_v2SalResumen(), W=_v2Semanas(), i=+SALIDAS.sem||0, n=fmtUSDs, mM=x=>Math.round(x).toLocaleString('en-US');
+  const L=[['Concepto','Equipos','US$','COP'].join('\t'),['China · '+(i===0?'esta semana':'semana del '+_p14F(W[i])),R.its.filter(x=>x.china>0.5).map(x=>x.e?_v2Base(x.e):x.nombre).filter((x,j,a)=>a.indexOf(x)===j).join(', '),n(R.china),''].join('\t'),
+    ['Magnum · antes del '+_p14F(R.M.f),'','',mM(R.mag)].join('\t'),['Aduana y flete al llegar','',n(R.log)+(R.falta?' + flete':''),''].join('\t'),['Transporte terrestre','','',mM(R.tr)].join('\t')];
+  _v2Copiar(L.join('\n'),'Tabla copiada'); return L.join('\n');
+}
+function v2SalAPlan(){
+  _v2PlanesBase(); const ca=_v2SalCli(), p=(ca&&_v2Plan('cobro:'+ca))||PLANES.planes.find(x=>x.dir==='cobro'); if(!p) return; const R=_v2SalResumen(), W=_v2Semanas(), i=+SALIDAS.sem||0, iso=_p14Iso(W[i]), T=_p14Trm();
+  const v={id:_v2SigId(p),nombre:'Pedido para salidas · '+_p14F(W[i]),fecha:_p14Iso(TODAY),origen:'Zentrack',estado:'borrador',lineas:[]};
+  if(R.china>0.5) v.lineas.push({sem:iso,fecha:iso,monto:Math.round(R.china*100)/100,dest:'china'});
+  if(R.mag>0.5){ const mi=_p14Iso(_p14Lun(R.M.f)); v.lineas.push({sem:mi,fecha:mi,monto:Math.round(R.mag/T*100)/100,dest:'magnum'}); }
+  const lleg={}; R.its.filter(x=>x.adu+(x.flete||0)+x.tr>0.5).forEach(x=>{ const d=x.llega?_p14Iso(_p14Lun(x.llega)):''; lleg[d]=(lleg[d]||0)+x.adu+(x.flete||0)+x.tr/T; });
+  Object.keys(lleg).forEach(d=>v.lineas.push({sem:d,fecha:d,monto:Math.round(lleg[d]*(SALIDAS.margen?1.07:1)*100)/100,dest:'nac'}));
+  p.versiones=p.versiones||[]; p.versiones.push(v); V3.vista='cp'; V3.cp=p.id; V3.ver=v.id; V3.sel=null; guardar4(); toast('Versión '+v.id+' creada en el plan de '+esc4(p.cp)); navTo('planes'); return v;
+}
+const _serAntes22=serializeState;
+serializeState=function(){ const o=JSON.parse(_serAntes22.apply(this,arguments)); o.SALIDAS=SALIDAS; return JSON.stringify(o); };
+const _appAntes22=applyState;
+applyState=function(s){ _appAntes22.apply(this,arguments); SALIDAS=Object.assign({sel:{},cont:{},magFecha:'',magDias:null,magSeguro:false,margen:false,comparar:'',sem:1,cli:''},(s&&s.SALIDAS)||{}); };
+</script>

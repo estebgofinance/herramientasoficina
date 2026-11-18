@@ -504,7 +504,8 @@ const tx=(x,y,s,fill,fs,fw,op)=>{const e=mk('text',{x,y,fill,'font-size':fs,'fon
 function tip(el,html){const t=document.getElementById('tip');el.addEventListener('mousemove',e=>{t.innerHTML=html;t.style.left=Math.min(e.clientX+12,innerWidth-260)+'px';t.style.top=(e.clientY+12)+'px';t.style.opacity=1;});el.addEventListener('mouseleave',()=>t.style.opacity=0);}
 function clip(s,w){const m=Math.floor((w-14)/6.3);return s.length>m?s.slice(0,Math.max(1,m-1))+'…':s;}
 const RAMP={confirm:'#B9BEC4',prod:'#8A9099',finished:'#5E646C',booked:'#474D55',shipping:'#333940',shipped:'#23272C'};
-const isOver=e=>isShipped(e)&&!e.balPaid&&e.vence&&e.vence<TODAY;
+/* un pedido que el cliente le paga directo al fabricante (v1.7) no es deuda vencida tuya */
+const isOver=e=>isShipped(e)&&!e.balPaid&&e.vence&&e.vence<TODAY&&!(typeof esDirecto==='function'&&esDirecto(e));
 function eqColor(e){return isOver(e)?'#B3261E':RAMP[e.st];}
 function eqTextDark(e){return !isOver(e)&&(e.st==='confirm'||e.st==='prod');}
 
@@ -691,7 +692,6 @@ function openPanel(id){
       </div>
       ${body}
       <div class="pactions">
-        <button onclick="navTo('pagos');closePanel()">Registrar giro a China</button>
         
         <button class="primary" onclick="navTo('clientes');closePanel()">Ver estado de cuenta de ${o.cliente}</button>
       </div>

@@ -1,0 +1,10 @@
+/* ===== v2.9 · Excel de planes ===== */
+.z-dlg.zpx{max-width:760px}
+.zpx-b{max-height:62vh;overflow:auto;font-size:14px;line-height:1.5}
+.zpx-b h4{margin:12px 0 4px;font-size:14px}
+.zpx-b h4:first-child{margin-top:0}
+.zpx-b h4.w{color:var(--z-warn)}
+.zpx-b h4.e{color:var(--z-crit)}
+.zpx-b ul{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:4px}
+.zpx-b small{display:block;color:var(--ink3);font-size:13px}
+.zpx-sub{cursor:pointer}

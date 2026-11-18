@@ -1,0 +1,293 @@
+/* ===================================================================
+   v2.13 · Planes por cuotas
+   Esteban (17-nov-2026): "No me gusta como esta el hub de los planes de cobro, no es facil modificar ni crear
+   cuotas, solo la ventana esa de una linea por pago esta bien pensada". Respondió 1a, 2a y 3a:
+   - Planes abre en "Cuotas": a la izquierda los clientes y proveedores (Me pagan / Le pago) con lo pendiente y
+     la próxima fecha; a la derecha las cuotas del elegido, una línea cada una, editables ahí mismo (fecha,
+     concepto, moneda, monto), separadas por semana con su subtotal. Fila fija arriba para agregar (fecha,
+     concepto, monto, Enter). Marcar varias: correr o adelantar una semana, poner fecha, quitar. Abre en la
+     contraparte con la cuota pendiente más cercana. La tabla de 12 semanas queda a un clic.
+   - Cuotas en pesos: una cuota puede ir en COP (cuota.mon='COP', cuota.cop). En la Caja y en todo cálculo vale
+     cop / TRM del día (la oficial, la misma de la Caja). Los giros del plan "a" de China (PLANCHINA) siguen en US$.
+   - Mover o cambiar una cuota corrige el mismo acuerdo (no crea uno nuevo) y deja nota en plan.log =
+     [{f, v, id, n, k, de, a}]: se ve debajo de la cuota ("19-nov → 26-nov · cambiado el 17-nov") y en "Cambios".
+     Todo tiene Deshacer.
+   - Excel de planes: subirlo conserva el concepto y la moneda de las cuotas que no cambiaron, y la TRM que se movió
+     entre bajar y subir no cuenta como cambio de una cuota en pesos.
+   - Actualización preparada, paso "cuotaCop": pasa una cuota a pesos (no se repite).
+   Estado: solo agrega PLANES.planes[].log y los campos mon/cop de una cuota. Nada se renombra ni se borra.
+   =================================================================== */
+var Z213={vista:'cuotas',cp:null,marc:{},addF:null,mudo:0};
+const _z213r2=v=>Math.round((+v||0)*100)/100;
+function _z213Trm(){ let t=0; try{ t=+_p14Trm(); }catch(e){} return t>1000?t:4000; }
+function _z213Cop(v){ return Math.round(+v||0).toLocaleString('en-US'); }
+function _z213Usd(v){ v=+v||0; return Math.abs(v-Math.round(v))<0.005?Math.round(v).toLocaleString('en-US'):v.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function _z213Fd(s){ const d=s instanceof Date?s:_p14D(s); return d?_p14F(d):'—'; }
+function _z213EsCop(x){ return !!(x&&x.mon==='COP'&&+x.cop>0); }
+/* la cuota guardada (en una versión o en PROM); null si vive en PLANCHINA o en la base */
+function _z213Raw(c,vid,id){ if(!c||vid==='base') return null;
+  if(vid==='a'&&c.tipo==='Negociado') return c.dir==='c'?((PROM||[]).find(x=>x.id===id)||null):null;
+  const p=c.p||_v2Plan(c.id), v=p&&(p.versiones||[]).find(x=>x.id===vid); return v?((v.lineas||[]).find(l=>l.id===id)||null):null; }
+/* el concepto viejo era un código (china, magnum, nac): se muestra con nombre */
+const _Z213COD={china:'Giro a China',magnum:'Magnum y TIBA',nac:'Nacional'};
+function _z213Con(l){ const c=(l&&l.c)||''; return _Z213COD[c]||c; }
+/* a China se le gira en dólares */
+function _z213SoloUsd(c){ return !!c&&c.dir==='p'&&!!_V3PROV[c.prov]; }
+/* las cuotas que viven en PLANCHINA: sin concepto y solo en US$ */
+function _z213EnPC(c,vid){ return !!c&&vid==='a'&&c.tipo==='Negociado'&&c.dir==='p'; }
+
+/* ---- una cuota en pesos vale cop / TRM del día ---- */
+const _v3LinAntes213=_v3Lin;
+_v3Lin=function(c,vid){ const L=_v3LinAntes213.apply(this,arguments);
+  if(!c||vid==='base'||!L||!L.length) return L;
+  let raw;
+  if(vid==='a'&&c.tipo==='Negociado'){ if(c.dir!=='c') return L; raw=(PROM||[]).filter(x=>x.cliente===c.n); }
+  else { const p=c.p||_v2Plan(c.id), v=p&&(p.versiones||[]).find(x=>x.id===vid); raw=v?(v.lineas||[]):[]; }
+  if(!raw.some(_z213EsCop)) return L;
+  const t=_z213Trm(), M={}; raw.forEach(x=>{ if(_z213EsCop(x)) M[x.id]=x; });
+  L.forEach(l=>{ const x=M[l.id]; if(x){ l.mon='COP'; l.cop=+x.cop; l.trm=t; l.m=_z213r2(x.cop/t); } });
+  return L; };
+
+/* ---- nota de cada cambio: el mismo acuerdo, con su registro ---- */
+function _z213Log(c,o){ if(Z213.mudo||!c) return; try{ const p=_v3PlanDe(c), L=(p.log=Array.isArray(p.log)?p.log:[]);
+  L.push(Object.assign({f:_p14Iso(TODAY),ts:Date.now()},o)); if(L.length>300) L.splice(0,L.length-300); }catch(e){ console.warn('v2.13 nota',e); } }
+const _v3LinSetAntes213=_v3LinSet;
+_v3LinSet=function(c,vid,id,campo,val){
+  if(!c||vid==='base') return _v3LinSetAntes213.apply(this,arguments);
+  const antes=_v3Lin(c,vid).find(x=>x.id===id); if(!antes) return _v3LinSetAntes213.apply(this,arguments);
+  const n=antes.c||'', t=_z213Trm();
+  if(campo==='cop'||campo==='mon'){ const x=_z213Raw(c,vid,id); if(!x) return;
+    if(campo==='cop'){ const v=Math.round(+val||0); if(!(v>0)) return; const de=_z213EsCop(x)?+x.cop:null; x.mon='COP'; x.cop=v; x.monto=_z213r2(v/t);
+      if(de==null||Math.abs(de-v)>=0.5) _z213Log(c,{v:vid,id,n,k:'cop',de,a:v}); return; }
+    if(val==='COP'){ if(_z213EsCop(x)) return; x.mon='COP'; x.cop=Math.round((+x.monto||0)*t); _z213Log(c,{v:vid,id,n,k:'mon',de:'USD',a:'COP'}); return; }
+    if(!_z213EsCop(x)) return; x.monto=_z213r2(x.cop/t); delete x.mon; delete x.cop; _z213Log(c,{v:vid,id,n,k:'mon',de:'COP',a:'USD'}); return; }
+  const r=_v3LinSetAntes213.apply(this,arguments);
+  if(campo==='m'){ const x=_z213Raw(c,vid,id); if(_z213EsCop(x)) x.cop=Math.round((+val||0)*t); }
+  const nid=(_z213EnPC(c,vid)&&campo==='f'&&val)?'pc|'+val+'|'+c.prov:id;
+  if(campo==='f'&&val&&val!==antes.f) _z213Log(c,{v:vid,id:nid,n,k:'f',de:antes.f,a:val});
+  else if(campo==='m'&&Math.abs((+antes.m||0)-(+val||0))>=0.005) _z213Log(c,{v:vid,id,n,k:'m',de:_z213r2(antes.m),a:_z213r2(val)});
+  else if(campo==='c'&&(antes.c||'')!==(val||'')) _z213Log(c,{v:vid,id,n:val||'',k:'c',de:antes.c||'',a:val||''});
+  return r; };
+const _v3LinAddAntes213=_v3LinAdd;
+_v3LinAdd=function(c,vid,f,m,dest){ const id=_v3LinAddAntes213.apply(this,arguments);
+  if(id&&c&&vid!=='base') _z213Log(c,{v:vid,id,n:dest||'',k:'add',a:{f,m:_z213r2(m)}}); return id; };
+const _v3LinDelAntes213=_v3LinDel;
+_v3LinDel=function(c,vid,id){ const antes=c&&vid!=='base'?_v3Lin(c,vid).find(x=>x.id===id):null;
+  const r=_v3LinDelAntes213.apply(this,arguments);
+  if(antes) _z213Log(c,{v:vid,id,n:antes.c||'',k:'del',de:{f:antes.f,m:_z213r2(antes.m),cop:antes.cop||null}}); return r; };
+function _z213Txt(e){ const din=(m,cop)=>cop?'COP '+_z213Cop(cop):_z26m(+m||0);
+  if(e.k==='f') return _z213Fd(e.de)+' → '+_z213Fd(e.a);
+  if(e.k==='m') return _z26m(+e.de)+' → '+_z26m(+e.a);
+  if(e.k==='cop') return (e.de!=null?'COP '+_z213Cop(e.de):'')+' → COP '+_z213Cop(e.a);
+  if(e.k==='mon') return e.a==='COP'?'pasó a pesos':'pasó a dólares';
+  if(e.k==='c') return '"'+(e.de||'—')+'" → "'+(e.a||'—')+'"';
+  if(e.k==='add') return 'cuota nueva · '+_z213Fd(e.a&&e.a.f)+(e.a&&(e.a.m||e.a.cop)?' · '+din(e.a.m,e.a.cop):'');
+  if(e.k==='del') return 'quitada · '+_z213Fd(e.de&&e.de.f)+' · '+din(e.de&&e.de.m,e.de&&e.de.cop);
+  return ''; }
+
+/* ---- la lista de la izquierda ---- */
+function _z213Res(c){ const V=_z27Vista(c), china=c.dir==='p'&&!!_V3PROV[c.prov], sinP=china?(+c.sinPlan||0):0;
+  const pend=V.L.filter(x=>x.e.pend>0.5), prox=pend.slice().sort((a,b)=>_v3PorF(a.l,b.l))[0]||null;
+  const venc=pend.filter(x=>x.e.past), sem=pend.filter(x=>!x.e.past&&x.e.w===0);
+  let k=V.edit?'ok':'idle'; if((V.edit&&venc.length)||sinP>0.5) k='crit'; else if(sem.length) k='warn';
+  let sub;
+  if(!c.enCaja) sub='fuera de la Caja';
+  else if(sinP>0.5&&!pend.length) sub='sin acuerdo · vencido '+_z26m(sinP);
+  else if(prox) sub=(prox.e.past?'vencida desde el ':'próxima ')+_z213Fd(prox.l.f)+(V.edit?'':' · automático');
+  else if(V.L.length) sub='todo al día';
+  else sub=V.edit?'sin cuotas':(c.tipo==='Negociado'?'sin acuerdo':'nada programado');
+  return {V,china,sinP,pend:V.pend,prox,venc,sem,k,sub}; }
+function _z213Elegir(C,R){ if(Z213.cp&&C.some(c=>c.id===Z213.cp)) return Z213.cp;
+  let best=null; C.forEach(c=>{ const r=R[c.id]; if(!r||!r.V.edit||!r.prox) return; if(!best||_v3PorF(r.prox.l,best.prox.l)<0) best={id:c.id,prox:r.prox}; });
+  if(best) return best.id; const s=C.find(c=>R[c.id]&&R[c.id].sinP>0.5); return s?s.id:(C[0]?C[0].id:null); }
+function _z213CpsHTML(C,R,sel){ let h='';
+  [['c','Me pagan'],['p','Le pago']].forEach(([d,t])=>{ const L=C.filter(c=>c.dir===d); if(!L.length) return; h+='<div class="z13-g">'+t+'</div>';
+    L.forEach(c=>{ const r=R[c.id], m=r.pend>0.5?r.pend:(r.sinP>0.5?r.sinP:0);
+      h+='<button type="button" class="z13-cp'+(c.id===sel?' on':'')+'" data-h="cp" data-cp="'+esc4(c.id)+'"'+(c.id===sel?' aria-current="true"':'')+'>'
+        +'<span class="z13-dot '+r.k+'" aria-hidden="true"></span><b>'+esc4(c.n)+'</b><span class="n">'+(m>0.5?_z26m(m):'—')+'</span><small>'+esc4(r.sub)+'</small></button>'; }); });
+  return '<nav class="z13-cps" aria-label="Clientes y proveedores">'+h+'</nav>'; }
+
+/* ---- las cuotas del elegido ---- */
+function _z213Ult(p,vid){ const o={}; ((p&&p.log)||[]).forEach(e=>{ if(e.v===vid&&(e.k==='f'||e.k==='m'||e.k==='cop')) o[e.id]=e; }); return o; }
+function _z213DetHTML(c,r){
+  const cobro=c.dir==='c', V=r.V, edit=V.edit, cid=esc4(c.id), pc=_z213EnPC(c,c.act), su=_z213SoloUsd(c), p=c.p||_v2Plan(c.id);
+  const vAct=_v3Vers(c).find(v=>v.id===c.act)||{t:c.act}, nomV=(''+vAct.t).replace(/^[a-z0-9]+ · /i,'');
+  let est;
+  if(!c.enCaja) est=_z26tag('idle','Fuera de la Caja');
+  else if(!edit) est=_z26tag(c.tipo==='Negociado'?'crit':'idle',c.tipo==='Negociado'?'Sin acuerdo':'Automático · '+(c.baseT||''));
+  else if(r.china&&!V.L.length) est=_z26tag('crit','Sin acuerdo');
+  else est=_z26tag('idle',nomV);
+  const kp=[];
+  if(cobro){ const t=ecTotales(c.n)||{}; kp.push('Te debe <b>'+_z26m(t.saldo||0)+'</b>'); kp.push('vencido <b>'+_z26m(t.vencido||0)+'</b>'); }
+  else if(r.china){ const D=c.deudas||[]; kp.push('Le debes <b>'+_z26m(D.reduce((a,x)=>a+x.m,0))+'</b> según Andrés'); if(r.sinP>0.5) kp.push('<span class="z13-crit">vencido sin acuerdo <b>'+_z26m(r.sinP)+'</b></span>'); }
+  else if(c.baseT) kp.push(esc4(c.baseT));
+  kp.push((edit?'En el acuerdo ':'Programado ')+'<b>'+_z26m(V.tot)+'</b>'); if(edit) kp.push('Pendiente <b>'+_z26m(V.pend)+'</b>');
+  const pastPend=V.L.some(x=>x.e.past&&x.e.pend>0.5);
+  const btn=edit?'<button type="button" class="z-btn sm" data-y="gen" data-cp="'+cid+'" data-m="'+(cobro&&pastPend?'reprog':'reneg')+'">Acuerdo nuevo</button>'
+    :(c.tipo==='Negociado'?'<button type="button" class="z-btn sm pri" data-y="gen" data-cp="'+cid+'" data-m="armar">Armar acuerdo</button>':'<button type="button" class="z-btn sm" data-h="propio">Hacer plan propio</button>');
+  let h='<div class="z13-dh"><div class="rw"><h3>'+esc4(c.n)+'</h3>'+_z26tag(cobro?'ok':'info',cobro?'Me paga':'Le pago')+est+'<span class="z-sp"></span>'+btn
+    +'<button type="button" class="z-btn sm" data-h="dr">Historial y más</button></div><div class="z13-kp">'+kp.map(x=>'<span>'+x+'</span>').join('')+'</div>'
+    +(edit?'':'<p class="z13-auto">'+(c.tipo==='Negociado'?'Sin acuerdo: la Caja no cuenta estos pagos hasta que armes uno.':'Sale de su estado de cuenta y de la regla. Para cambiar fechas o montos, hazlo plan propio.')+'</p>')+'</div>';
+  if(edit){ let f0=Z213.addF&&Z213.addF.cp===c.id?Z213.addF.f:_p14Iso(addD(TODAY,7));
+    if(_p14D(f0)<TODAY) f0=_p14Iso(TODAY);
+    h+='<form class="z13-add" data-h="add" autocomplete="off"><input class="z-in" type="date" data-a="f" value="'+esc4(f0)+'" aria-label="Fecha de la cuota nueva">'
+      +'<input class="z-in z13-con" type="text" data-a="c" placeholder="'+(pc?'Giro a China':'Concepto (Trackers, Shelters…)')+'"'+(pc?' disabled':'')+' aria-label="Concepto de la cuota nueva">'
+      +'<span class="z13-mon">'+(su?'<span class="z13-usd">USD</span>':'<select class="z-in" data-a="mon" aria-label="Moneda de la cuota nueva"><option>USD</option><option>COP</option></select>')
+      +'<input class="z-in n z13-mo" type="text" data-a="m" placeholder="Monto" inputmode="decimal" aria-label="Monto de la cuota nueva"></span>'
+      +'<button class="z-btn pri" type="submit">Agregar cuota</button></form>'; }
+  const marc=Object.keys(Z213.marc).filter(id=>V.L.some(x=>x.l.id===id));
+  if(edit&&marc.length) h+='<div class="z13-bulk" role="group" aria-label="Cuotas marcadas"><b>'+marc.length+' marcada'+(marc.length===1?'':'s')+'</b>'
+    +'<button type="button" class="z-btn sm" data-h="b" data-b="c7">Correr 1 semana</button><button type="button" class="z-btn sm" data-h="b" data-b="c-7">Adelantar 1 semana</button>'
+    +'<label>Poner fecha <input class="z-in" type="date" data-h="bF" aria-label="Fecha para las marcadas"></label>'
+    +'<button type="button" class="z-btn sm" data-h="b" data-b="del">Quitar</button><button type="button" class="z-btn sm q" data-h="b" data-b="none">Desmarcar</button></div>';
+  const ult=_z213Ult(p,c.act), Ls=V.L.slice().sort((a,b)=>_v3PorF(a.l,b.l)||(a.l.id<b.l.id?-1:1));
+  const todos=edit&&Ls.length&&Ls.every(x=>Z213.marc[x.l.id]);
+  let b='', wk=null;
+  Ls.forEach(x=>{ let e=x.e; const l=x.l, id=esc4(l.id), d=_p14D(l.f), w=d?_p14Iso(_p14Lun(d)):'';
+    if(w!==wk){ wk=w; const S=Ls.filter(y=>{ const dy=_p14D(y.l.f); return (dy?_p14Iso(_p14Lun(dy)):'')===w; }).reduce((a,y)=>a+y.l.m,0), i=w?_v3Wk(w):null;
+      b+='<tr class="wk"><td></td><td colspan="3">'+(w?'Semana del '+_z213Fd(w)+(i===0?' · esta semana':(i<0?' · ya pasó':'')):'Sin fecha')+'</td><td class="n">'+_z26m(S)+'</td><td colspan="2"></td></tr>'; }
+    const done=edit&&e.pend<=0.5, cop=l.mon==='COP', u=ult[l.id];
+    if(!edit) e=e.past?{k:'crit',t:'Vencida',pag:0,pend:l.m}:(e.w===0?{k:'info',t:'Esta semana',pag:0,pend:l.m}:{k:'idle',t:'Programada',pag:0,pend:l.m});
+    const nota=u?'<span class="z13-nota">'+esc4(_z213Txt(u))+' · cambiado el '+esc4(_z213Fd(u.f))+'</span>':'';
+    const acc=_z213Acc(c,l,e,done,edit);
+    b+='<tr class="'+(done?'done':'')+(Z213.marc[l.id]?' sel':'')+'" data-id="'+id+'">'
+      +'<td class="ck">'+(edit?'<input type="checkbox" data-h="mk" data-id="'+id+'"'+(Z213.marc[l.id]?' checked':'')+' aria-label="Marcar la cuota del '+esc4(_z213Fd(l.f))+'">':'')+'</td>'
+      +'<td>'+(edit?'<input class="z-in" type="date" data-h="f" data-id="'+id+'" value="'+esc4(l.f)+'" aria-label="Fecha">':esc4(_z213Fd(l.f)))+'</td>'
+      +'<td class="z13-c">'+(edit&&!pc?'<input class="z-in z13-con" type="text" data-h="c" data-id="'+id+'" value="'+esc4(_z213Con(l))+'" placeholder="Concepto" aria-label="Concepto">':esc4(pc?'Giro a China':(_z213Con(l)||'—')))+nota+'</td>'
+      +'<td class="n">'+(edit?'<span class="z13-mon">'+(su&&!cop?'<span class="z13-usd">USD</span>':'<select class="z-in" data-h="mon" data-id="'+id+'" aria-label="Moneda"><option'+(cop?'':' selected')+'>USD</option><option'+(cop?' selected':'')+'>COP</option></select>')
+        +'<input class="z-in n z13-mo" type="text" data-h="m" data-id="'+id+'" value="'+(cop?_z213Cop(l.cop):_z213Usd(l.m))+'" inputmode="decimal" aria-label="Monto en '+(cop?'pesos':'dólares')+'"></span>':(cop?'COP '+_z213Cop(l.cop):''))+'</td>'
+      +'<td class="n"><b>'+_z26m(l.m)+'</b>'+(cop?'<span class="z13-nota">TRM '+_z213Usd(l.trm)+'</span>':'')+'</td>'
+      +'<td class="z13-e">'+_z26tag(e.k,e.t)+(e.pag>0.5&&!done?'<span class="z13-nota">'+(cobro?'abonado ':'pagado ')+_z26m(e.pag)+'</span>':'')+'</td>'
+      +'<td class="n"><span class="z-acc">'+acc+'</span></td></tr>';
+    if(Z27.pg&&Z27.pg.cp===c.id&&Z27.pg.id===l.id) b+='<tr class="z-regr"><td colspan="7">'+_z27RegHTML(c,l,e)+'</td></tr>'; });
+  if(!Ls.length) b='<tr><td colspan="7" class="z13-vacio">'+(edit?'Sin cuotas. Agrégalas arriba: fecha, concepto, monto y Enter.':'Nada programado.')+'</td></tr>';
+  h+='<div class="z-wrap"><table class="z-t z13-t"><thead><tr><th class="ck">'+(edit&&Ls.length?'<input type="checkbox" data-h="all"'+(todos?' checked':'')+' aria-label="Marcar todas">':'')+'</th>'
+    +'<th>Fecha</th><th>Concepto</th><th class="n">Monto</th><th class="n">US$</th><th>Estado</th><th></th></tr></thead><tbody>'+b+'</tbody></table></div>';
+  const lg=((p&&p.log)||[]).filter(e=>e.v===c.act).slice().reverse();
+  h+='<div class="z13-f"><span>'+(edit?'Total del acuerdo':'Total')+' <b>'+_z26m(V.tot)+'</b>'+(edit?' · pendiente <b>'+_z26m(V.pend)+'</b>':'')+'</span><span class="z-sp"></span>'
+    +(edit?'<span>Se guarda solo · todo tiene Deshacer</span>':'')+'</div>';
+  if(lg.length) h+='<details class="z13-log"><summary>Cambios ('+lg.length+')</summary><div class="z-wrap"><table class="z-t"><thead><tr><th>Cuándo</th><th>Cuota</th><th>Qué cambió</th></tr></thead><tbody>'
+    +lg.slice(0,60).map(e=>'<tr><td>'+esc4(_z213Fd(e.f))+'</td><td>'+esc4(_Z213COD[e.n]||e.n||(pc?'Giro a China':'—'))+'</td><td>'+esc4(_z213Txt(e))+'</td></tr>').join('')+'</tbody></table></div></details>';
+  return h; }
+/* acciones de una cuota (la v2.13.1 suma Cobrado / Pagado / Desmarcar) */
+function _z213Acc(c,l,e,done,edit){ const id=esc4(l.id); if(!edit) return '';
+  return (!done?'<button type="button" class="z-btn sm q" data-h="correr" data-id="'+id+'" title="Una semana más tarde">Correr</button>':'')
+    +'<button type="button" class="z-btn sm q z13-x" data-h="del" data-id="'+id+'" aria-label="Quitar la cuota del '+esc4(_z213Fd(l.f))+'">✕</button>'; }
+function _z213Seg(){ const on=v=>Z213.vista===v?' class="on" aria-pressed="true"':' aria-pressed="false"';
+  return '<div class="z-seg z13-seg" role="group" aria-label="Vista de Planes"><button type="button" data-h="vista" data-v="cuotas"'+on('cuotas')+'>Cuotas</button><button type="button" data-h="vista" data-v="12"'+on('12')+'>12 semanas</button></div>'; }
+function _z213HTML(){ const M=_v3Fichas(), C=M.C, R={}; C.forEach(c=>{ R[c.id]=_z213Res(c); });
+  const sel=_z213Elegir(C,R); Z213.cp=sel; const c=C.find(x=>x.id===sel);
+  const head='<div class="z-ph"><h2>Planes</h2>'+_z213Seg()+'<span class="z-sp"></span><button type="button" class="z-btn" onclick="zpxDescargar()">Descargar Excel</button>'
+    +'<label class="z-btn zpx-sub">Subir Excel<input type="file" accept=".xlsx" onchange="zpxSubir(this)" hidden></label></div>';
+  return head+'<div class="z13-hub" id="z13Hub">'+_z213CpsHTML(C,R,sel)+'<section class="z-box z13-det" id="z13Det" aria-label="Cuotas">'+(c?_z213DetHTML(c,R[c.id]):'<p class="z13-vacio">Nada todavía.</p>')+'</section></div>'; }
+
+/* ---- pintar, conservando el foco al cambiar una cifra ---- */
+const _renderPlanesAntes213=renderPlanes;
+renderPlanes=function(){ const v=document.getElementById('v-planes'); if(!v) return;
+  _z213Eventos(v);
+  /* durante un "change" se pinta un instante después: así el foco ya pasó a la casilla siguiente y se conserva */
+  if(Z213.enCambio){ if(!Z213.tPend) Z213.tPend=setTimeout(()=>{ Z213.tPend=null; renderPlanes(); },0); return; }
+  if(Z213.vista!=='cuotas'||(!EQ.length&&!_ecClientes().length)) return _renderPlanesAntes213.apply(this,arguments);
+  const a=document.activeElement, fo=a&&v.contains(a)&&a.dataset?{h:a.dataset.h,a:a.dataset.a,id:a.dataset.id}:null;
+  try{ v.innerHTML=_z213HTML(); }catch(e){ console.warn('v2.13 planes',e); Z213.vista='12'; return _renderPlanesAntes213.apply(this,arguments); }
+  if(fo&&(fo.h||fo.a)){ const q=fo.a?'[data-a="'+fo.a+'"]':'[data-h="'+fo.h+'"]'+(fo.id?'[data-id="'+CSS.escape(fo.id)+'"]':''), n=v.querySelector(q); if(n&&!n.disabled){ try{ n.focus(); }catch(e){} } } };
+const _z26PlHTMLAntes213=_z26PlHTML;
+_z26PlHTML=function(){ return _z26PlHTMLAntes213.apply(this,arguments).replace('<h2>Planes</h2>','<h2>Planes</h2>'+_z213Seg()); };
+/* desde la Caja, Clientes o el Tablero: Planes abre en las cuotas de esa contraparte */
+const _v3AbrirAntes213=v3Abrir;
+v3Abrir=function(cpId){ if(Z213.vista!=='cuotas') return _v3AbrirAntes213.apply(this,arguments);
+  Z213.cp=cpId; Z213.marc={}; Z27.pg=null; navTo('planes'); renderPlanes(); try{ window.scrollTo(0,0); }catch(e){} };
+
+/* ---- acciones ---- */
+function _z213C(){ return _v3Cp(Z213.cp); }
+function _z213Repintar(){ setTimeout(()=>{ const v=document.getElementById('v-planes'); if(v&&v.classList.contains('on')) renderPlanes(); },0); }
+function _z213Bulk(c,que,f){ const ids=Object.keys(Z213.marc).filter(id=>_v3Lin(c,c.act).some(l=>l.id===id)); if(!ids.length) return;
+  const s=_z26Snap(); let n=0;
+  ids.forEach(id=>{ const l=_v3Lin(c,c.act).find(x=>x.id===id); if(!l) return;
+    if(que==='del'){ _v3LinDel(c,c.act,id); n++; return; }
+    let iso=f;
+    if(que==='c7'||que==='c-7'){ const d0=_p14D(l.f)||TODAY; let d=addD(que==='c7'&&d0<TODAY?TODAY:d0,que==='c7'?7:-7); if(d<TODAY) d=TODAY; iso=_p14Iso(d); }
+    if(iso&&iso!==l.f){ _v3LinSet(c,c.act,id,'f',iso); n++; } });
+  Z213.marc={};
+  if(!n){ z26Aviso('No cambió nada'); renderPlanes(); return; }
+  const t=que==='del'?n+' cuota'+(n===1?'':'s')+' quitada'+(n===1?'':'s'):(que==='c7'?n+' corrida'+(n===1?'':'s')+' una semana':(que==='c-7'?n+' adelantada'+(n===1?'':'s')+' una semana':n+' al '+_z213Fd(f)));
+  _z26Hecho(t,s); }
+function _z213Click(e,v){ const t=e.target.closest('[data-h]'); if(!t||!v.contains(t)) return; const h=t.dataset.h;
+  if(h==='vista'){ Z213.vista=t.dataset.v==='12'?'12':'cuotas'; Z26.pop=null; renderPlanes(); return; }
+  if(h==='cp'){ Z213.cp=t.dataset.cp; Z213.marc={}; Z213.addF=null; Z27.pg=null; renderPlanes(); const d=document.getElementById('z13Det'); if(d&&d.getBoundingClientRect().top<0) d.scrollIntoView({block:'start'}); return; }
+  const c=_z213C(); if(!c) return;
+  if(h==='dr'){ z26Abrir(c.id); return; }
+  if(h==='propio'){ const s=_z26Snap(), nv=v3Negociar(c.id,'base'); if(nv) v3Activar(c.id,nv.id); return _z26Hecho('Plan propio de '+c.n+': ya puedes mover sus cuotas',s); }
+  if(h==='cob'){ Z27.gen=null; Z27.pg={cp:c.id,id:t.dataset.id}; renderPlanes(); const i=v.querySelector('.z-reg input[data-yr="m"]'); if(i){ i.focus(); i.select(); } return; }
+  if(h==='correr'){ const s=_z26Snap(), iso=_z27Correr(c,t.dataset.id,7); if(!iso) return; delete Z213.marc[t.dataset.id]; return _z26Hecho('Cuota corrida al '+_z213Fd(iso),s); }
+  if(h==='del'){ const l=_v3Lin(c,c.act).find(x=>x.id===t.dataset.id); if(!l) return; const s=_z26Snap(); _v3LinDel(c,c.act,l.id); delete Z213.marc[l.id];
+    return _z26Hecho('Cuota del '+_z213Fd(l.f)+' quitada',s); }
+  if(h==='b'){ const b=t.dataset.b; if(b==='none'){ Z213.marc={}; renderPlanes(); return; } _z213Bulk(c,b); return; } }
+function _z213Change(e,v){ const t=e.target; if(!t||!t.dataset||!v.contains(t)) return; const h=t.dataset.h; if(!h) return;
+  if(h==='vista'||h==='cp') return;
+  const c=_z213C(); if(!c) return;
+  if(h==='mk'){ if(t.checked) Z213.marc[t.dataset.id]=1; else delete Z213.marc[t.dataset.id]; renderPlanes(); return; }
+  if(h==='all'){ Z213.marc={}; if(t.checked) _z27Vista(c).L.forEach(x=>{ Z213.marc[x.l.id]=1; }); renderPlanes(); return; }
+  if(h==='bF'){ if(t.value) _z213Bulk(c,'f',t.value); return; }
+  const id=t.dataset.id, l=_v3Lin(c,c.act).find(x=>x.id===id); if(!l) return;
+  if(h==='f'){ if(!t.value||t.value===l.f){ renderPlanes(); return; } const s=_z26Snap(); _v3LinSet(c,c.act,id,'f',t.value); delete Z213.marc[id]; return _z26Hecho('Cuota movida al '+_z213Fd(t.value),s); }
+  if(h==='c'){ const val=t.value.trim(); if(val===_z213Con(l)) return; const s=_z26Snap(); _v3LinSet(c,c.act,id,'c',val); return _z26Hecho('Concepto cambiado',s); }
+  if(h==='mon'){ const s=_z26Snap(); _v3LinSet(c,c.act,id,'mon',t.value); return _z26Hecho(t.value==='COP'?'La cuota queda en pesos: vale en US$ con la TRM del día':'La cuota queda en dólares',s); }
+  if(h==='m'){ const m=_z27Num(t.value); if(!(m>=0)||!isFinite(m)){ z26Aviso('Escribe un monto'); renderPlanes(); return; }
+    const s=_z26Snap();
+    if(l.mon==='COP'){ if(Math.abs(m-(+l.cop||0))<0.5){ renderPlanes(); return; } _v3LinSet(c,c.act,id,'cop',m); }
+    else { if(Math.abs(m-l.m)<0.005){ renderPlanes(); return; } _v3LinSet(c,c.act,id,'m',m); }
+    return _z26Hecho('Monto cambiado',s); } }
+function _z213Add(e,v){ const fm=e.target.closest('form[data-h="add"]'); if(!fm||!v.contains(fm)) return; e.preventDefault();
+  const c=_z213C(); if(!c||c.act==='base') return; const g=k=>{ const n=fm.querySelector('[data-a="'+k+'"]'); return n?n.value:''; };
+  const f=g('f'), m=_z27Num(g('m')), cop=g('mon')==='COP'&&!_z213SoloUsd(c), con=_z213EnPC(c,c.act)?'':g('c').trim();
+  if(!_p14D(f)){ z26Aviso('Escribe la fecha'); return; } if(!(m>0)){ z26Aviso('Escribe el monto'); const i=fm.querySelector('[data-a="m"]'); if(i) i.focus(); return; }
+  const s=_z26Snap(), usd=cop?_z213r2(m/_z213Trm()):_z213r2(m); let id;
+  Z213.mudo++; try{ id=_v3LinAdd(c,c.act,f,usd,con); if(cop&&id){ const x=_z213Raw(c,c.act,id); if(x){ x.mon='COP'; x.cop=Math.round(m); } } } finally{ Z213.mudo--; }
+  if(!id){ z26Aviso('No se pudo agregar'); return; }
+  _z213Log(c,{v:c.act,id,n:con,k:'add',a:{f,m:usd,cop:cop?Math.round(m):null}});
+  Z213.addF={cp:c.id,f};
+  _z26Hecho('Cuota agregada · '+_z213Fd(f)+' · '+(cop?'COP '+_z213Cop(m):_z26m(usd)),s);
+  const v2=document.getElementById('v-planes'), i=v2&&v2.querySelector('form[data-h="add"] [data-a="'+(con||cop?'c':'m')+'"]'); if(i&&!i.disabled) i.focus(); }
+function _z213Eventos(v){ if(v.dataset.z13) return; v.dataset.z13='1';
+  v.addEventListener('click',e=>{ try{ _z213Click(e,v); }catch(err){ console.warn('v2.13',err); } });
+  v.addEventListener('change',e=>{ Z213.enCambio=1; try{ _z213Change(e,v); }catch(err){ console.warn('v2.13',err); } finally{ Z213.enCambio=0; } });
+  v.addEventListener('submit',e=>{ try{ _z213Add(e,v); }catch(err){ console.warn('v2.13',err); } });
+  v.addEventListener('keydown',e=>{ const t=e.target; if(e.key==='Enter'&&t&&t.dataset&&(t.dataset.h==='m'||t.dataset.h==='c')&&!t.closest('form')){ e.preventDefault(); t.blur(); } }); }
+/* "Cancelar" del formulario de cobro también repinta las cuotas */
+document.addEventListener('click',e=>{ const t=e.target.closest('[data-y="pgX"]'); if(t) _z213Repintar(); });
+
+/* ---- Excel de planes: la TRM que se movió no es un cambio; el concepto y la moneda se conservan ---- */
+const _zpxCompararAntes213=zpxComparar;
+zpxComparar=function(wb){ const X=_zpxCompararAntes213.apply(this,arguments);
+  X.planes=X.planes.filter(P=>{ const raw={}; try{ _v3Lin(P.c,P.c.act).forEach(l=>{ raw[l.id]=l; }); }catch(e){}
+    P.mov=P.mov.filter(({o,x})=>{ const r=raw[o.id]; if(!r||r.mon!=='COP'||o.f!==x.f) return true; if(Math.abs(x.m-o.m)<=Math.max(1,o.m*0.03)){ x.m=o.m; return false; } return true; });
+    return P.mov.length||P.nue.length||P.bor.length; });
+  X.n=X.planes.length+X.pagos.length+X.cobros.length+X.precios.length; return X; };
+const _zpxCrearAntes213=_zpxCrear;
+_zpxCrear=function(c,P){ const viejo={}; try{ _v3Lin(c,c.act).forEach(l=>{ viejo[l.id]=l; }); }catch(e){}
+  const v=_zpxCrearAntes213.apply(this,arguments);
+  try{ (v&&v.lineas||[]).forEach(nl=>{ const x=P.filas.find(y=>y.nid===nl.id), o=x&&x.lid?viejo[x.lid]:null; if(!o) return;
+    if(o.c&&!/^(china|magnum|nac)$/.test(o.c)) nl.dest=o.c;
+    if(o.mon==='COP'&&+o.cop>0&&Math.abs((+x.m||0)-o.m)<0.005){ nl.mon='COP'; nl.cop=+o.cop; } }); }catch(e){ console.warn('v2.13 excel',e); }
+  return v; };
+
+/* ---- actualización preparada: paso "cuotaCop" (pasa una cuota a pesos; no se repite) ---- */
+function _ztpCuotaCop(paso){ const c=_v3Cp(paso.cp); if(!c) return false; const x=_z213Raw(c,paso.v,paso.id); if(!x) return false;
+  const cop=Math.round(+paso.cop||0); if(!(cop>0)) return false; if(_z213EsCop(x)&&Math.abs(+x.cop-cop)<0.5) return false;
+  const de=x.dest||''; x.mon='COP'; x.cop=cop; x.monto=_z213r2(cop/_z213Trm()); if(paso.con!=null) x.dest=paso.con;
+  _z213Log(c,{v:paso.v,id:paso.id,n:x.dest||de,k:'mon',de:'USD',a:'COP'}); return true; }
+_ztpUno=async function(P,hecho){
+  for(const paso of (P.pasos||[])){
+    if(paso.tipo==='json'){ PKPREV=Object.assign(pkLeer(paso.obj),{archivo:paso.nombre}); pkAplicar(); hecho.push(paso.nombre); }
+    else if(paso.tipo==='abono'){ _ztpAbono(paso); hecho.push(paso.nombre); }
+    else if(paso.tipo==='reaplicar'){ _ztpReaplicar(paso); hecho.push(paso.nombre); }
+    else if(paso.tipo==='cuotaCop'){ _ztpCuotaCop(paso); hecho.push(paso.nombre); }
+    else if(paso.tipo==='excel'){
+      const files=(paso.archivos||[]).map(a=>new File([_ztpB64(a.b64)],a.nombre,{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}));
+      WIZ.loaded=false; WIZ.work=null; WIZ.err=null; await v2CargarArchivos({files});
+      await _ztpEsperar(()=>WIZ&&(WIZ.err||(WIZ.loaded&&WIZ.work&&WIZ.work.length)),90000);
+      if(WIZ.err) throw new Error(WIZ.err);
+      wizGo(2); wizGo(3); wizGo(4); wizApprove(); await new Promise(r=>setTimeout(r,700)); hecho.push(paso.nombre); }
+  }
+  CONFIG.cambios[_ztpLlave(P)]={f:new Date().toISOString(),titulo:P.titulo||'',pasos:hecho.slice()}; };

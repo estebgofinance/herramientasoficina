@@ -33,7 +33,7 @@ const ok=(n,c)=>console.log((c?'  OK ':'FALLA')+'  '+n);
   const nEq=await g(`EQ.length`);
 
   // ---- PRECIOS ----
-  await p.click('nav.tabs button[data-v="precios"]'); await p.waitForTimeout(400); await p.evaluate(()=>{PCADV=true;pintarPrecios();}); await p.waitForTimeout(250);
+  await p.evaluate(()=>navTo('precios')); await p.waitForTimeout(400); await p.evaluate(()=>{PCADV=true;pintarPrecios();}); await p.waitForTimeout(250);
   ok('la pestaña Precios pinta', (await p.textContent('#v-precios')).includes('Precios por grupo'));
   await p.screenshot({path:OUT+'v22-precios0.png'});
 
@@ -85,15 +85,20 @@ const ok=(n,c)=>console.log((c?'  OK ':'FALLA')+'  '+n);
   ok('y los pedidos siguen enteros', (await g(`EQ.length`))===nEq);
 
   // ---- SINOSURE: lo nuevo se prueba en zsino.js; aquí solo que la pestaña viva ----
-  await p.click('nav.tabs button[data-v="sinosure"]'); await p.waitForTimeout(450);
+  await p.evaluate(()=>navTo('sinosure')); /* v2.0: Sinosure se entra desde Pedidos › Cupo Sinosure */ await p.waitForTimeout(450); await p.evaluate(()=>{SNDET=true;SNPC=true;pintarSino();}); await p.waitForTimeout(150);
   ok('la pestaña Sinosure pinta el derrotero', (await p.textContent('#v-sinosure')).includes('Sinosure')
      && (await p.evaluate(()=>document.querySelectorAll('#v-sinosure tbody.sn-g').length))>0);
 
   // las pestañas viejas siguen sanas
-  for(const v of ['hoy','pedidos','clientes','pagos','config']){
+  for(const v of ['hoy','pedidos','clientes','config']){
     await p.click(`nav.tabs button[data-v="${v}"]`); await p.waitForTimeout(220);
   }
-  ok('las cinco pestañas de siempre siguen pintando sin error', errs.length===0);
+  ok('las pestañas de siempre siguen pintando sin error', errs.length===0);
+  /* v1.9: la pestaña Pagos ya no existe, pero la llave PAGOS se sigue guardando */
+  ok('la pestaña Pagos ya no aparece', await p.evaluate(()=>!document.querySelector('nav.tabs button[data-v="pagos"]')&&!document.getElementById('v-pagos')));
+  ok('un estado con PAGOS viejos abre y los conserva', await p.evaluate(()=>{const s=JSON.parse(serializeState());
+    s.PAGOS=[{id:7,tipo:'in',cliente:'X',monto:1,fecha:new Date().toISOString(),ts:new Date().toISOString(),aps:[]}];
+    applyState(s); refreshAll(); const ok1=PAGOS.length===1&&JSON.parse(serializeState()).PAGOS.length===1; PAGOS.length=0; return ok1;}));
   ok('sin errores de JS', errs.length===0);
   if(errs.length)console.log(errs.slice(0,5));
   await b.close();

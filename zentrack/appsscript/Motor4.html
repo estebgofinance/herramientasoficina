@@ -26,7 +26,7 @@ function delCliente(c){
   if(typeof saveToServer==='function')saveToServer();
 }
 function addClienteUI(){const n=document.getElementById('ncName').value,t=document.getElementById('ncTerm').value,f=document.getElementById('ncFifo').value==='fifo';if(addCliente(n,t,f)){renderConfig();if(typeof renderClientes==='function')renderClientes();toast('Cliente <b>'+n.trim()+'</b> agregado · '+(+t||60)+' días');}else toast('Nombre vacío o cliente ya existe');}
-function refreshCupo(){renderHoy();renderConfig();if(document.getElementById('v-pagos').classList.contains('on'))renderPagos();}
+function refreshCupo(){renderHoy();renderConfig();if(document.getElementById('v-pagos')&&document.getElementById('v-pagos').classList.contains('on'))renderPagos();}
 function stageOpts(sel){return ['confirm','prod','finished','booked','shipping'].map(s=>`<option value="${s}" ${s===sel?'selected':''}>${STAGE[s]}</option>`).join('');}
 function renderHistCargas(){
   const el=document.getElementById('cfgHist');if(!el)return;

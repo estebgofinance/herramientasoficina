@@ -1,0 +1,21 @@
+/* ===== v2.11 · fecha viva y gráfica de control de la Caja ===== */
+.zd-chip{font-size:13px;font-weight:600;color:var(--ink2);margin-right:10px;white-space:nowrap;font-variant-numeric:tabular-nums}
+.zd-hoy{font-size:14px;font-weight:600;color:#7A4A00;background:#FFF8EC;border:1px solid #F3DDB5;border-radius:var(--z-r1);padding:3px 10px;white-space:nowrap}
+.zg{margin-top:16px}
+.zg-ley{display:flex;flex-wrap:wrap;gap:6px 18px;padding:10px 16px 0;font-size:13px;color:var(--ink2)}
+.zg-ley span{display:inline-flex;align-items:center;gap:6px}
+.zg-ley i,.zg-tt i{width:10px;height:10px;border-radius:2px;display:inline-block;flex:none}
+.zg-ley i.ln,.zg-tt i.ln{height:2px;width:14px;border-radius:1px;background:#17181A}
+.zg-cv{position:relative;padding:4px 12px 0}
+.zg-cv svg{display:block;width:100%;height:auto}
+.zg-hit{cursor:pointer;outline:none}
+.zg-hit:hover,.zg-hit:focus{fill:rgba(23,24,26,.04)}
+.zg-tt{position:absolute;z-index:5;min-width:250px;background:var(--card);border:1px solid var(--line);border-radius:var(--z-r1);box-shadow:0 4px 14px rgba(0,0,0,.08);padding:8px 10px;font-size:13px;pointer-events:none}
+.zg-tt .h{font-weight:600;margin-bottom:4px;color:var(--ink)}
+.zg-tt .r{display:flex;align-items:center;gap:8px;padding:2px 0;color:var(--ink2)}
+.zg-tt .r span{flex:1}
+.zg-tt .r b{color:var(--ink);font-variant-numeric:tabular-nums;font-weight:600}
+.zg-tt .r.tot{border-top:1px solid var(--rule);margin-top:2px;padding-top:4px}
+@media (max-width:760px){ .zd-chip{display:none} .zg-cv{overflow-x:auto} .zg-cv svg{min-width:720px} }
+.zd-trm{font-size:13px;font-weight:600;color:var(--ink2);white-space:nowrap;font-variant-numeric:tabular-nums}
+.zd-trm.warn{color:#7A4A00}

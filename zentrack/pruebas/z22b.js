@@ -15,7 +15,7 @@ const ok=(n,c)=>console.log((c?'  OK ':'FALLA')+'  '+n);
   await p.setInputFiles('#reportFile','DET.xlsx'); await p.waitForTimeout(1500);
   await p.evaluate(()=>{wizGo(4);wizApprove();document.getElementById('toast').classList.remove('on');});
   await p.waitForTimeout(700);
-  await p.click('nav.tabs button[data-v="precios"]'); await p.waitForTimeout(350); await p.evaluate(()=>{PCADV=true;pintarPrecios();}); await p.waitForTimeout(250);
+  await p.evaluate(()=>navTo('precios')); await p.waitForTimeout(350); await p.evaluate(()=>{PCADV=true;pintarPrecios();}); await p.waitForTimeout(250);
   await p.evaluate(()=>{gpNuevo();const g=GPRE[0];g.nombre='Factura Mompox';g.cliente=EQ[0].cliente;
     g.eqRefs=[EQ[5].derrame,EQ[9].derrame];g.total=480000;pintarPrecios();refreshAll();});
   await p.waitForTimeout(400);
@@ -28,7 +28,7 @@ const ok=(n,c)=>console.log((c?'  OK ':'FALLA')+'  '+n);
      vis<20 && (await p.evaluate(()=>[...document.querySelectorAll('#v-precios .pc-adv tbody tr input:checked')].length))===2);
   await p.fill('#gq',''); await p.waitForTimeout(350);
   await p.screenshot({path:OUT+'v22-precios2.png'});
-  await p.click('nav.tabs button[data-v="sinosure"]'); await p.waitForTimeout(400);
+  await p.evaluate(()=>navTo('sinosure')); /* v2.0: Sinosure se entra desde Pedidos › Cupo Sinosure */ await p.waitForTimeout(400); await p.evaluate(()=>{SNDET=true;SNPC=true;pintarSino();}); await p.waitForTimeout(150);
   ok('el PO#16 sale en "lo que la hoja no lista" con su monto',
      (await p.textContent('#v-sinosure')).includes('515,200'));
   await p.screenshot({path:OUT+'v22-sino2.png'});

@@ -11,7 +11,9 @@ const {chromium}=require('playwright-core');const fs=require('fs');
   await p.waitForFunction(()=>WIZ.loaded&&WIZ.work&&WIZ.work.length,null,{timeout:60000});
   await p.evaluate(()=>{wizGo(2);wizApprove();navTo('precios');}); await p.waitForTimeout(300);
   const fila=async d=>p.evaluate(d=>{const tr=[...document.querySelectorAll('#v-precios tr.pc-r')].find(r=>{const c=r.querySelector('td:nth-child(2)');return c&&c.textContent.trim()===d;});
-    return tr?[...tr.querySelectorAll('td.r')].map(x=>x.textContent.trim()):null;},d);
+    /* desde v1.7.2 el costo es una casilla editable: se lee su valor */
+    const val=x=>{const i=x.querySelector('input');return i&&i.value!==''?Math.round(+i.value).toLocaleString('en-US'):x.textContent.trim();};
+    return tr?[...tr.querySelectorAll('td.r')].map(val):null;},d);
   const sol=await fila('12');
   ok('Solaris (PO12) muestra costo China 72,240, no el precio 111,701 ('+(sol||[]).join(' / ')+')',!!sol&&sol.some(x=>x==='72,240')&&!sol.some(x=>x==='111,701'));
   const d121=await fila('12-1');

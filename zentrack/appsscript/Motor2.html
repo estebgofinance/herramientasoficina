@@ -18,7 +18,7 @@ const iso=d=>new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().sli
 const HW=91; // 13 semanas
 /* ================= PAGOS ================= */
 let pagoTipo='in';
-function renderPagos(){
+function renderPagos(){ if(!document.getElementById('v-pagos')) return; /* v1.9: la pestaña ya no existe */
   document.querySelectorAll('#pagoTipoSeg button').forEach(b=>b.onclick=()=>{document.querySelectorAll('#pagoTipoSeg button').forEach(x=>x.classList.remove('on'));b.classList.add('on');pagoTipo=b.dataset.t;pagoForm();});
   pagoForm();renderHist();
 }
@@ -331,7 +331,7 @@ function parseDetailed(wb){
       proveedores:prov.map(l=>({nombre:l.nombre,monto:l.monto,pagado:l.pagado,saldo:l.pendiente,pagos:l.pagos,montoInferido:l.montoInferido}))};
     const pf=fab.flatMap(l=>l.pagos).filter(p=>p.monto>0.5), pfx=pf.filter(p=>!p.implicito);
     b.ultimoPago=pfx.length?pfx[pfx.length-1]:(pf.length?pf[pf.length-1]:null);
-    b.sinProgramar=pf.filter(p=>p.implicito).reduce((s,p)=>s+p.monto,0);
+    b.sinProgramar=pf.filter(p=>p.implicito&&p.estado!=='paid').reduce((s,p)=>s+p.monto,0);
     const dps=fab.flatMap(l=>l.pagos).filter(p=>p.tipo==='anticipo'&&(p.monto>0.5||p.estado));
     b.antStatus=dps.some(p=>p.estado==='pending')?'pending':(dps.some(p=>p.estado==='paid')?'paid':'unknown');
     const k=_bKey(b.mfg,b.key);
@@ -359,7 +359,9 @@ function parseDetailed(wb){
     const pagos=ranuras.map(s=>{
       const m=s.amt!=null?_numC(r[s.amt]):null, est=s.st!=null?_stPago(r[s.st]):null;
       const f=s.fecha!=null?r[s.fecha]:null; let pc=s.pct!=null?_numC(r[s.pct]):null; if(pc!=null&&pc>1)pc=pc/100;
-      return {slot:s.lbl,tipo:s.tipo,monto:m,pct:pc,estado:est,fecha:_esFecha(f)?new Date(f.getTime()):null};
+      /* "Paying" = pago parcial: el monto escrito es lo que FALTA de ese pago (v1.17.1) */
+      const parcial=s.st!=null&&/paying|partial|parcial/i.test(''+(r[s.st]==null?'':r[s.st]));
+      return {slot:s.lbl,tipo:s.tipo,monto:m,pct:pc,estado:est,parcial,fecha:_esFecha(f)?new Date(f.getTime()):null};
     }).filter(p=>(p.monto!=null&&p.monto!==0)||p.estado);
     /* pago con estado pero sin monto escrito: por su %, o lo que falte de la línea */
     const antPctL=CONFIG[b.mfg]?CONFIG[b.mfg].antPct:0.1;
@@ -389,7 +391,10 @@ function parseDetailed(wb){
     const faltante=Math.round((mTot-pagado-pendiente)*100)/100;
     let descuadre=0;
     if(faltante>0.5){
-      if(hayPend || !conEstado.length){ pendiente+=faltante; pagos.push({slot:'Sin programar',tipo:'balance',monto:faltante,estado:'pending',implicito:true}); }
+      /* Con un pago en "Paying", Andrés escribe solo lo que falta (CFM 2-3: =O-S-500-80000).
+         Lo que no aparece ya se abonó: es pagado, no deuda sin programar. */
+      if(pagos.some(p=>p.parcial)){ pagado+=faltante; pagos.push({slot:'Abonado (pago parcial)',tipo:'balance',monto:faltante,estado:'paid',implicito:true,parcial:true}); }
+      else if(hayPend || !conEstado.length){ pendiente+=faltante; pagos.push({slot:'Sin programar',tipo:'balance',monto:faltante,estado:'pending',implicito:true}); }
       else descuadre=faltante;          /* todo pagado: el monto de la línea no cuadra con sus pagos */
     }
     b.lineas.push({fila:i+1,nombre:nombre||'(sin nombre)',esFab,monto:mTot,montoInferido,pagos,pagado,pendiente,antPend,antPagado,sinEstado,descuadre});

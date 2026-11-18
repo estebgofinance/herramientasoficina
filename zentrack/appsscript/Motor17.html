@@ -1,0 +1,492 @@
+<script>
+
+/* ===================================================================
+   v2.8 · Precios provisionales y facturados (pedido por pedido)
+   - Estados del precio de un pedido para su cliente:
+       sin precio · provisional (cualquier precio que no tenga factura) · facturado (con número,
+       fecha y valor de la factura) · standby (el pedido está detenido: no entra al estado de cuenta).
+   - Precio provisional calculado: (costo China + flete + aduana) × (1 + margen) + Zentrack × (1 + margen
+     Zentrack) (electrónica, estaciones, TCUs que pone Zentrack). Los márgenes por defecto no van en el
+     código (el repo es público): llegan en los datos preparados y se guardan en PRECIO.__def.
+   - Al registrar la factura el precio pasa al valor real; lo abonado se queda y el saldo se recalcula.
+   - Todo cambio de precio queda en el historial del pedido. El PDF y el Excel que van al cliente no
+     dicen qué es provisional (Esteban: "es para manejo interno").
+   - Datos preparados: PRECIOS = [{def:{margen,mExtra}} | {ped, mfg, flete, aduana, extra, mExtra, margen, standby, nota}].
+   Llave nueva del estado: PRECIO = {kOf: {est:'standby', calc:{flete,aduana,extra,mExtra,margen}, fac:{num,fecha,valor}, hist:[{f,de,a,por}]}}.
+   =================================================================== */
+var PRECIO={}, PR28={fac:null};
+function _prDef(){ const d=(PRECIO&&PRECIO.__def)||{}; return {margen:+d.margen||0,mExtra:+d.mExtra||0}; }
+const _serAntes28=serializeState;
+serializeState=function(){ const o=JSON.parse(_serAntes28.apply(this,arguments)); o.PRECIO=PRECIO; return JSON.stringify(o); };
+const _appAntes28=applyState;
+applyState=function(s){ PRECIO=(s&&s.PRECIO&&typeof s.PRECIO==='object'&&!Array.isArray(s.PRECIO))?s.PRECIO:{}; return _appAntes28.apply(this,arguments); };
+function _prEq(k){ return EQ.find(e=>kOf(e)===k)||null; }
+function _prReg(e,crear){ const k=kOf(e); let r=PRECIO[k]; if(!r&&crear) r=PRECIO[k]={hist:[]}; return r||null; }
+function prEstado(e){ const r=_prReg(e); if(r&&r.est==='standby') return 'standby'; if(r&&r.fac&&+r.fac.valor>0) return 'facturado'; return precioVenta(e)>0?'provisional':'sin'; }
+function _prDespachado(e){ return (e.etd&&new Date(e.etd)<=TODAY)||e.st==='shipped'; }
+function prCalc(e,calc){ const c=Object.assign({flete:0,aduana:0,extra:0},_prDef(),calc||{}), china=_pcCosto(e), base=china+(+c.flete||0)+(+c.aduana||0);
+  return {china:_r2(china),flete:+c.flete||0,aduana:+c.aduana||0,base:_r2(base),margen:+c.margen||0,extra:+c.extra||0,mExtra:+c.mExtra||0,
+    precio:_r2(base*(1+(+c.margen||0))+(+c.extra||0)*(1+(+c.mExtra||0)))}; }
+function _prPoner(e,v,por){ const de=precioVenta(e); v=_r2(v); if(Math.abs(de-v)<0.005) return false; const r=_prReg(e,true);
+  (r.hist=r.hist||[]).push({f:_p14Iso(TODAY),de:_r2(de),a:v,por:por||''}); e.precioVenta=v; return true; }
+/* calcular el precio provisional (no toca uno facturado ni uno de grupo de precio) */
+function prCalcSet(e,calc,por){ if(!e||prEstado(e)==='facturado'||(typeof gpDeEq==='function'&&gpDeEq(e))) return false;
+  const r=_prReg(e,true); r.calc=Object.assign({},r.calc||{},calc); return _prPoner(e,prCalc(e,r.calc).precio,por||'Precio provisional calculado'), true; }
+function prFacturar(e,o){ if(!e||!(+o.valor>0)) return false; const r=_prReg(e,true); delete r.est;
+  r.fac={num:(''+(o.num||'')).trim(),fecha:o.fecha||_p14Iso(TODAY),valor:_r2(+o.valor),prov:_r2(precioVenta(e))};
+  _prPoner(e,+o.valor,'Factura '+r.fac.num); return true; }
+function prStandby(e,on){ if(!e) return; const r=_prReg(e,true); if(on) r.est='standby'; else delete r.est; }
+/* deshacer: foto del registro y del precio */
+function _prFoto(e){ const k=kOf(e), r=PRECIO[k]; return {k,r:r?JSON.stringify(r):null,p:precioVenta(e)}; }
+function _prVolver(f){ const e=_prEq(f.k); if(f.r==null) delete PRECIO[f.k]; else PRECIO[f.k]=JSON.parse(f.r); if(e) e.precioVenta=f.p; }
+
+/* el estado de cuenta no muestra lo que está en standby */
+const _ecFilasAntes28=ecFilas;
+ecFilas=function(c){ const r=_ecFilasAntes28.apply(this,arguments);
+  r.filas=r.filas.filter(f=>!(f.tipo==='eq'&&f.e&&prEstado(f.e)==='standby'));
+  if(r.sinPrecio) r.sinPrecio=r.sinPrecio.filter(e=>prEstado(e)!=='standby'); return r; };
+/* en pantalla (solo para ti) el valor dice si es provisional */
+const _ecFilaHTMLAntes28=_ecFilaHTML;
+_ecFilaHTML=function(f){ let h=_ecFilaHTMLAntes28.apply(this,arguments);
+  if(f&&f.tipo==='eq'&&f.e&&prEstado(f.e)==='provisional'){ const a='<td class="r">'+_ec2(f.valor)+'</td>'; h=h.replace(a,'<td class="r">'+_ec2(f.valor)+'<span class="pr28-p" title="Precio provisional: sin factura">provisional</span></td>'); }
+  return h; };
+
+/* ---- la tabla de precios del cliente ---- */
+function _prFilas(c){ return EQ.filter(e=>e.cliente===c&&cobroModo(e)!=='especial'); }
+function _prOrden(e){ const s=prEstado(e); return s==='sin'?0:(s==='provisional'&&_prDespachado(e)?1:(s==='provisional'?2:(s==='facturado'?3:4))); }
+function _prTag(e){ const s=prEstado(e);
+  if(s==='sin') return _z26tag('crit','Sin precio'); if(s==='standby') return _z26tag('idle','Standby'); if(s==='facturado') return _z26tag('ok','Facturado');
+  return _prDespachado(e)?_z26tag('warn','Despachado · por facturar'):_z26tag('info','Provisional'); }
+function _prHTML(c){ const L=_prFilas(c); if(!L.length) return '';
+  const g={sin:[],provisional:[],facturado:[],standby:[]}; L.forEach(e=>g[prEstado(e)].push(e)); const S=a=>a.reduce((s,e)=>s+precioVenta(e),0);
+  const desp=g.provisional.filter(_prDespachado), prov=g.provisional.filter(e=>!_prDespachado(e)), abierto=g.sin.length>0||desp.length>0||!!PR28.abierto;
+  const inp=(e,campo,val,ph)=>'<label>'+ph+'<input class="z-in n pr28-in'+(campo==='margen'?' pct':'')+'" data-pr="'+campo+'" data-k="'+esc4(kOf(e))+'" data-foco="pr-'+campo+'-'+esc4(kOf(e))+'" value="'+(val==null||val===''?'':(campo==='margen'?Math.round(val*1000)/10:fmtUSDs(val)))+'" placeholder="'+(campo==='margen'?Math.round(_prDef().margen*1000)/10:'0')+'" inputmode="decimal"></label>';
+  const fila=e=>{ const k=kOf(e), kq=esc4(k), s=prEstado(e), r=_prReg(e)||{}, cc=r.calc||null, fac=r.fac, x=prCalc(e,cc||{});
+    const acc=s==='standby'?'<button type="button" class="z-btn sm" data-pa="activar" data-k="'+kq+'">Reactivar</button>'
+      :(s==='facturado'?'<button type="button" class="z-btn sm q" data-pa="corregir" data-k="'+kq+'">Corregir factura</button>'
+        :'<button type="button" class="z-btn sm'+(s==='sin'?' pri':'')+'" data-pa="calc" data-k="'+kq+'" aria-expanded="'+(PR28.calc===k)+'">Calcular</button>'
+          +'<button type="button" class="z-btn sm'+(s!=='sin'?' pri':'')+'" data-pa="facturar" data-k="'+kq+'"'+(s==='sin'?' disabled title="Primero ponle un precio"':'')+'>Factura</button>');
+    let h='<tr class="pr28-'+s+'"><td><b>'+esc4(e.derrame||e.ordenId)+'</b><small>'+esc4((e.mfg==='Singsun'?'Tracker':'Shelter')+((+e.qty||1)>1?' × '+e.qty:''))+'</small></td>'
+      +'<td class="w">'+esc4(e.proj||'')+'</td><td>'+_prTag(e)+(fac?'<small>'+esc4(fac.num||'s/n')+' · '+_p14F(_p14D(fac.fecha))+(fac.prov&&Math.abs(fac.valor-fac.prov)>0.5?' · ajuste '+(fac.valor>fac.prov?'+':'−')+fmtUSDs(Math.abs(fac.valor-fac.prov)):'')+'</small>':'')+'</td>'
+      +'<td class="n">'+fmtUSDs(x.china)+'</td><td class="n"><b>'+(precioVenta(e)>0?fmtUSDs(precioVenta(e)):'—')+'</b>'+(precioVenta(e)>0&&x.china>0?'<small>'+Math.round((precioVenta(e)/x.china-1)*100)+' % sobre China</small>':'')+'</td>'
+      +'<td class="n"><span class="z-acc">'+acc+'</span></td></tr>';
+    if(PR28.calc===k&&s!=='facturado'&&s!=='standby'){ const c2=Object.assign({},_prDef(),cc||{}), y=prCalc(e,c2);
+      h+='<tr class="pr28-ff"><td colspan="6"><div class="z-reg">'+inp(e,'flete',c2.flete,'Flete')+inp(e,'aduana',c2.aduana,'Aduana')+inp(e,'extra',c2.extra,'Zentrack (+'+Math.round(y.mExtra*1000)/10+' %)')+inp(e,'margen',c2.margen,'Margen %')
+        +'<div class="z-reg-b"><span>('+fmtUSDs(y.china)+' + '+fmtUSDs(y.flete)+' + '+fmtUSDs(y.aduana)+') × '+(1+y.margen).toFixed(2)+(y.extra?' + '+fmtUSDs(y.extra)+' × '+(1+y.mExtra).toFixed(2):'')+' = <b>'+fmtUSDs(y.precio)+'</b></span><span class="z-sp"></span>'
+        +'<button type="button" class="z-btn sm pri" data-pa="usar" data-k="'+kq+'">Usar este precio</button><button type="button" class="z-btn sm q" data-pa="standby" data-k="'+kq+'">Poner en standby</button><button type="button" class="z-btn sm q" data-pa="calcX">Cerrar</button></div></div></td></tr>'; }
+    if(PR28.fac===k){ const v=fac?fac.valor:precioVenta(e);
+      h+='<tr class="pr28-ff"><td colspan="6"><div class="z-reg"><label>Factura n.º<input class="z-in" data-pf="num" value="'+esc4(fac?fac.num:'')+'" placeholder="número"></label>'
+        +'<label>Fecha<input class="z-in" type="date" data-pf="fecha" value="'+esc4(fac?fac.fecha:_p14Iso(TODAY))+'"></label>'
+        +'<label>Valor US$<input class="z-in n" data-pf="valor" value="'+fmtUSDs(v)+'" inputmode="decimal"></label>'
+        +'<div class="z-reg-b"><span class="z-mut3">Precio actual '+fmtUSDs(precioVenta(e))+'. Lo abonado se queda y el saldo se recalcula.</span><span class="z-sp"></span>'
+        +'<button type="button" class="z-btn sm pri" data-pa="facOk" data-k="'+kq+'">Guardar factura</button><button type="button" class="z-btn sm q" data-pa="facX">Cancelar</button></div></div></td></tr>'; }
+    if(r.hist&&r.hist.length&&PR28.hist===k) h+='<tr class="pr28-h"><td colspan="6">'+r.hist.slice().reverse().map(x=>_p14F(_p14D(x.f))+' · '+fmtUSDs(x.de)+' → '+fmtUSDs(x.a)+(x.por?' · '+esc4(x.por):'')).join('<br>')+'</td></tr>';
+    return h; };
+  const ord=a=>a.slice().sort((p,q)=>(''+(p.derrame||'')).localeCompare(''+(q.derrame||''),undefined,{numeric:true}));
+  const sec=(t,a,tot)=>a.length?'<tr class="sec"><td colspan="6">'+t+' · '+a.length+(tot?' · US$ '+fmtUSDs(S(a)):'')+'</td></tr>'+ord(a).map(fila).join(''):'';
+  const res=[['Facturado',S(g.facturado),g.facturado.length],['Provisional',S(g.provisional),g.provisional.length],['Sin precio',null,g.sin.length],['Standby',null,g.standby.length]].filter(x=>x[2]>0)
+    .map(x=>x[0]+' '+(x[1]!=null?fmtUSDs(x[1])+' ':'')+'('+x[2]+')').join(' · ');
+  return '<details class="pr28"'+(abierto?' open':'')+'><summary><b>Precios</b><span class="pr28-res">'+esc4(res)+(desp.length?' · <b class="pr28-w">'+desp.length+' despachado'+(desp.length===1?'':'s')+' sin factura</b>':'')+'</span></summary>'
+    +'<div class="z-wrap"><table class="z-t pr28-t"><thead><tr><th>Pedido</th><th>Proyecto</th><th>Estado</th><th class="n">Costo China</th><th class="n">Precio</th><th></th></tr></thead><tbody>'
+    +sec('Sin precio',g.sin,false)+sec('Despachados sin factura',desp,true)+sec('Provisionales',prov,true)+sec('Facturados',g.facturado,true)+sec('Standby',g.standby,false)+'</tbody></table></div>'
+    +'<div class="pr28-pie">Precio provisional = (costo China + flete + aduana) × (1 + margen) + Zentrack × (1 + su margen). Solo tú ves qué es provisional: el PDF y el Excel muestran el precio sin marca. Clic en un pedido para ver su historial.</div></details>'; }
+const _ecHTMLAntes28=_ecHTML;
+_ecHTML=function(c){ const h=_ecHTMLAntes28.apply(this,arguments); let p=''; try{ p=_prHTML(c); }catch(err){ console.warn('v2.8 precios',err); }
+  if(!p) return h; const k=h.indexOf('<div class="ec8-sec'); return k>=0?h.slice(0,k)+p+h.slice(k):h+p; };
+function _prListo(msg,f){ if(typeof _z27HechoFn==='function') _z27HechoFn(msg,()=>_prVolver(f)); else { guardar4(); refreshAll(); } }
+document.addEventListener('change',e=>{ const t=e.target; if(!t||!t.dataset||!t.dataset.pr) return; const el=_prEq(t.dataset.k); if(!el) return;
+  const campo=t.dataset.pr, raw=(''+t.value).trim(); let v=raw===''?0:(typeof _z27Num==='function'?_z27Num(raw):parseFloat(raw.replace(/,/g,'')));
+  if(!isFinite(v)) v=0; if(campo==='margen') v=v/100; const r=_prReg(el,true);
+  r.calc=Object.assign({},_prDef(),r.calc||{}); r.calc[campo]=v; PR28.calc=kOf(el); guardar4(); renderClientes(); });
+document.addEventListener('click',e=>{ const t=e.target.closest('[data-pa]'); if(!t||t.disabled) return; const a=t.dataset.pa;
+  if(a==='facX'){ PR28.fac=null; renderClientes(); return; }
+  if(a==='calcX'){ PR28.calc=null; renderClientes(); return; }
+  const el=_prEq(t.dataset.k); if(!el) return; const k=kOf(el);
+  if(a==='calc'){ PR28.calc=PR28.calc===k?null:k; PR28.fac=null; PR28.abierto=true; renderClientes(); const i=document.querySelector('.pr28 [data-pr="flete"]'); if(i) i.focus(); return; }
+  if(a==='usar'){ const f=_prFoto(el), r=_prReg(el,true); const ok=prCalcSet(el,Object.assign({},_prDef(),r.calc||{}),'Precio provisional calculado');
+    if(!ok){ z26Aviso('Este pedido no se puede calcular aquí'); return; } PR28.calc=null; return _prListo('Precio provisional de '+(el.derrame||'')+': '+fmtUSDs(precioVenta(el)),f); }
+  if(a==='facturar'||a==='corregir'){ PR28.calc=null; PR28.fac=k; PR28.abierto=true; renderClientes(); const i=document.querySelector('.pr28 [data-pf="num"]'); if(i) i.focus(); return; }
+  if(a==='facOk'){ const b=t.closest('.z-reg'), v=n=>{ const x=b.querySelector('[data-pf="'+n+'"]'); return x?x.value:''; }, val=typeof _z27Num==='function'?_z27Num(v('valor')):parseFloat(v('valor'));
+    if(!(val>0)){ z26Aviso('Escribe el valor de la factura'); return; } const f=_prFoto(el); prFacturar(el,{num:v('num'),fecha:v('fecha'),valor:val}); PR28.fac=null;
+    return _prListo('Factura registrada: '+(el.derrame||'')+' · '+fmtUSDs(val),f); }
+  if(a==='standby'||a==='activar'){ PR28.calc=null; const f=_prFoto(el); prStandby(el,a==='standby'); return _prListo((el.derrame||'')+(a==='standby'?' queda en standby: sale del estado de cuenta':' vuelve al estado de cuenta'),f); } });
+document.addEventListener('click',e=>{ const t=e.target.closest('.pr28-t tbody tr:not(.pr28-ff):not(.pr28-h):not(.sec) td:first-child'); if(!t) return; const b=t.querySelector('b'); if(!b) return;
+  const el=EQ.find(x=>(x.derrame||x.ordenId)===b.textContent&&_prReg(x)); if(!el) return; const k=kOf(el); PR28.hist=PR28.hist===k?null:k; PR28.abierto=true; renderClientes(); });
+
+/* ---- datos preparados: PRECIOS ---- */
+function _pr28Busca(x){ return EQ.find(e=>(e.derrame===x.ped||e.ordenId===x.ped)&&(!x.mfg||e.mfg===x.mfg))||null; }
+function _pr28Txt(x,dd){ if(x&&x.def) return 'Márgenes por defecto · '+Math.round((+x.def.margen||0)*1000)/10+' % sobre el costo · Zentrack '+Math.round((+x.def.mExtra||0)*1000)/10+' %'; const e=_pr28Busca(x); if(!e) return 'Precio · '+(x.ped||'?')+' no está en la herramienta: no se cambia';
+  const s=prEstado(e), n=(e.derrame||'')+' '+(e.proj||'');
+  if(x.standby) return 'Standby · '+n+(e.cliente&&e.cliente!=='Por asignar'?': sale del estado de cuenta de '+e.cliente:': queda detenido');
+  if(s==='facturado') return 'Precio · '+n+' ya está facturado: no se cambia';
+  const d=dd||_prDef(), c=prCalc(e,Object.assign({margen:d.margen,mExtra:d.mExtra},x)); return 'Precio provisional · '+n+': (costo '+fmtUSDs(c.china)+' + flete '+fmtUSDs(c.flete)+' + aduana '+fmtUSDs(c.aduana)+') × '+(1+c.margen).toFixed(2)
+    +(c.extra?' + Zentrack '+fmtUSDs(c.extra)+' × '+(1+c.mExtra).toFixed(2):'')+' = US$ '+fmtUSDs(c.precio)+' (antes '+(precioVenta(e)>0?fmtUSDs(precioVenta(e)):'sin precio')+')'; }
+function _pr28Aplicar(x){ if(x&&x.def){ PRECIO.__def={margen:+x.def.margen||0,mExtra:+x.def.mExtra||0}; return; } const e=_pr28Busca(x); if(!e) return; if(x.standby){ prStandby(e,true); return; }
+  if(prEstado(e)==='facturado') return; const d=_prDef(), c={flete:+x.flete||0,aduana:+x.aduana||0,extra:+x.extra||0,mExtra:x.mExtra!=null?+x.mExtra:d.mExtra,margen:x.margen!=null?+x.margen:d.margen};
+  prCalcSet(e,c,'Datos preparados'+(x.nota?' · '+x.nota:'')); }
+const _pkLeerAntes28=pkLeer;
+pkLeer=function(obj){ const r=_pkLeerAntes28.apply(this,arguments), d=(obj&&obj.datos)||{}; const dd=((d.PRECIOS||[]).find(x=>x&&x.def)||{}).def; const df=dd?{margen:+dd.margen||0,mExtra:+dd.mExtra||0}:null; r.res=(d.PRECIOS||[]).map(x=>_pr28Txt(x,df)).concat(r.res); return r; };
+const _pkAplicarAntes28=pkAplicar;
+pkAplicar=function(){ if(PKPREV&&PKPREV.obj){ (((PKPREV.obj.datos||{}).PRECIOS)||[]).forEach(x=>{ try{ _pr28Aplicar(x); }catch(err){ console.warn(err); } }); }
+  return _pkAplicarAntes28.apply(this,arguments); };
+document.addEventListener('toggle',e=>{ const t=e.target; if(t&&t.classList&&t.classList.contains('pr28')) PR28.abierto=t.open; },true);
+/* ===================================================================
+   v2.8.1 · Actualización preparada: lo que Esteban aprueba se aplica solo al abrir la herramienta desplegada.
+   - La carpeta de despliegue puede traer window.ZT_PENDIENTE = {id, titulo, resumen, pasos:[
+       {tipo:'json', nombre, obj}                                  (datos preparados: se aplican como "Agregar datos preparados")
+       {tipo:'excel', nombre, archivos:[{nombre, b64}]}            (detailed + ORDER REPORT: pasa por el asistente y se aprueba)
+     ]}. Esos datos NO van en el repo (son del negocio): los pone Claude solo en la copia de despliegue.
+   - Corre una sola vez, justo después de cargar el estado del servidor (nunca con el estado vacío ni si el
+     servidor no respondió). Queda anotado en CONFIG.cambios['pendiente:'+id]. Todos los pasos se pueden repetir
+     sin duplicar nada, así que si algo falla a mitad se reintenta la próxima vez que se abra.
+   =================================================================== */
+var ZTP={corre:false,ultimo:null};
+function _ztpB64(b){ const s=atob(b), u=new Uint8Array(s.length); for(let i=0;i<s.length;i++) u[i]=s.charCodeAt(i); return u; }
+function _ztpEsperar(fn,ms){ return new Promise((res,rej)=>{ const t0=Date.now(); (function mira(){ let v=false; try{ v=fn(); }catch(e){} if(v) return res(v); if(Date.now()-t0>ms) return rej(new Error('el asistente no terminó de leer los archivos')); setTimeout(mira,150); })(); }); }
+function _ztpLlave(P){ return 'pendiente:'+P.id; }
+function _ztpLista(){ const P=window.ZT_PENDIENTE; return (Array.isArray(P)?P:(P?[P]:[])).filter(p=>p&&p.id); }
+/* v2.9.2: un paso "abono" registra un cobro del cliente (no se repite si ya está con la misma fecha y monto) */
+function _ztpAbono(paso){ const c=_v3Cp('cobro:'+paso.cliente); if(!c) throw new Error('no encuentro al cliente '+paso.cliente);
+  const usd=_z27r2(paso.usd), dup=(ECA||[]).some(a=>!a.via&&a.cliente===paso.cliente&&a.fecha===paso.fecha&&Math.abs((+a.usd||0)-usd)<0.01);
+  if(!dup) z27Cobrar(c.id,{m:usd,f:paso.fecha,cop:paso.cop||null,trm:paso.trm||null,nota:paso.nota||''}); return !dup; }
+async function _ztpUno(P,hecho){
+  for(const paso of (P.pasos||[])){
+    if(paso.tipo==='json'){ PKPREV=Object.assign(pkLeer(paso.obj),{archivo:paso.nombre}); pkAplicar(); hecho.push(paso.nombre); }
+    else if(paso.tipo==='abono'){ _ztpAbono(paso); hecho.push(paso.nombre); }
+    else if(paso.tipo==='excel'){
+      const files=(paso.archivos||[]).map(a=>new File([_ztpB64(a.b64)],a.nombre,{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}));
+      WIZ.loaded=false; WIZ.work=null; WIZ.err=null; await v2CargarArchivos({files});
+      await _ztpEsperar(()=>WIZ&&(WIZ.err||(WIZ.loaded&&WIZ.work&&WIZ.work.length)),90000);
+      if(WIZ.err) throw new Error(WIZ.err);
+      wizGo(2); wizGo(3); wizGo(4); wizApprove(); await new Promise(r=>setTimeout(r,700)); hecho.push(paso.nombre); }
+  }
+  CONFIG.cambios[_ztpLlave(P)]={f:new Date().toISOString(),titulo:P.titulo||'',pasos:hecho.slice()}; }
+async function ztPendiente(){
+  if(ZTP.corre) return null; const L=_ztpLista(); if(!L.length) return null;
+  CONFIG.cambios=CONFIG.cambios||{}; const faltan=L.filter(P=>!CONFIG.cambios[_ztpLlave(P)]); if(!faltan.length||!EQ.length) return null;
+  ZTP.corre=true; const hecho=[], listos=[];
+  try{
+    if(typeof toast==='function') toast('Aplicando la actualización preparada…');
+    for(const P of faltan){ await _ztpUno(P,hecho); listos.push(P); }
+    ZTP.ultimo={ok:true,hecho}; guardar4(); try{ refreshAll(); }catch(e){ console.warn(e); }
+    z26Dialogo(listos.length===1?{t:listos[0].titulo||'Actualización aplicada',x:(listos[0].resumen||'')+' Ya quedó guardado.',ok:'Listo'}
+      :{t:'Actualizaciones aplicadas ('+listos.length+')',x:listos.map(P=>(P.titulo||'')+': '+(P.resumen||'')).join(' · ')+' Ya quedó guardado.',ok:'Listo'});
+  }catch(err){ console.warn('actualización preparada',err); ZTP.ultimo={ok:false,hecho,err:String(err&&err.message||err)};
+    guardar4(); z26Dialogo({t:'La actualización preparada no terminó',x:'Se aplicó: '+(hecho.join(', ')||'nada')+'. Falló: '+(err&&err.message||err)+'. Nada se duplica: se reintenta la próxima vez que abras la herramienta. Avísale a Claude.',ok:'Entendido'}); }
+  finally{ ZTP.corre=false; }
+  return hecho; }
+/* solo después de leer el estado del servidor (loadFromServer → applyState) */
+const _appAntesZtp=applyState;
+applyState=function(){ const r=_appAntesZtp.apply(this,arguments);
+  if(typeof google!=='undefined'&&google.script){ ZTP.estado=true; setTimeout(()=>{ if(window.ZT_PENDIENTE) ztPendiente(); },1500); }
+  return r; };
+/* el paquete puede terminar de llegar después del estado: entonces se aplica al llegar */
+function _ztpAlLlegar(){ if(ZTP.estado) setTimeout(()=>{ ztPendiente(); },800); }
+/* ===================================================================
+   v2.9 · Excel de planes: pagos, cobros y precios en un solo archivo que se baja y se sube
+   - Descargar (Planes › Descargar Excel): hojas Léeme, Pagos, Cobros y Precios. Cada fila trae un
+     "Código (no tocar)" para saber qué cuota o pedido es.
+   - Subir (Planes › Subir Excel o el botón "Cargar archivo"): muestra qué cambia y espera Aprobar.
+     · Un plan que cambió queda como acuerdo nuevo vigente ("Excel dd-mmm"); el anterior pasa al historial.
+       Las cuotas que ya existían conservan su identidad, así que lo pagado sigue con ellas.
+     · Un plan automático (Magnum, TIBA, contrato de un cliente) que se cambia pasa a ser un plan propio.
+     · Pagos: "Pagado US$" es el total pagado de la cuota; si sube, se registra la diferencia con su fecha y medio.
+       Bajarlo no quita pagos (se avisa).
+     · Cobros: "Nuevo cobro" registra un abono del cliente (no se repite si ya está).
+     · Precios: el cálculo (flete, aduana, Zentrack, margen) o el precio escrito; factura; standby.
+   - Todo con Deshacer (vuelve al estado de antes de aprobar). No hay llaves nuevas.
+   =================================================================== */
+var ZPX={prev:null};
+const _ZPX_MARCA='Zentrack · Planes, cobros y precios';
+const _zpxMed=s=>{ const t=(''+(s==null?'':s)).trim().toLowerCase(); if(!t) return ''; if(/fink/.test(t)) return 'finkargo'; if(/cruce/.test(t)) return 'cruce'; if(/banc/.test(t)) return 'banco'; return '?'; };
+function _zpxSerial(iso){ const d=iso instanceof Date?iso:_p14D(iso); if(!d) return ''; return (Date.UTC(d.getFullYear(),d.getMonth(),d.getDate())-Date.UTC(1899,11,30))/86400000; }
+function _zpxFecha(v){ if(v==null||v==='') return '';
+  if(typeof v==='number'){ if(v>20000&&v<80000){ const d=new Date(Math.round(v*86400000)+Date.UTC(1899,11,30)); return _p14Iso(new Date(d.getUTCFullYear(),d.getUTCMonth(),d.getUTCDate())); } return '?'; }
+  if(v instanceof Date&&!isNaN(v)) return _p14Iso(new Date(v.getFullYear(),v.getMonth(),v.getDate()));
+  const F=_z27Fecha(''+v); return F&&!isNaN(F.d)?_p14Iso(F.d):'?'; }
+function _zpxNum(v){ if(v==null||(''+v).trim()==='') return null; if(typeof v==='number') return v; const n=_z27Num(v); return isFinite(n)?n:NaN; }
+const _zpxR=v=>v==null||v===''?'':_z27r2(v);
+
+/* ---- armar el libro ---- */
+function zpxLibro(){
+  const wb=XLSX.utils.book_new(), C=_v3Cps(), Rg=_z27Reg(), R=_v3Real();
+  const lee=[[_ZPX_MARCA],['Descargado el '+_p14F(TODAY)+'-'+TODAY.getFullYear()+' · versión '+((document.getElementById('verTag')||{}).textContent||'')],[],
+    ['Cómo se usa'],
+    ['1. Cambia fechas y montos. Para agregar una cuota, agrega una fila con el nombre exacto del proveedor o cliente (lista abajo) y deja vacío el Código.'],
+    ['2. Para quitar una cuota, borra la fila. Un plan que cambie queda como acuerdo nuevo; el anterior queda en el historial.'],
+    ['3. Pagos: en "Pagado US$" va el total pagado de esa cuota, con la fecha y el medio (Banco, Finkargo o Cruce).'],
+    ['4. Cobros: en "Nuevo cobro" escribe lo que entró (fecha y US$). Se registra como abono del cliente.'],
+    ['5. Precios: flete, aduana, Zentrack y margen calculan el precio provisional; o escribe el precio. Al facturar, llena número, fecha y valor de la factura. Standby: escribe "sí".'],
+    ['6. No cambies la columna "Código (no tocar)".'],
+    ['7. Sube el archivo con "Cargar archivo" o "Subir Excel" en Planes. Verás qué cambia antes de aprobar.'],[],
+    ['Proveedores']].concat(C.filter(c=>c.dir==='p').map(c=>[c.n]),[[],['Clientes']],C.filter(c=>c.dir==='c').map(c=>[c.n]));
+  const pag=[['Proveedor','Acuerdo','Fecha','Monto US$','Estado','Fecha de pago','Pagado US$','Medio','Nota','Código (no tocar)']];
+  const cob=[['Cliente','Acuerdo','Fecha','Monto US$','Estado','Abonado US$','Nuevo cobro: fecha','Nuevo cobro: US$','Nota','Código (no tocar)']];
+  C.forEach(c=>{ const V=_z27Vista(c), va=V.edit?((_v3Vers(c).find(v=>v.id===c.act)||{t:c.act}).t):'Automático · '+(c.baseT||''), cod=(c.dir==='p'?'p|':'c|')+c.id+'|';
+    const nota=l=>(l.c&&!/^(china|magnum|nac)$/.test(l.c))?l.c:'';
+    if(!V.L.length){ (c.dir==='p'?pag:cob).push(c.dir==='p'?[c.n,V.edit?'Sin cuotas':va,'','','Sin acuerdo','','','','',cod]:[c.n,V.edit?'Sin cuotas':va,'','','Sin acuerdo','','','','',cod]); return; }
+    V.L.forEach(x=>{ const l=x.l;
+      if(c.dir==='p'){ const G=Rg[l.id]||[], u=G.slice().reverse().find(r=>r.f||r.medio)||null, pg=V.edit?(+R[l.id]||0):0;
+        pag.push([c.n,va,_zpxSerial(l.f),_z27r2(l.m),x.e.t,u&&u.f?_zpxSerial(u.f):'',pg>0.005?_z27r2(pg):'',u&&u.medio?_z27Med(u.medio):'',nota(l),cod+l.id]); }
+      else cob.push([c.n,va,_zpxSerial(l.f),_z27r2(l.m),x.e.t,x.e.pag>0.005?_z27r2(x.e.pag):'','','',nota(l),cod+l.id]); }); });
+  const pre=[['Cliente','Pedido','Proyecto','Equipo','Cant.','Estado','Costo China','Flete','Aduana','Zentrack','Margen %','Precio','Factura n.º','Fecha factura','Valor factura','Standby','Código (no tocar)']];
+  const est={sin:'Sin precio',provisional:'Provisional',facturado:'Facturado',standby:'Standby'};
+  EQ.filter(e=>cobroModo(e)!=='especial').slice().sort((a,b)=>(''+(a.cliente||'')).localeCompare(''+(b.cliente||''))||(''+(a.derrame||'')).localeCompare(''+(b.derrame||''),undefined,{numeric:true})).forEach(e=>{
+    const r=_prReg(e)||{}, cc=r.calc||{}, f=r.fac||{}, s=prEstado(e);
+    pre.push([e.cliente||'Por asignar',e.derrame||e.ordenId||'',e.proj||'',e.mfg==='Singsun'?'Tracker':'Shelter',+e.qty||1,est[s]+(s==='provisional'&&_prDespachado(e)?' · despachado':''),_z27r2(_pcCosto(e)),
+      _zpxR(cc.flete),_zpxR(cc.aduana),_zpxR(cc.extra),cc.margen!=null?Math.round(cc.margen*1000)/10:'',precioVenta(e)>0?_z27r2(precioVenta(e)):'',f.num||'',f.fecha?_zpxSerial(f.fecha):'',f.valor?_z27r2(f.valor):'',s==='standby'?'sí':'','x|'+kOf(e)]); });
+  const hoja=(rows,fechas,dinero,anchos)=>{ const ws=XLSX.utils.aoa_to_sheet(rows);
+    for(let i=1;i<rows.length;i++){ fechas.forEach(j=>{ const a=XLSX.utils.encode_cell({r:i,c:j}); if(ws[a]&&ws[a].t==='n') ws[a].z='dd-mmm-yyyy'; });
+      dinero.forEach(j=>{ const a=XLSX.utils.encode_cell({r:i,c:j}); if(ws[a]&&ws[a].t==='n') ws[a].z='#,##0.00'; }); }
+    ws['!cols']=anchos.map(w=>({wch:w})); ws['!autofilter']={ref:XLSX.utils.encode_range({s:{r:0,c:0},e:{r:Math.max(1,rows.length-1),c:rows[0].length-1}})}; return ws; };
+  const wl=XLSX.utils.aoa_to_sheet(lee); wl['!cols']=[{wch:120}];
+  XLSX.utils.book_append_sheet(wb,wl,'Léeme');
+  XLSX.utils.book_append_sheet(wb,hoja(pag,[2,5],[3,6],[26,30,13,14,22,13,14,10,26,34]),'Pagos');
+  XLSX.utils.book_append_sheet(wb,hoja(cob,[2,6],[3,5,7],[26,30,13,14,22,13,14,14,26,34]),'Cobros');
+  XLSX.utils.book_append_sheet(wb,hoja(pre,[13],[6,7,8,9,11,14],[20,12,34,9,6,22,13,11,11,11,10,13,13,13,13,9,30]),'Precios');
+  return wb; }
+function zpxDescargar(){ try{ XLSX.writeFile(zpxLibro(),'Zentrack_planes_'+_p14Iso(TODAY)+'.xlsx'); }catch(err){ console.warn(err); z26Aviso('No pude armar el Excel: '+(err&&err.message||err)); } }
+
+/* ---- leer y comparar ---- */
+function _zpxFilas(wb,nombre){ const ws=wb.Sheets[nombre]; if(!ws) return null; return XLSX.utils.sheet_to_json(ws,{header:1,raw:true,defval:''}); }
+function _zpxCol(H,n){ const t=n.toLowerCase(); return H.findIndex(h=>(''+h).trim().toLowerCase()===t); }
+function _zpxPlanes(rows,dir,X){ if(!rows||!rows.length) return; const H=rows[0], hoja=dir==='p'?'Pagos':'Cobros';
+  const iN=_zpxCol(H,dir==='p'?'Proveedor':'Cliente'), iF=_zpxCol(H,'Fecha'), iM=_zpxCol(H,'Monto US$'), iC=_zpxCol(H,'Código (no tocar)');
+  const iFP=_zpxCol(H,'Fecha de pago'), iPg=_zpxCol(H,'Pagado US$'), iMe=_zpxCol(H,'Medio'), iNF=_zpxCol(H,'Nuevo cobro: fecha'), iNU=_zpxCol(H,'Nuevo cobro: US$');
+  if(iF<0||iM<0||iC<0){ X.errores.push(hoja+': faltan columnas (Fecha, Monto US$ o Código). No se usa esta hoja.'); return; }
+  const C=_v3Cps().filter(c=>c.dir===dir), G={}; C.forEach(c=>{ G[c.id]={c,filas:[]}; });
+  rows.slice(1).forEach((r,k)=>{ const fila=k+2, cod=(''+(r[iC]||'')).trim(); let cpId=null, lid='';
+    if(cod){ const ps=cod.split('|'); cpId=ps[1]; lid=ps.slice(2).join('|'); }
+    else { const nom=(''+(iN>=0?r[iN]:'')).trim().toLowerCase(), c=C.find(x=>x.n.toLowerCase()===nom);
+      if(!c){ if(nom||r[iF]!==''||r[iM]!=='') X.errores.push(hoja+' fila '+fila+': "'+(iN>=0?r[iN]:'')+'" no es un '+(dir==='p'?'proveedor':'cliente')+' de la herramienta.'); return; } cpId=c.id; }
+    const g=G[cpId]; if(!g){ X.errores.push(hoja+' fila '+fila+': el código no corresponde a ningún '+(dir==='p'?'proveedor':'cliente')+'.'); return; }
+    const f=_zpxFecha(r[iF]), m=_zpxNum(r[iM]);
+    const x={fila,lid,f,m:m==null||isNaN(m)?m:_z27r2(m)};
+    if(dir==='p'&&iPg>=0){ const pg=_zpxNum(r[iPg]); if(pg!=null){ if(isNaN(pg)) X.errores.push(hoja+' fila '+fila+': "Pagado US$" no es un número.'); else x.pago={m:pg,f:_zpxFecha(iFP>=0?r[iFP]:''),medio:_zpxMed(iMe>=0?r[iMe]:'')}; } }
+    if(dir==='c'&&iNU>=0){ const u=_zpxNum(r[iNU]); if(u!=null){ if(isNaN(u)||u<=0) X.errores.push(hoja+' fila '+fila+': "Nuevo cobro: US$" no es un número.'); else X.cobros.push({c:g.c,usd:_z27r2(u),f:_zpxFecha(iNF>=0?r[iNF]:'')||_p14Iso(TODAY),fila}); } }
+    if(!f&&(m==null)) return;                                  /* fila vacía o "sin cuotas" */
+    if(f==='?'||!f||m==null||isNaN(m)||m<0){ X.errores.push(hoja+' fila '+fila+': falta la fecha o el monto, o no se entienden.'); return; }
+    g.filas.push(x); });
+  Object.values(G).forEach(({c,filas})=>{ const V=_z27Vista(c), cur=V.L.map(x=>({id:x.l.id,f:x.l.f,m:_z27r2(x.l.m),c:x.l.c})), ids=new Set(cur.map(o=>o.id)), usadas=new Set();
+    filas.forEach(x=>{ if(x.lid&&!ids.has(x.lid)){ x.viejo=true; x.lid=''; }
+      if(x.lid){ if(usadas.has(x.lid)) x.lid=''; else usadas.add(x.lid); } });
+    /* una fila sin código que ya existe con la misma fecha y monto es esa cuota (subir dos veces no duplica) */
+    filas.forEach(x=>{ if(x.lid) return; const o=cur.find(y=>!usadas.has(y.id)&&y.f===x.f&&Math.abs(y.m-x.m)<0.005); if(o){ x.lid=o.id; usadas.add(o.id); } });
+    filas.forEach(x=>{ if(x.viejo&&!x.lid) X.avisos.push((dir==='p'?'Pagos':'Cobros')+' fila '+x.fila+': esa cuota ya no está en el plan vigente de '+c.n+'; entra como cuota nueva.'); });
+    const mov=[], nue=[], bor=[]; filas.forEach(x=>{ if(!x.lid) nue.push(x); else { const o=cur.find(y=>y.id===x.lid); if(o.f!==x.f||Math.abs(o.m-x.m)>0.005) mov.push({o,x}); } });
+    cur.forEach(o=>{ if(!usadas.has(o.id)) bor.push(o); });
+    if(mov.length||nue.length||bor.length) X.planes.push({c,auto:!V.edit,filas,cur,mov,nue,bor});
+    if(dir==='p') filas.forEach(x=>{ if(!x.pago) return; if(!V.edit&&!(mov.length||nue.length||bor.length)){ X.avisos.push('Pagos fila '+x.fila+': '+c.n+' es automático; lo pagado se ve cuando cargues su estado de cuenta.'); return; }
+      const ya=x.lid?(+_v3Real()[x.lid]||0):0, d=_z27r2(x.pago.m-ya);
+      if(d<-0.5){ X.avisos.push('Pagos fila '+x.fila+': el pagado de '+c.n+' bajó de '+fmtUSDs(ya)+' a '+fmtUSDs(x.pago.m)+'. Desde el Excel no se quitan pagos: hazlo en la herramienta.'); return; }
+      if(d<=0.5) return; if(x.pago.f==='?'){ X.errores.push('Pagos fila '+x.fila+': no entiendo la fecha de pago.'); return; }
+      if(x.pago.medio==='?'){ X.errores.push('Pagos fila '+x.fila+': el medio debe ser Banco, Finkargo o Cruce.'); return; }
+      X.pagos.push({c,x,m:d,f:x.pago.f||_p14Iso(TODAY),medio:x.pago.medio||'banco',sinMedio:!x.pago.medio}); }); });
+}
+function _zpxPrecios(rows,X){ if(!rows||!rows.length) return; const H=rows[0], ix=n=>_zpxCol(H,n), iC=ix('Código (no tocar)'); if(iC<0){ X.errores.push('Precios: falta la columna Código.'); return; }
+  const i={fl:ix('Flete'),ad:ix('Aduana'),ex:ix('Zentrack'),mg:ix('Margen %'),pr:ix('Precio'),fn:ix('Factura n.º'),ff:ix('Fecha factura'),fv:ix('Valor factura'),sb:ix('Standby')};
+  const v=(r,j)=>j<0?'':r[j];
+  rows.slice(1).forEach((r,k)=>{ const fila=k+2, cod=(''+(r[iC]||'')).trim(); if(!cod) return; const e=_prEq(cod.replace(/^x\|/,'')); if(!e){ X.avisos.push('Precios fila '+fila+': ese pedido ya no está en la herramienta.'); return; }
+    const s=prEstado(e), r0=_prReg(e)||{}, c0=r0.calc||{}, d=_prDef(), n=j=>_zpxNum(v(r,j)), ch={e,fila};
+    const sb=/^s[ií]?$/i.test((''+v(r,i.sb)).trim()); if(sb!==(s==='standby')) ch.standby=sb;
+    const fv=n(i.fv), fnum=(''+v(r,i.fn)).trim(), ff=_zpxFecha(v(r,i.ff));
+    if(fv!=null&&!isNaN(fv)&&fv>0){ const f0=r0.fac||{}; if(!f0.valor||Math.abs(f0.valor-fv)>0.005||(f0.num||'')!==fnum||(ff&&ff!=='?'&&f0.fecha!==ff)) ch.fac={num:fnum,fecha:ff&&ff!=='?'?ff:_p14Iso(TODAY),valor:_z27r2(fv)}; }
+    const nums=[['flete',i.fl],['aduana',i.ad],['extra',i.ex]].map(([k2,j])=>[k2,n(j)]), mgx=n(i.mg);
+    if(nums.some(([,x])=>x!=null&&isNaN(x))||(mgx!=null&&isNaN(mgx))){ X.errores.push('Precios fila '+fila+': flete, aduana, Zentrack o margen no son números.'); return; }
+    const calc={}; nums.forEach(([k2,x])=>{ calc[k2]=x==null?0:x; }); calc.margen=mgx==null?(c0.margen!=null?c0.margen:d.margen):mgx/100;
+    const habia=r0.calc!=null, escrito=nums.some(([,x])=>x!=null)||mgx!=null;
+    const difCalc=escrito&&(!habia||['flete','aduana','extra'].some(k2=>Math.abs((+c0[k2]||0)-calc[k2])>0.005)||Math.abs((c0.margen!=null?c0.margen:d.margen)-calc.margen)>0.0005);
+    const prx=n(i.pr);
+    if(s!=='facturado'&&!ch.fac){ if(difCalc) ch.calc=Object.assign({mExtra:c0.mExtra!=null?c0.mExtra:d.mExtra},calc);
+      else if(prx!=null&&!isNaN(prx)&&Math.abs(prx-precioVenta(e))>0.005) ch.precio=_z27r2(prx); }
+    else if(s==='facturado'&&!ch.fac&&prx!=null&&!isNaN(prx)&&Math.abs(prx-precioVenta(e))>0.005) X.avisos.push('Precios fila '+fila+': '+(e.derrame||'')+' está facturado; su precio se cambia corrigiendo la factura.');
+    if(ch.standby!=null||ch.fac||ch.calc||ch.precio!=null) X.precios.push(ch); }); }
+function zpxComparar(wb){ const X={planes:[],pagos:[],cobros:[],precios:[],avisos:[],errores:[]};
+  const L=_zpxFilas(wb,'Léeme'); if(!L||!L[0]||(''+L[0][0]).indexOf(_ZPX_MARCA)!==0) throw new Error('Este Excel no es el de planes de Zentrack (descárgalo desde Planes).');
+  _zpxPlanes(_zpxFilas(wb,'Pagos'),'p',X); _zpxPlanes(_zpxFilas(wb,'Cobros'),'c',X); _zpxPrecios(_zpxFilas(wb,'Precios'),X);
+  X.cobros=X.cobros.filter(o=>{ const dup=(ECA||[]).some(a=>a.cliente===o.c.n&&a.fecha===o.f&&Math.abs((+a.usd||0)-o.usd)<0.01&&!a.via);
+    if(dup) X.avisos.push('Cobros fila '+o.fila+': ese cobro de '+o.c.n+' ('+fmtUSDs(o.usd)+' el '+_p14F(_p14D(o.f))+') ya está registrado; no se repite.'); return !dup; });
+  X.n=X.planes.length+X.pagos.length+X.cobros.length+X.precios.length; return X; }
+
+/* ---- aplicar ---- */
+function _zpxCrear(c,P){ const p=_v3PlanDe(c), vid=_v3SigId(p), china=c.dir==='p'&&!!_V3PROV[c.prov], reusa=!P.auto;
+  const L=P.filas.slice().sort((a,b)=>a.f<b.f?-1:(a.f>b.f?1:0));
+  const v={id:vid,nombre:'Excel '+_p14F(TODAY),fecha:_p14Iso(TODAY),origen:'Excel',estado:'activo',lineas:L.map(x=>{ const o=x.lid?P.cur.find(y=>y.id===x.lid):null, d=_p14D(x.f), id=(reusa&&x.lid)?x.lid:_v3Nid(); x.nid=id;
+    const dest=o&&o.c&&/^(china|magnum|nac)$/.test(o.c)?o.c:(china?'china':''); return {id,sem:d?_p14Iso(_p14Lun(d)):x.f,fecha:x.f,monto:_z27r2(x.m),dest}; })};
+  p.versiones=p.versiones||[]; p.versiones.push(v); _z27Activar(c,vid); return v; }
+function zpxAplicar(){ const X=ZPX.prev; if(!X||!X.n) return; const snap=serializeState(); let n=0;
+  X.planes.forEach(P=>{ const c=_v3Cp(P.c.id); if(!c) return; _zpxCrear(c,P); n++; });
+  X.pagos.forEach(o=>{ const c=_v3Cp(o.c.id), id=o.x.nid||o.x.lid; if(c&&id&&z27Pagar(c.id,id,{m:o.m,f:o.f,medio:o.medio,ref:'Excel'})) n++; });
+  X.cobros.forEach(o=>{ if(z27Cobrar(o.c.id,{m:o.usd,f:o.f,nota:'Cobro (Excel)'})) n++; });
+  X.precios.forEach(ch=>{ const e=_prEq(kOf(ch.e)); if(!e) return;
+    if(ch.standby!=null) prStandby(e,ch.standby);
+    if(ch.fac) prFacturar(e,ch.fac); else if(ch.calc) prCalcSet(e,ch.calc,'Excel'); else if(ch.precio!=null){ if(!(typeof gpDeEq==='function'&&gpDeEq(e))) _prPoner(e,ch.precio,'Excel'); }
+    n++; });
+  ZPX.prev=null; _zpxCerrar();
+  _z27HechoFn('Excel aplicado: '+n+' cambio'+(n===1?'':'s'),()=>{ applyState(JSON.parse(snap)); try{ refreshAll(); }catch(e){} }); }
+
+/* ---- la ventana "qué cambia" ---- */
+function _zpxCerrar(){ const d=document.getElementById('zpxDlg'); if(d) d.remove(); }
+function _zpxHTML(X){ const li=a=>'<ul>'+a.map(t=>'<li>'+t+'</li>').join('')+'</ul>', F=iso=>iso?_p14F(_p14D(iso)):'—';
+  let h='';
+  if(X.planes.length) h+='<h4>Planes ('+X.planes.length+')</h4>'+li(X.planes.map(P=>'<b>'+esc4(P.c.n)+'</b> · '+(P.auto?'pasa de automático a plan tuyo · ':'acuerdo nuevo · ')+[P.mov.length?P.mov.length+' cambiada'+(P.mov.length===1?'':'s'):'',P.nue.length?P.nue.length+' nueva'+(P.nue.length===1?'':'s'):'',P.bor.length?P.bor.length+' quitada'+(P.bor.length===1?'':'s'):''].filter(Boolean).join(', ')
+    +'<small>'+P.mov.map(({o,x})=>F(o.f)+' '+fmtUSDs(o.m)+' → '+F(x.f)+' '+fmtUSDs(x.m)).concat(P.nue.map(x=>'+ '+F(x.f)+' '+fmtUSDs(x.m)),P.bor.map(o=>'− '+F(o.f)+' '+fmtUSDs(o.m))).slice(0,8).map(esc4).join(' · ')+'</small>'));
+  if(X.pagos.length) h+='<h4>Pagos ('+X.pagos.length+')</h4>'+li(X.pagos.map(o=>'<b>'+esc4(o.c.n)+'</b> · cuota del '+F(o.x.f)+' · pagado '+fmtUSDs(o.m)+' el '+F(o.f)+' · '+esc4(_z27Med(o.medio))+(o.sinMedio?' <small>sin medio: queda Banco</small>':'')));
+  if(X.cobros.length) h+='<h4>Cobros ('+X.cobros.length+')</h4>'+li(X.cobros.map(o=>'<b>'+esc4(o.c.n)+'</b> · abono de '+fmtUSDs(o.usd)+' el '+F(o.f)));
+  if(X.precios.length) h+='<h4>Precios ('+X.precios.length+')</h4>'+li(X.precios.map(ch=>{ const e=ch.e, t=[];
+    if(ch.standby!=null) t.push(ch.standby?'standby':'sale de standby');
+    if(ch.fac) t.push('factura '+esc4(ch.fac.num||'s/n')+' · '+fmtUSDs(ch.fac.valor)+' (antes '+fmtUSDs(precioVenta(e))+')');
+    else if(ch.calc) t.push('precio provisional '+fmtUSDs(precioVenta(e))+' → '+fmtUSDs(prCalc(e,ch.calc).precio)+' (cálculo)');
+    else if(ch.precio!=null) t.push('precio provisional '+fmtUSDs(precioVenta(e))+' → '+fmtUSDs(ch.precio));
+    return '<b>'+esc4(e.derrame||'')+'</b> '+esc4(e.proj||'')+' · '+t.join(' · '); }));
+  if(X.avisos.length) h+='<h4 class="w">Avisos ('+X.avisos.length+')</h4>'+li(X.avisos.map(esc4));
+  if(X.errores.length) h+='<h4 class="e">No se usan ('+X.errores.length+')</h4>'+li(X.errores.map(esc4));
+  return h||'<p>El Excel no trae cambios frente a lo que hay en la herramienta.</p>'; }
+function zpxPrevia(wb){ let X; try{ X=zpxComparar(wb); }catch(err){ console.warn(err); z26Dialogo({t:'No pude usar ese Excel',x:String(err&&err.message||err),ok:'Entendido'}); return null; }
+  ZPX.prev=X; _zpxCerrar(); const s=document.createElement('div'); s.id='zpxDlg'; s.className='z-scrim';
+  s.innerHTML='<div class="z-dlg zpx" role="dialog" aria-modal="true" aria-labelledby="zpxT"><h3 id="zpxT">Excel de planes · qué cambia</h3><div class="zpx-b">'+_zpxHTML(X)+'</div>'
+    +'<div class="z-dlg-f"><button type="button" class="z-btn" data-zx="no">'+(X.n?'Cancelar':'Cerrar')+'</button>'+(X.n?'<button type="button" class="z-btn pri" data-zx="si">Aprobar '+X.n+' cambio'+(X.n===1?'':'s')+'</button>':'')+'</div></div>';
+  s.addEventListener('click',e=>{ const b=e.target.closest('[data-zx]'); if(b){ if(b.dataset.zx==='si') zpxAplicar(); else { ZPX.prev=null; _zpxCerrar(); } } });
+  document.body.appendChild(s); const f=s.querySelector('[data-zx="si"]')||s.querySelector('[data-zx="no"]'); if(f) f.focus(); return X; }
+async function _zpxLibroDe(f){ if(!/\.xlsx?$/i.test((f&&f.name)||'')) return null;
+  try{ const wb=XLSX.read(new Uint8Array(await f.arrayBuffer()),{type:'array'}), L=wb.Sheets['Léeme']; if(L&&L.A1&&(''+L.A1.v).indexOf(_ZPX_MARCA)===0) return wb; }catch(e){ console.warn(e); } return null; }
+async function zpxSubir(inp){ const f=inp&&inp.files&&inp.files[0]; try{ inp.value=''; }catch(e){} if(!f) return; const wb=await _zpxLibroDe(f);
+  if(!wb){ z26Dialogo({t:'Ese archivo no es el Excel de planes',x:'Descárgalo desde Planes › Descargar Excel, cámbialo y súbelo aquí.',ok:'Entendido'}); return; } zpxPrevia(wb); }
+/* "Cargar archivo" también lo reconoce */
+const _v2CargarAntes29=v2CargarArchivos;
+v2CargarArchivos=async function(inp){ const fs=[...((inp&&inp.files)||[])], otros=[]; let wb=null;
+  for(const f of fs){ const w=wb?null:await _zpxLibroDe(f); if(w) wb=w; else otros.push(f); }
+  if(wb){ try{ inp.value=''; }catch(e){} zpxPrevia(wb); }
+  if(otros.length||!wb) return _v2CargarAntes29.call(this,wb?{files:otros,value:''}:inp); return null; };
+/* botones en Planes */
+const _z26PlHTMLAntes29=_z26PlHTML;
+_z26PlHTML=function(){ const h=_z26PlHTMLAntes29.apply(this,arguments), a='<div class="z-ph"><h2>Planes</h2>', k=h.indexOf(a); if(k<0) return h;
+  const j=h.indexOf('</div>',k); return h.slice(0,j)+'<button type="button" class="z-btn" onclick="zpxDescargar()">Descargar Excel</button><label class="z-btn zpx-sub">Subir Excel<input type="file" accept=".xlsx" onchange="zpxSubir(this)" hidden></label>'+h.slice(j); };
+/* ===================================================================
+   v2.9.1 · Flujo de ingresos y egresos, sin saldo de bancos
+   Esteban (12-nov-2026): "a día de hoy no me sirve de nada colocar el saldo del banco porque es jueves y ya ha
+   salido plata. Necesito mapear mis ingresos y egresos de forma oportuna; el saldo lo sé yo".
+   - El cálculo no arranca con el saldo de bancos (X.s0 = 0; el registrado queda en X.s0Bancos, sin uso).
+   - Esta semana trae lo que YA entró (abonos registrados del lunes a hoy) y lo que YA salió (pagos registrados
+     con fecha del lunes a hoy), además de lo que falta. Así la semana muestra el flujo completo.
+   - "Saldo al cerrar" pasa a "Acumulado" (entra − sale desde esta semana). La tarjeta "Plata en bancos" del
+     Tablero pasa a "Esta semana"; la gráfica muestra el neto de cada semana; el sankey lee cada semana sola.
+   =================================================================== */
+function _z291Lineas(){ const m={}; try{ _v3Cps().forEach(c=>{ if(c.dir!=='p') return; _v3Vers(c).forEach(v=>{ if(v.id==='base') return; _v3Lin(c,v.id).forEach(l=>{ if(!m[l.id]) m[l.id]={prov:c.prov,n:c.n}; }); }); }); }catch(e){ console.warn(e); } return m; }
+function _z291Flujo(X){ const R=X.R, N=X.W&&X.W.length; if(!R||!N||!R.ext) return X;
+  X.s0Bancos=X.s0; X.s0=0; X.chPlan=X.chPlan||{};
+  const L0=X.W[0], hoy=TODAY, ya={entra:0,sale:0,itE:[],itS:[]}, cli=(X.v3&&X.v3.cli)||null;
+  (ECA||[]).forEach(a=>{ if(a.via) return; const d=_ecFecha(a.fecha), usd=+a.usd||0; if(!d||d<L0||d>hoy||!(usd>0.005)) return;
+    const k=esInterno(a.cliente)?'sole':'ext'; R[k].v[0]+=usd; R[k].it[0].push({txt:'Ya entró · '+a.cliente+' · '+_p14F(d)+(a.nota?' · '+a.nota:''),usd});
+    if(cli){ (cli[a.cliente]=cli[a.cliente]||new Array(N).fill(0))[0]+=usd; } ya.entra+=usd; ya.itE.push({n:a.cliente,usd,d}); });
+  const G=(PLANES&&PLANES.reg)||{}, M=Object.keys(G).length?_z291Lineas():{}, FI={eagle:'china',nexus:'china',comp:'china',magnum:'mag',tiba:'tiba',otros:'otros'};
+  Object.keys(G).forEach(id=>{ (G[id]||[]).forEach(r=>{ const d=_p14D(r.f), m=+r.m||0; if(!d||d<L0||d>hoy||!(m>0.005)) return;
+    const o=M[id]||{prov:'otros',n:'Pago'}, fila=FI[o.prov]||'otros'; if(!R[fila]) return;
+    R[fila].v[0]+=m; R[fila].it[0].push({txt:'Ya salió · '+o.n+' · '+_p14F(d)+' · '+_z27Med(r.medio),usd:m});
+    if(fila==='china'){ (X.chPlan[o.prov]=X.chPlan[o.prov]||new Array(N).fill(0))[0]+=m; } ya.sale+=m; ya.itS.push({n:o.n,usd:m,d}); }); });
+  X.ya=ya; let s=0; X.ini=[]; X.neto=[]; X.cierre=[];
+  for(let i=0;i<N;i++){ X.ini.push(s); const n=R.ext.v[i]+R.sole.v[i]-R.china.v[i]-R.mag.v[i]-R.tiba.v[i]-R.otros.v[i]-R.fij.v[i]-R.imp.v[i]; X.neto.push(n); s+=n; X.cierre.push(s); }
+  return X; }
+const _p14CalcAntes291=p14Calc;
+p14Calc=function(){ const X=_p14CalcAntes291.apply(this,arguments); try{ _z291Flujo(X); }catch(e){ console.warn('v2.9.1 flujo',e); } return X; };
+
+/* ---- Caja: sin "Saldo al empezar"; "Acumulado" en vez de "Saldo al cerrar" ---- */
+const _p14CajaAntes291=_p14Caja;
+_p14Caja=function(){ let h=_p14CajaAntes291.apply(this,arguments);
+  h=h.replace(/<tr class=""><td class="cp">Saldo al empezar<\/td>[\s\S]*?<\/tr>/,'');
+  h=h.replace('<td class="cp">Saldo al cerrar</td>','<td class="cp">Acumulado <small class="z-mut3">entra − sale desde esta semana</small></td>').replace(/ title="bajo el colchón"/g,'');
+  h=h.replace(/ · saldo inicial: bancos [^·<]*· colchón [^<]*<\/span>/,' · esta semana incluye lo que ya entró y salió · sin saldo de bancos</span>');
+  return h; };
+/* ---- Planes: la última fila es el acumulado ---- */
+const _z26PlHTMLAntes291=_z26PlHTML;
+_z26PlHTML=function(){ return _z26PlHTMLAntes291.apply(this,arguments).replace('Saldo al cerrar = Caja','Acumulado (entra − sale)'); };
+/* ---- Tablero: "Esta semana" en vez de "Plata en bancos" ---- */
+const _z26TiraAntes291=_z26Tira;
+_z26Tira=function(){ const h=_z26TiraAntes291.apply(this,arguments); let X=null; try{ X=p14Calc('pago'); }catch(e){}
+  if(!X) return h; const E=X.R.ext.v[0]+X.R.sole.v[0], S=X.R.china.v[0]+X.R.mag.v[0]+X.R.tiba.v[0]+X.R.otros.v[0]+X.R.fij.v[0]+X.R.imp.v[0], ya=X.ya||{entra:0,sale:0};
+  const card='<div><span class="z-cap">Esta semana · US$</span><a href="#" class="z-go" onclick="z26IrSemana(0);return false"><span class="v'+(E-S<-0.5?' crit':(E-S>0.5?' ok':''))+'">'+_z26m(E-S).replace('—','0')+'</span></a>'
+    +'<span class="s">entra '+_z26m(E)+' · sale '+_z26m(S)+'</span><span class="s">ya entró '+_z26m(ya.entra)+' · ya salió '+_z26m(ya.sale)+'</span></div>';
+  const a=h.indexOf('<div><span class="z-cap">Plata en bancos'); if(a<0) return h;
+  const b=h.indexOf('</div>',h.indexOf('Registrar saldos',a)); if(b<0) return h;
+  return h.slice(0,a)+card+h.slice(b+6); };
+/* ---- Tablero: la gráfica muestra el neto de cada semana ---- */
+_z26GrafHTML=function(X){
+  const C=X.neto||[], N=C.length, W=1180, H=250, L=60, Rr=12, T=24, B=44, ph=H-T-B, pw=W-L-Rr;
+  const mx=Math.max(0,...C), mn=Math.min(0,...C), rg=Math.max(1,mx-mn), y=v=>T+(mx-v)/rg*ph;
+  const st=(()=>{ const r=rg/4, p=Math.pow(10,Math.floor(Math.log10(r))), m=r/p; return (m<=1?1:(m<=2?2:(m<=5?5:10)))*p; })();
+  let s='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Lo que entra menos lo que sale, semana a semana, en dólares">';
+  for(let t=Math.ceil(mn/st)*st;t<=mx+0.5;t+=st){ const yy=y(t).toFixed(1); s+='<line x1="'+L+'" x2="'+(W-Rr)+'" y1="'+yy+'" y2="'+yy+'" stroke="'+(Math.abs(t)<0.5?'#A2A7AD':'#E4E6E9')+'"/><text x="'+(L-8)+'" y="'+(+yy+4)+'" text-anchor="end" font-size="13" fill="#7D838A">'+_z26k(t)+'</text>'; }
+  let mi=0; C.forEach((v,i)=>{ if(v<C[mi]) mi=i; });
+  const slot=pw/N, bw=Math.min(40,slot*.62), y0=y(0);
+  C.forEach((v,i)=>{ const x=L+slot*i+(slot-bw)/2, yt=Math.min(y(v),y0), h=Math.max(2,Math.abs(y(v)-y0)), cl=v<0?'#B3261E':'#2E6E5A';
+    s+='<g class="bar" data-i="'+i+'" onclick="z26IrSemana('+i+')"><title>'+_p14F(X.W[i])+' · entra − sale '+_z26m(v)+'</title><rect x="'+x.toFixed(1)+'" y="'+yt.toFixed(1)+'" width="'+bw.toFixed(1)+'" height="'+h.toFixed(1)+'" rx="2" fill="'+cl+'" opacity="'+(i===mi?1:.72)+'"/>'
+      +'<text x="'+(x+bw/2).toFixed(1)+'" y="'+(v<0?yt+h+15:yt-6).toFixed(1)+'" text-anchor="middle" font-size="13" font-weight="'+(i===mi?700:500)+'" fill="'+(v<0?'#B3261E':'#17181A')+'">'+_z26k(v)+'</text>'
+      +'<text x="'+(x+bw/2).toFixed(1)+'" y="'+(H-12)+'" text-anchor="middle" font-size="13" font-weight="'+(i===0?700:400)+'" fill="'+(i===0?'#7A4A00':'#7D838A')+'">'+_p14F(X.W[i])+'</text></g>'; });
+  s+='</svg>';
+  const neg=C.filter(v=>v<-0.5).length, tot=C.reduce((a,v)=>a+v,0);
+  return '<section class="z-box z-graf" id="z26Graf"><div class="z-bh"><h3>Entra menos sale · '+N+' semanas</h3><span class="z-def">US$ · con tu plan de pagos · esta semana incluye lo que ya entró y salió · sin saldo de bancos</span></div>'
+    +'<div style="padding:8px 12px 0">'+s+'</div><div class="z-bf">Peor semana: <b style="color:'+(C[mi]<0?'var(--z-crit)':'var(--ink)')+'">'+_z26m(C[mi])+'</b> el '+_p14F(X.W[mi])+' · '+neg+' de '+N+' semanas sale más de lo que entra · en '+N+' semanas: '+_z26m(tot)+' · clic en una barra abre la Caja en esa semana</div></section>'; };
+/* ---- el Tablero ya no pide saldos de bancos ---- */
+z26Bancos=function(){ z26Aviso('El saldo de bancos ya no se usa: la Caja muestra lo que entra y sale cada semana.'); };
+/* ---- armar acuerdo: el efecto se mide en el acumulado ---- */
+const _z27GenPrevHTMLAntes291=_z27GenPrevHTML;
+_z27GenPrevHTML=function(){ return _z27GenPrevHTMLAntes291.apply(this,arguments).replace('Saldo más bajo','Acumulado más bajo').replace('Semana del saldo más bajo','Semana del más bajo'); };
+/* ---- arriba ya no se muestra la fecha de los bancos ---- */
+const _z26FuentesAntes291=_z26Fuentes;
+_z26Fuentes=function(){ return _z26FuentesAntes291.apply(this,arguments).replace(/<span title="Bancos[^"]*"><span class="z-tag[^"]*">[^<]*<\/span><\/span>/,'').replace(/<span class="z-tag[^"]*">Bancos · sin cargar<\/span>/,''); };
+/* ===================================================================
+   v2.9.3 · Plan de Enexa (solo trackers) y lo que necesita
+   - Un acuerdo puede decir desde qué fecha cuenta los abonos (versión.desde): los abonos de antes ya están
+     descontados en los saldos con que se armó el plan y no deben pagar sus cuotas.
+   - Datos preparados PLANES_V: se copia "desde" a la versión.
+   - Actualización preparada, paso "abono": puede ir a un pedido (ped) y no se repite si ya hay un abono
+     parecido en un rango de fechas (dup: {desde, hasta, usd, cop}).
+   - Standby también para líneas sueltas del estado de cuenta (ECX: el inversor de Enexa). Datos preparados
+     PRECIOS acepta {ecx, cliente, standby}. En Clientes › Precios se ven y se reactivan.
+   =================================================================== */
+function _z293Ver(c){ const p=c&&(c.p||_v2Plan(c.id)); return p&&(p.versiones||[]).find(v=>v.id===c.act)||null; }
+const _z27CobAntes293=_z27Cob;
+_z27Cob=function(c){ const v=_z293Ver(c); if(!v||!v.desde) return _z27CobAntes293.apply(this,arguments);
+  const vacio={map:{},ab:0,desde:null,abonos:[],sobra:0}; if(!c||c.dir!=='c'||c.act==='base') return vacio;
+  const L=_v3Lin(c,c.act).filter(l=>!l.cump&&!l.sint&&l.m>0.005&&l.f).sort(_v3PorF); if(!L.length) return vacio;
+  let desde=_p14Lun(_p14D(L[0].f)); const d2=_p14D(v.desde); if(d2&&d2>desde) desde=d2;
+  const abonos=(ECA||[]).filter(a=>a.cliente===c.n&&!a.via).filter(a=>{ const d=_ecFecha(a.fecha); return d&&d>=desde; });
+  let ab=abonos.reduce((s,a)=>s+(+a.usd||0),0); const tot=ab, map={};
+  L.forEach(l=>{ const t=Math.min(l.m,ab); map[l.id]=t; ab-=t; });
+  return {map,ab:tot,desde,abonos,sobra:ab}; };
+const _pk24PlanAplicarAntes293=_pk24PlanAplicar;
+_pk24PlanAplicar=function(x){ const r=_pk24PlanAplicarAntes293.apply(this,arguments);
+  try{ if(x&&x.desde&&x.ref){ const c=_v3Cp(x.cp), p=c&&_v2Plan(c.id), v=p&&(p.versiones||[]).find(y=>y.ref===x.ref); if(v&&!v.desde) v.desde=x.desde; } }catch(e){ console.warn(e); }
+  return r; };
+/* paso "abono": a un pedido y sin repetir uno parecido */
+_ztpAbono=function(paso){ const c=_v3Cp('cobro:'+paso.cliente); if(!c) throw new Error('no encuentro al cliente '+paso.cliente);
+  const usd=_z27r2(paso.usd), A=(ECA||[]).filter(a=>!a.via&&a.cliente===paso.cliente);
+  if(A.some(a=>a.fecha===paso.fecha&&Math.abs((+a.usd||0)-usd)<0.01)) return false;
+  const D=paso.dup; if(D){ const R=A.filter(a=>a.fecha>=D.desde&&a.fecha<=D.hasta);
+    /* ya está si: un abono con el mismo monto en pesos (el total o esta parte), uno solo por casi el total en dólares (±2%), o esta misma parte */
+    if(R.some(a=>D.cop&&a.cop&&Math.abs(+a.cop-D.cop)<1)) return false;
+    if(R.some(a=>paso.cop&&a.cop&&Math.abs(+a.cop-paso.cop)<1)) return false;
+    if(D.usd&&R.some(a=>Math.abs((+a.usd||0)-D.usd)<=0.02*D.usd)) return false;
+    if(R.some(a=>(a.nota||'')===(paso.nota||'')&&Math.abs((+a.usd||0)-usd)<0.01)) return false; }
+  const e=paso.ped?EQ.find(x=>x.cliente===paso.cliente&&(x.derrame===paso.ped||x.ordenId===paso.ped)):null;
+  const a={id:'eca'+((typeof _gidNuevo==='function')?_gidNuevo().replace(/^sp/,''):Date.now().toString(36)),cliente:c.n,fecha:paso.fecha,usd,cop:paso.cop||null,trm:paso.trm||null,nota:paso.nota||''};
+  ecAbonoAplicar(c.n,a,e?kOf(e):null); ECA.push(a); return true; };
+/* standby para líneas sueltas (ECX) */
+function _z293Ecx(x){ const t=(''+(x.ecx||'')).trim().toLowerCase(); return (ECX||[]).find(r=>r.cliente===x.cliente&&!r.fink&&t&&[r.pedido,r.equipo,r.proyecto].some(s=>(''+(s||'')).toLowerCase().indexOf(t)>=0))||null; }
+const _ecFilasAntes293=ecFilas;
+ecFilas=function(c){ const r=_ecFilasAntes293.apply(this,arguments); r.filas=r.filas.filter(f=>!(f.tipo==='x'&&f.x&&f.x.standby)); return r; };
+const _pr28TxtAntes293=_pr28Txt;
+_pr28Txt=function(x,dd){ if(x&&x.ecx){ const r=_z293Ecx(x); if(!r) return 'Standby · "'+x.ecx+'" no está en el estado de cuenta de '+(x.cliente||'?')+': no se cambia';
+  return 'Standby · '+(r.pedido||r.equipo||x.ecx)+' ('+x.cliente+'): sale del estado de cuenta'; } return _pr28TxtAntes293.apply(this,arguments); };
+const _pr28AplicarAntes293=_pr28Aplicar;
+_pr28Aplicar=function(x){ if(x&&x.ecx){ const r=_z293Ecx(x); if(r){ if(x.standby===false) delete r.standby; else r.standby=true; } return; } return _pr28AplicarAntes293.apply(this,arguments); };
+/* en Clientes › Precios: las líneas sueltas en standby, con Reactivar */
+const _prHTMLAntes293=_prHTML;
+_prHTML=function(c){ let h=_prHTMLAntes293.apply(this,arguments); const X=(ECX||[]).filter(x=>x.cliente===c&&x.standby); if(!X.length) return h;
+  const filas='<tr class="sec"><td colspan="6">Standby · líneas sueltas · '+X.length+'</td></tr>'+X.map(x=>'<tr class="pr28-standby"><td><b>'+esc4(x.pedido||'Línea')+'</b><small>'+esc4(x.equipo||'')+'</small></td><td class="w">'+esc4(x.proyecto||'')+'</td><td>'+_z26tag('idle','Standby')+'</td><td class="n">—</td><td class="n"><b>'+fmtUSDs(+x.valor||0)+'</b></td>'
+    +'<td class="n"><span class="z-acc"><button type="button" class="z-btn sm" data-pax="'+esc4(x.id)+'">Reactivar</button></span></td></tr>').join('');
+  if(!h) return '<details class="pr28" open><summary><b>Precios</b></summary><div class="z-wrap"><table class="z-t pr28-t"><tbody>'+filas+'</tbody></table></div></details>';
+  const k=h.lastIndexOf('</tbody>'); return k<0?h:h.slice(0,k)+filas+h.slice(k); };
+document.addEventListener('click',e=>{ const t=e.target.closest('[data-pax]'); if(!t) return; const x=(ECX||[]).find(r=>r.id===t.dataset.pax); if(!x) return;
+  const antes=!!x.standby; delete x.standby; _z27HechoFn((x.pedido||'Línea')+' vuelve al estado de cuenta',()=>{ if(antes) x.standby=true; }); });
+</script>

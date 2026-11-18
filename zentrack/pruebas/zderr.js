@@ -12,7 +12,7 @@ let ok=0,mal=0;const T=(c,m)=>{if(c){ok++;console.log('  OK   '+m);}else{mal++;c
   await p.evaluate(()=>verifyOpen());
   await p.setInputFiles('#reportFile','DET.xlsx'); await p.waitForTimeout(1900);
   await p.evaluate(()=>{wizGo(4);wizApprove();}); await p.waitForTimeout(4200);
-  await p.evaluate(()=>navTo('sinosure')); await p.waitForTimeout(600);
+  await p.evaluate(()=>navTo('sinosure')); await p.waitForTimeout(600); await p.evaluate(()=>{SNDET=true;SNPC=true;pintarSino();}); await p.waitForTimeout(150);
 
   console.log('\n— es un derrotero, no un listado de mil renglones —');
   const g0=await p.evaluate(()=>({

@@ -48,7 +48,7 @@ Cuando diga **LISTO**, presiona cualquier tecla para cerrar.
 1. Reemplaza `master.html` en la carpeta por el nuevo que te mande.
 2. Doble clic en **desplegar.bat**.
 3. Abre la URL de siempre con **Ctrl+Shift+R** y carga el detailed. La primera
-   pantalla debe decir trackers **1,413,028** y shelters **1,465,652**.
+   pantalla debe cuadrar con la hoja de Andrés (cifras de referencia en `privado/CIFRAS.md`).
 
 `desplegar.bat` se niega a subir nada si no encuentra tu `Code.gs` en la carpeta
 `appsscript`, porque subir sin él lo borraría del lado de Google.

@@ -1047,8 +1047,11 @@ renderWizDiff=function(){
     return '<tr class="v-exc"><td class="wd-po"><b>'+x.clave.split('|')[1]+'</b><small>'+(p.mfg==='Singsun'?'tracker':'shelter')+'</small></td>'
       +'<td class="wd-pr">'+(p.proj||'<span style="color:var(--ink3)">(sin proyecto)</span>')+'</td>'
       +'<td class="wd-cs"><div class="wd-c"><span class="vtag exc">Desapareció</span>'
-      +'<span class="wd-d">estaba cargado con saldo <b>'+fmtUSDs(p.saldoReal!=null?p.saldoReal:(p.cupoSaldo||0))+'</b> y no viene en este archivo</span>'
-      +'<span class="wd-w">⚠ si apruebas, se va de la herramienta</span></div></td></tr>';
+      +'<span class="wd-d">estaba cargado con saldo <b>'+fmtUSDs(p.saldoReal!=null?p.saldoReal:(p.cupoSaldo||0))+'</b> y '
+      +(_idoCerrado(x.clave)?'en este archivo viene <b>pagado y cerrado</b>. ':'no viene en este archivo. ')
+      +(_idoQuitar(x.clave)?'<b style="color:var(--danger)">Se va de la herramienta, con su línea en el estado de cuenta.</b>'
+        :(_idoCerrado(x.clave)?'Se conserva con saldo a China en 0; su estado de cuenta con el cliente sigue igual.':'Se conserva como estaba: cliente, estado de cuenta y abonos.'))+'</span>'
+      +'<span class="wd-aj">'+_idoSel(x.clave)+'</span></div></td></tr>';
   };
 
   const chip=function(f,txt,n){

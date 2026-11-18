@@ -116,8 +116,8 @@ function equiposDesdeDetailed(det, sino){
     const otrosMonto=Math.round(b.otros.monto||0);
     const cupoSaldo=Math.round(b.fab.pendiente||0), otrosSaldo=Math.round(b.otros.pendiente||0);
     const vivo=(cupoSaldo+otrosSaldo)>0.5 || enSino[b.fila];
-    if(!mfg || (!cupoMonto && !otrosMonto)){ omitidos.push({poRaw:b.poRaw,fila:b.fila,motivo:'sin fabricante ni montos'}); return; }
-    if(!vivo){ omitidos.push({poRaw:b.poRaw,fila:b.fila,motivo:'sin saldo y fuera de la hoja Sinosure · pedido cerrado',monto:cupoMonto}); return; }
+    if(!mfg || (!cupoMonto && !otrosMonto)){ omitidos.push({poRaw:b.poRaw,fila:b.fila,key:b.key,mfg:mfg,motivo:'sin fabricante ni montos'}); return; }
+    if(!vivo){ omitidos.push({poRaw:b.poRaw,fila:b.fila,key:b.key,mfg:mfg,cerrado:true,motivo:'sin saldo y fuera de la hoja Sinosure · pedido cerrado',monto:cupoMonto}); return; }
     const base=b.key.split('#')[0], ent=b.key.split('#')[1]||'';
     const mc=base.match(/^CFM(\d+)(?:-(\d+))?/);
     const ordenId = mc? 'CFM'+mc[1] : base.replace(/-\d+$/,'');
@@ -481,6 +481,7 @@ function cruzarOrderReport(wb,nombre){
     const o=por[_poKey(w.derrame)]; if(!o) return;
     if(o.cliente && o.cliente!=='Por asignar' && !w._cliCustom){ if(w.cliente!==o.cliente) nCli++; w.cliente=o.cliente; }
     if(o.limitePago){ w.limitePago=o.limitePago; w.limiteFuente='ORDER REPORT · pagos prioritarios'; nLim++; }
+    if(o.saldoPrioridad!=null) w.saldoPrioridad=o.saldoPrioridad;
     if(!w.proj && o.proj && o.proj!=='-') w.proj=o.proj;
     const dM=Math.abs((+o.cupoMonto||0)-(+w.cupoMonto||0));
     if(dM>2) difs.push({derrame:w.derrame, or:+o.cupoMonto||0, det:+w.cupoMonto||0});
@@ -618,7 +619,7 @@ function renderWizReceive(){
   const sum=(mfg,f)=>WIZ.work.filter(w=>w.mfg===mfg).reduce((s,w)=>s+(+w[f]||0),0);
   const C=WIZ.concilia;
   const lineMfg=mfg=>{const O=sum(mfg,'cupoSaldo'),U=sum(mfg,'totalSaldo');
-    const cupo=C?WIZ.work.filter(w=>w.mfg===mfg).reduce((s,w)=>s+((C.sinoPorDerrame[kOf(w)]||0)),0):null;
+    const cupo=C?cupoWork(mfg):null;
     const decl=C&&C.sino?(mfg==='Singsun'?C.sino.totalSingsun:C.sino.totalEagle):null;
     return `<div class="rl-line"><span>${mfg==='Singsun'?'Trackers · Singsun':'Shelters · Eaglerise'}</span><span class="num">saldo al fabricante ${fmtUSDs(O)} · saldo total a China <b>${fmtUSDs(U)}</b>${cupo!=null?` · cupo Sinosure <b>${fmtUSDs(cupo)}</b>`:''}${decl!=null&&Math.abs(decl-(cupo||0))>2?` <span style="color:var(--dato-debo)">(la hoja suma ${fmtUSDs(decl)})</span>`:''}</span></div>`;};
   document.getElementById('reconBody').innerHTML=`

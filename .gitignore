@@ -21,3 +21,22 @@ zentrack/pruebas/*.png
 
 # datos del negocio: no van a un repo público
 zentrack/privado/
+zentrack/pruebas/*.pdf
+zentrack/pruebas/RESP*.json
+zentrack/pruebas/V113.html
+zentrack/pruebas/DATOS*.json
+
+# pruebas que comparan contra cifras de los archivos reales: viven solo en el PC de Esteban (OneDrive), no en el repo público
+zentrack/pruebas/z14.js
+zentrack/pruebas/z15.js
+zentrack/pruebas/z16.js
+zentrack/pruebas/z171.js
+zentrack/pruebas/z20.js
+zentrack/pruebas/z23.js
+zentrack/pruebas/z261.js
+zentrack/pruebas/z27.js
+zentrack/pruebas/z271.js
+zentrack/pruebas/z291.js
+zentrack/pruebas/zcobro.js
+zentrack/pruebas/zec.js
+zentrack/pruebas/zsino3.js

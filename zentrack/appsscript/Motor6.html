@@ -218,10 +218,17 @@ function aplicarOrderReport(p,nombre){
     /* lo que manda el ORDER REPORT */
     if(c.cliente&&c.cliente!=='Por asignar'&&!w._cliCustom){ if(w.cliente!==c.cliente) n.cli++; w.cliente=c.cliente; }
     if(!esParte&&c.proj&&c.proj!=='-'&&!w._projMio) w.proj=c.proj;
-    if(!vacia&&c.st&&!c.dudoso){ if(!esParte&&w.st!==c.st) difs.push({tipo:'estado',der:w.derrame,mfg:w.mfg,det:STAGE[w.st]||w.st,or:STAGE[c.st]||c.st}); w.st=c.st; }
+    /* un pedido que ya zarpó (el detailed trae la fecha de BL y ya pasó) no vuelve a producción
+       aunque el ORDER REPORT lo diga: PO#10 y 9-7 del 23-oct venían "Production" con BL de agosto
+       y septiembre, y perdían su fecha de vencimiento (v1.17.1) */
+    const hoyC=(WIZ.corte instanceof Date&&!isNaN(WIZ.corte))?WIZ.corte:TODAY;
+    const zarpo=isShipped(w)&&w.bl&&new Date(w.bl)<=hoyC&&c.st&&!isShipped({st:c.st});
+    if(!vacia&&c.st&&!c.dudoso&&zarpo){ if(!esParte) difs.push({tipo:'estado',der:w.derrame,mfg:w.mfg,det:STAGE[w.st]||w.st,or:(STAGE[c.st]||c.st)+' · se deja '+(STAGE[w.st]||w.st)+': zarpó el '+fmtD(new Date(w.bl))}); }
+    else if(!vacia&&c.st&&!c.dudoso){ if(!esParte&&w.st!==c.st) difs.push({tipo:'estado',der:w.derrame,mfg:w.mfg,det:STAGE[w.st]||w.st,or:STAGE[c.st]||c.st}); w.st=c.st; }
     if(!vacia) ['etd','eta','prodFin'].forEach(function(f){ if(c[f]) w[f]=c[f]; });
     if(c.bl) w.bl=c.bl; if(c.blNo) w.blNo=c.blNo; if(c.telex) w.telex=c.telex;
     if(c.limitePago){ w.limitePago=c.limitePago; w.limiteFuente='ORDER REPORT · pagos prioritarios'; n.lim++; }
+    if(c.saldoPrioridad!=null) w.saldoPrioridad=c.saldoPrioridad; /* v2.0: la cifra de Andrés, para la conciliación y para no ponerle al balance la fecha del anticipo */
     if(!vacia&&!esParte&&(''+(c.qtyRaw||'')).trim()&&(+c.qty||0)>0&&(+w.qty||1)!==(+c.qty)){ difs.push({tipo:'cantidad',der:w.derrame,mfg:w.mfg,det:+w.qty||1,or:+c.qty}); w.qty=+c.qty; }
     /* la plata la manda el detailed: aquí solo se compara */
     if(!esParte){
@@ -392,7 +399,11 @@ function _pcVisibles(){
 /* costo con China = lo que se le paga al fabricante + otros componentes (lo mismo que ves en Clientes).
    No se usa la columna "Total amount" del detailed: en pedidos que pasan por Nexus (PO12 Solaris)
    Andrés pone ahí el precio de venta, y en 12-1/12-2 repite el total de los dos pedidos. */
-const _pcCosto=e=>(+e.cupoMonto||+e.mfgAmt||0)+(+e.otrosMonto||0);
+const _pcCosto=e=>{
+  /* v1.7.2: si Esteban corrigió el costo a mano, manda el suyo */
+  const m=(typeof costoManual==='function')?costoManual(e):null;
+  return m!=null?m:(+e.cupoMonto||+e.mfgAmt||0)+(+e.otrosMonto||0);
+};
 function _pcCliOpts(sel){
   const cs=[...new Set(CLIENTES.concat(EQ.map(function(e){return e.cliente;})))].filter(function(c){return c&&c!=='Por asignar';}).sort();
   return '<option value="Por asignar"'+(sel==='Por asignar'||!sel?' selected':'')+'>Por asignar</option>'
@@ -468,7 +479,9 @@ function _pcSacarDeGrupos(e,soloSiOtroCliente){
 }
 function _pcAsignar(e,cli){
   e.cliente=cli; e._cliCustom=true;
-  if(cli&&cli!=='Por asignar') MIO.cli[kOf(e)]=cli; else delete MIO.cli[kOf(e)];
+  /* v1.7.3: "Por asignar" escogido a mano también es decisión tuya; si no se guarda, la
+     siguiente carga le vuelve a poner el cliente del order report (el 18 Catedral volvía a "Ext") */
+  if(cli) MIO.cli[kOf(e)]=cli; else delete MIO.cli[kOf(e)];
   _pcSacarDeGrupos(e,true);
 }
 function _pcRecalcOrdenes(){
@@ -617,5 +630,329 @@ renderConfig=function(){
   }
   return r;
 };
+
+/* ===================================================================
+   v1.7 · CÓMO SE COBRA CADA PEDIDO
+   En Precios cada pedido dice cómo se le cobra al cliente:
+   - Precio: como siempre.
+   - Sin facturar: con precio o sin él. Al cliente interno (Solenium) se le
+     transmite el COSTO con China con las mismas fechas (anticipo ya, balance
+     al BL); la utilidad queda "por materializar" hasta pasarlo a Precio. Al
+     externo no le cuenta nada hasta que tenga factura.
+   - Especial: con nota, no cuenta en el estado de cuenta del cliente. Con la
+     casilla "lo paga el cliente directo al fabricante" (PO12 Solaris) sale
+     también de lo que le debes a China, pero sigue ocupando cupo Sinosure
+     hasta que el detailed lo muestre pagado. Se ve aparte en el Tablero.
+   Sin decisión: interno sin precio = Sin facturar; todo lo demás = Precio.
+   Llave nueva del estado: COBRO = {kOf: {modo, nota, directo}}.
+   =================================================================== */
+var COBRO={};
+function cobroReg(e){
+  if(!e||!COBRO) return null;
+  const own=COBRO[kOf(e)]; if(own&&own.modo) return own;
+  if(e.splitDe){ const p=COBRO[_claveDe(e.mfg,e.splitDe)]; if(p&&p.modo) return p; }
+  return null;
+}
+function cobroModo(e){
+  const r=cobroReg(e); if(r) return r.modo;
+  return (esInterno(e.cliente)&&!(precioVenta(e)>0))?'sinfac':'precio';
+}
+function esDirecto(e){ const r=cobroReg(e); return !!(r&&r.modo==='especial'&&r.directo); }
+/* costo con el fabricante; si el costo total se corrigió a mano, el del fabricante es ese menos otros componentes */
+const _cbCosto=e=>{
+  const m=(typeof costoManual==='function')?costoManual(e):null;
+  return m!=null?Math.max(0,m-(+e.otrosMonto||0)):(+e.cupoMonto||+e.mfgAmt||0);
+};
+
+/* ---- interno "sin facturar": los mismos hitos, valorados al costo ----
+   Se calculan sobre una copia del pedido con precio = costo y un nombre que
+   ningún grupo de precio reconoce; después cada hito vuelve a apuntar al pedido. */
+const _hitosIntAntesCobro=hitosEqInterno;
+hitosEqInterno=function(e){
+  const m=cobroModo(e);
+  if(m==='especial') return [];
+  if(m!=='sinfac') return _hitosIntAntesCobro.apply(this,arguments);
+  const sombra=Object.assign({},e,{precioVenta:_cbCosto(e),derrame:'\u0000costo\u0000'+e.derrame});
+  return _hitosIntAntesCobro.call(this,sombra).map(function(h){
+    h.eq=e;
+    if(h.tipo!=='logistica'){ h.lbl+=' · a costo'; h.aCosto=true; }
+    return h;
+  });
+};
+const _meDebenAntesCobro=meDebenEq;
+meDebenEq=function(e){ return cobroModo(e)==='especial'?[]:_meDebenAntesCobro.apply(this,arguments); };
+const _eqCliAntesCobro=equiposCliente;
+equiposCliente=function(){ return _eqCliAntesCobro.apply(this,arguments).filter(function(e){return cobroModo(e)!=='especial';}); };
+
+/* ---- lo que el cliente paga directo al fabricante no es deuda tuya con China ---- */
+const _deboAntesCobro=deboChina;
+deboChina=function(e){
+  const d=_deboAntesCobro.apply(this,arguments);
+  return esDirecto(e)?{cupo:0,otros:0,total:0,receptor:d.receptor}:d;
+};
+const _pagosPendAntesCobro=pagosPend;
+pagosPend=function(){ return _pagosPendAntesCobro.apply(this,arguments).filter(function(p){return !esDirecto(p.eq);}); };
+const _vencFilasAntesCobro=vencFilas;
+vencFilas=function(){ return _vencFilasAntesCobro.apply(this,arguments).filter(function(r){return !esDirecto(r.e);}); };
+
+/* ---- guardar y recuperar ---- */
+const _serAntesCobro=serializeState;
+serializeState=function(){
+  const o=JSON.parse(_serAntesCobro.apply(this,arguments));
+  o.COBRO=COBRO; return JSON.stringify(o);
+};
+const _appAntesCobro=applyState;
+applyState=function(s){
+  _appAntesCobro.apply(this,arguments);
+  COBRO=(s&&s.COBRO&&typeof s.COBRO==='object')?s.COBRO:{};
+};
+
+/* ---- lo que se toca en Precios ---- */
+function _cbReg(k){ return COBRO[k]||(COBRO[k]={modo:null,nota:'',directo:false}); }
+function cobroSet(k,v){
+  if(['precio','sinfac','especial'].indexOf(v)<0) return;
+  _cbReg(k).modo=v; _pcListo();
+}
+function cobroNota(k,v){ const r=_cbReg(k); if(!r.modo) r.modo='especial'; r.nota=(''+v).trim(); _pcListo(); }
+function cobroDirecto(k,on){ const r=_cbReg(k); r.modo='especial'; r.directo=!!on; _pcListo(); }
+
+function _cbCelda(k,e){
+  const m=cobroModo(e), reg=cobroReg(e), interno=esInterno(e.cliente), pv=precioVenta(e);
+  const kk=(''+k).replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+  let h='<select class="pc-cli cb-sel cb-m-'+m+'" data-foco="cb-'+esc4(k)+'" onchange="cobroSet(\''+esc4(kk)+'\',this.value)">'
+    +[['precio','Precio'],['sinfac','Sin facturar'],['especial','Especial']]
+      .map(function(o){return '<option value="'+o[0]+'"'+(o[0]===m?' selected':'')+'>'+o[1]+'</option>';}).join('')
+    +'</select>';
+  if(m==='sinfac'){
+    h+=interno
+      ? '<small>cobra el costo ya ('+fmtUSDs(_cbCosto(e))+') · utilidad '
+        +(pv>0?fmtUSDs(pv-_pcCosto(e))+' por materializar':'cuando tenga precio')+'</small>'
+      : '<small>no cuenta hasta que lo factures</small>';
+  }else if(m==='especial'){
+    const r=reg||{};
+    h+='<input class="pc-in cb-nota" placeholder="¿qué pasa con este pedido?" value="'+esc4(r.nota||'')+'" data-foco="cbn-'+esc4(k)+'" onchange="cobroNota(\''+esc4(kk)+'\',this.value)">'
+      +'<label class="cb-dir"><input type="checkbox"'+(r.directo?' checked':'')+' onchange="cobroDirecto(\''+esc4(kk)+'\',this.checked)"> lo paga el cliente directo al fabricante</label>'
+      +'<small>no cuenta en el estado de cuenta del cliente'+(r.directo?' ni en lo que le debes a China · sigue en el cupo Sinosure':'')+'</small>';
+  }
+  if(!reg&&m!=='precio') h+='<small>automático: '+(interno?'cliente interno sin precio':'')+'</small>';
+  return h;
+}
+function _cbColumna(cont){
+  const t=cont.querySelector('table.vtable.pc'); if(!t) return;
+  const hr=t.querySelector('thead tr');
+  if(hr&&!hr.querySelector('.cb-th')){ const th=document.createElement('th'); th.className='cb-th'; th.textContent='Cómo se cobra'; hr.appendChild(th); }
+  t.querySelectorAll('tbody tr').forEach(function(tr){
+    if(tr.classList.contains('pc-r')){
+      const chk=tr.querySelector('input[type=checkbox]');
+      const mm=chk&&(chk.getAttribute('onchange')||'').match(/pcSel\('(.*)',this\.checked\)/);
+      const e=mm?_pcEq(mm[1]):null;
+      const td=document.createElement('td'); td.className='cb-cel';
+      if(e) td.innerHTML=_cbCelda(mm[1],e);
+      tr.appendChild(td);
+      /* v1.7.2: el costo China también se corrige aquí */
+      const tc=tr.children[5];
+      if(e&&tc&&typeof _ccCelda==='function') tc.innerHTML=_ccCelda(mm[1],e);
+    }else{
+      const td=tr.querySelector('td[colspan]'); if(td) td.colSpan=(+td.colSpan||1)+1;
+    }
+  });
+}
+const _pintarPreciosAntesCobro=pintarPrecios;
+pintarPrecios=function(){
+  const cont=document.getElementById('v-precios');
+  const a=document.activeElement, foco=a&&a.closest&&a.closest('#v-precios')?a.getAttribute('data-foco'):null;
+  const r=_pintarPreciosAntesCobro.apply(this,arguments);
+  if(cont){
+    try{ _cbColumna(cont); }catch(err){ console.warn(err); }
+    if(foco&&/^(cbn?|cc)-/.test(foco)){
+      const n=[...cont.querySelectorAll('[data-foco]')].find(function(x){return x.getAttribute('data-foco')===foco;});
+      if(n&&n.focus) n.focus();
+    }
+  }
+  return r;
+};
+
+/* ---- Tablero: lo que el cliente le paga directo al fabricante ---- */
+function directoFilas(){
+  return EQ.filter(esDirecto).map(function(e){
+    return {e:e, saldo:(+e.cupoSaldo||0)+(+e.otrosSaldo||0), cupo:consumoEq(e,e.mfg),
+      fecha:e.limitePago||e.vence||null, nota:(cobroReg(e)||{}).nota||''};
+  }).filter(function(r){return r.saldo>0.5||r.cupo>0.5;});
+}
+function renderDirecto(){
+  let box=document.getElementById('directoBox');
+  if(!box){
+    const v=document.getElementById('vencBox'); if(!v||!v.parentNode) return;
+    box=document.createElement('div'); box.id='directoBox'; v.parentNode.insertBefore(box,v.nextSibling);
+  }
+  const fs=directoFilas();
+  if(!fs.length){ box.innerHTML=''; return; }
+  const DIA=864e5, hoy=TODAY.getTime();
+  const totS=fs.reduce(function(a,r){return a+r.saldo;},0), totC=fs.reduce(function(a,r){return a+r.cupo;},0);
+  box.innerHTML='<div class="vz-head"><h3>Lo paga el cliente directo al fabricante</h3>'
+    +'<span class="vz-chip ok">'+fs.length+' pedido(s) · pendiente '+fmtUSDs(totS)+'</span><div class="vz-sp"></div></div>'
+    +'<table class="vz"><thead><tr><th>Pedido</th><th>Cliente</th><th class="vz-n">Pendiente con el fabricante</th><th>Vence</th><th class="vz-n">Cupo Sinosure que ocupa</th><th></th></tr></thead><tbody>'
+    +fs.map(function(r){
+      const e=r.e, d=r.fecha?Math.round((new Date(r.fecha).getTime()-hoy)/DIA):null;
+      return '<tr><td class="vz-po"><b>'+esc4(e.derrame||e.ordenId)+'</b><small>'+(e.mfg==='Singsun'?'tracker':'shelter')+' · '+esc4(e.mfg)+'</small></td>'
+        +'<td>'+esc4(e.cliente||'')+'<small>'+esc4(r.nota||nombreEq(e)||'')+'</small></td>'
+        +'<td class="vz-n">'+fmtUSDs(r.saldo)+'</td>'
+        +'<td class="vz-f">'+(r.fecha?fmtD(r.fecha)+'<small>'+(d<0?'vencido hace '+Math.abs(d)+' d':'en '+d+' d')+'</small>':'—')+'</td>'
+        +'<td class="vz-n">'+(r.cupo>0.5?fmtUSDs(r.cupo):'<span class="vz-gris">—</span>')+'</td>'
+        +'<td class="vz-a"><button class="vz-b" onclick="openPanel(\''+e.ordenId+'\')">ver</button></td></tr>';
+    }).join('')
+    +'</tbody></table>'
+    +'<div class="vz-pie">No suma en lo que le debes a China ni en lo que te deben tus clientes. Sí sigue ocupando '
+    +fmtUSDs(totC)+' de cupo Sinosure: se libera solo cuando el detailed de Andrés lo muestre pagado.</div>';
+}
+const _refAntesCobro=refreshAll;
+refreshAll=function(){ _refAntesCobro.apply(this,arguments); try{ renderDirecto(); }catch(err){ console.warn(err); } };
+
+/* ---- Clientes: la utilidad por materializar y los pedidos especiales ---- */
+function _cbBloqueCli(c){
+  const det=document.getElementById('clDetail'); if(!det||!c) return;
+  const eqs=EQ.filter(function(e){return e.cliente===c;});
+  let h='';
+  if(esInterno(c)){
+    const sf=eqs.filter(function(e){return cobroModo(e)==='sinfac';});
+    if(sf.length){
+      const ut=sf.reduce(function(a,e){const pv=precioVenta(e);return a+(pv>0?pv-_pcCosto(e):0);},0);
+      h+='<div class="ec-block cb-blk"><div class="ec-block-h"><span class="ec-block-t">Sin facturar · utilidad por materializar</span>'
+        +'<small>Estos pedidos se cobran hoy al costo con China, con las mismas fechas. La utilidad se suma cuando los pases a «Precio» en la pestaña Precios.</small></div>'
+        +'<table class="ec-tabla"><thead><tr><th class="l">Pedido</th><th class="r">Costo que ya cuenta</th><th class="r">Precio</th><th class="r">Utilidad por materializar</th></tr></thead><tbody>'
+        +sf.map(function(e){const pv=precioVenta(e);
+          return '<tr><td class="l"><b>'+esc4(e.derrame||'—')+'</b><small>'+esc4(nombreEq(e)||'')+'</small></td>'
+            +'<td class="r">US$ '+fmtUSDs(_cbCosto(e))+'</td>'
+            +'<td class="r">'+(pv>0?'US$ '+fmtUSDs(pv):'<span class="ec-need">sin precio</span>')+'</td>'
+            +'<td class="r">'+(pv>0?'US$ '+fmtUSDs(pv-_pcCosto(e)):'—')+'</td></tr>';}).join('')
+        +'<tr class="oc-tot"><td class="l"><b>Total</b></td><td></td><td></td><td class="r"><b>US$ '+fmtUSDs(ut)+'</b></td></tr>'
+        +'</tbody></table></div>';
+    }
+  }
+  const es=eqs.filter(function(e){return cobroModo(e)==='especial';});
+  if(es.length){
+    h+='<div class="ec-block cb-blk"><div class="ec-block-h"><span class="ec-block-t">Pedidos especiales · no cuentan en este estado de cuenta</span></div>'
+      +'<table class="ec-tabla"><thead><tr><th class="l">Pedido</th><th class="l">Qué pasa</th><th class="r">Pendiente con el fabricante</th><th class="c">Vence</th></tr></thead><tbody>'
+      +es.map(function(e){const r=cobroReg(e)||{}, f=e.limitePago||e.vence||null;
+        return '<tr><td class="l"><b>'+esc4(e.derrame||'—')+'</b><small>'+esc4(nombreEq(e)||'')+'</small></td>'
+          +'<td class="l">'+(esc4(r.nota)||'—')+(r.directo?'<small>lo paga '+esc4(c)+' directo a '+esc4(e.mfg)+'</small>':'')+'</td>'
+          +'<td class="r">'+(r.directo?'US$ '+fmtUSDs((+e.cupoSaldo||0)+(+e.otrosSaldo||0)):'—')+'</td>'
+          +'<td class="c">'+(r.directo&&f?fmtD(f):'—')+'</td></tr>';}).join('')
+      +'</tbody></table></div>';
+  }
+  if(h){ const d=document.createElement('div'); d.id='cbCli'; d.innerHTML=h; det.appendChild(d); }
+}
+const _selCliAntesCobro=selCliData;
+selCliData=function(c){
+  const r=_selCliAntesCobro.apply(this,arguments);
+  try{ _cbBloqueCli(c); }catch(err){ console.warn(err); }
+  return r;
+};
+
+/* ===================================================================
+   v1.7.1 · NO PERDER EL LUGAR AL EDITAR
+   Cada cambio repinta la pestaña y las listas con barra propia (Precios,
+   Sinosure…) volvían arriba. Ahora, antes de repintar se anota dónde
+   estaba cada barra y la página, y después se deja igual. En Clientes,
+   además, el cliente que tenías abierto sigue abierto.
+   Solo toca la pantalla: no cambia nada de lo guardado.
+   =================================================================== */
+let _scrProf=0;
+function _scrRuta(el){
+  const p=[]; let x=el;
+  while(x&&x.nodeType===1&&x!==document.body&&x!==document.documentElement){
+    if(x.id){ p.unshift(x.id); return p; }
+    const par=x.parentElement; if(!par) return null;
+    p.unshift(Array.prototype.indexOf.call(par.children,x)); x=par;
+  }
+  return null;
+}
+function _scrBuscar(r){
+  let x=document.getElementById(r[0]);
+  for(let i=1;i<r.length&&x;i++) x=x.children[r[i]];
+  return x;
+}
+function _scrFoto(){
+  const cajas=[];
+  document.querySelectorAll('body *').forEach(function(el){
+    if(el.scrollTop>0||el.scrollLeft>0){ const r=_scrRuta(el); if(r) cajas.push({r:r,t:el.scrollTop,l:el.scrollLeft}); }
+  });
+  return {x:window.scrollX, y:window.scrollY, cajas:cajas};
+}
+function _scrPoner(f){
+  f.cajas.forEach(function(c){ const el=_scrBuscar(c.r); if(el){ el.scrollTop=c.t; el.scrollLeft=c.l; } });
+  if(window.scrollX!==f.x||window.scrollY!==f.y) window.scrollTo(f.x,f.y);
+}
+function _conLugar(fn){
+  return function(){
+    if(_scrProf>0) return fn.apply(this,arguments);
+    let f=null; try{ f=_scrFoto(); }catch(err){}
+    _scrProf++;
+    try{ return fn.apply(this,arguments); }
+    finally{ _scrProf--; if(f) try{ _scrPoner(f); }catch(err){} }
+  };
+}
+/* en Clientes, el cliente abierto sigue abierto después de repintar */
+let _CLISEL=null;
+const _selCliAntesLugar=selCliData;
+selCliData=function(c){ _CLISEL=c; return _selCliAntesLugar.apply(this,arguments); };
+const _renderCliAntesLugar=renderClientes;
+renderClientes=function(){
+  const antes=_CLISEL;
+  const r=_renderCliAntesLugar.apply(this,arguments);
+  if(antes&&antes!==_CLISEL){
+    const el=[...document.querySelectorAll('#clList .cl-item')].find(function(x){
+      return (x.getAttribute('onclick')||'').indexOf("selCli('"+antes+"'")===0;});
+    if(el) selCli(antes,el);
+  }
+  return r;
+};
+['refreshAll','pintarPrecios','pintarSino','renderLedger','renderClientes','renderPagos','renderVenc','renderDirecto','renderConfig','renderHoy']
+  .forEach(function(n){ if(typeof window[n]==='function') window[n]=_conLugar(window[n]); });
+
+/* ===================================================================
+   v1.7.2 · COSTO CHINA CORREGIDO A MANO
+   Andrés a veces trae mal el costo de un pedido (12-1/12-2 La Elvira).
+   En Precios se escribe el costo correcto; el del archivo queda a la
+   vista en gris y, si se borra lo escrito, vuelve. Ninguna carga lo pisa.
+   Se usa para el margen, para repartir un precio total por costo y para
+   lo que se cobra "a costo" al cliente interno. NO toca la deuda con
+   China ni el cupo Sinosure: esos siguen saliendo del detailed.
+   Llave nueva del estado: COSTO = {kOf: {monto}}.
+   =================================================================== */
+var COSTO={};
+function costoManual(e){
+  if(!e||!COSTO) return null;
+  const r=COSTO[kOf(e)];
+  return (r&&r.monto!=null&&isFinite(+r.monto))?+r.monto:null;
+}
+const _ccArchivo=e=>(+e.cupoMonto||+e.mfgAmt||0)+(+e.otrosMonto||0);
+function costoSet(k,v){
+  const s=(''+(v==null?'':v)).trim();
+  if(s===''){ delete COSTO[k]; }
+  else{ const n=+s; if(!isFinite(n)||n<0){ toast('Ese costo no es un número'); pintarPrecios(); return; } COSTO[k]={monto:Math.round(n*100)/100}; }
+  _pcListo();
+}
+function _ccCelda(k,e){
+  const kk=(''+k).replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+  const m=costoManual(e), arch=_ccArchivo(e);
+  return '<input class="pc-in pc-num" type="number" step="0.01" min="0" value="'+(m!=null?m:Math.round(arch*100)/100)+'"'
+    +' data-foco="cc-'+esc4(k)+'" title="Costo con China. Si el del archivo está mal, escribe el correcto; vacío = el del archivo."'
+    +' onchange="costoSet(\''+esc4(kk)+'\',this.value)">'
+    +(m!=null?'<small class="cc-nota">tuyo · archivo '+fmtUSDs(arch)+' · <a href="#" onclick="event.preventDefault();costoSet(\''+esc4(kk)+'\',\'\')">volver</a></small>':'');
+}
+/* repartir un total "por costo" usa el costo corregido */
+const _gpPesosAntesCC=gpPesos;
+gpPesos=function(g){
+  const r=_gpPesosAntesCC.apply(this,arguments);
+  if(!g||(g.base&&g.base!=='costo')||!r.eqs.some(function(e){return costoManual(e)!=null;})) return r;
+  const p=r.eqs.map(_cbCosto), s=p.reduce(function(a,x){return a+x;},0);
+  if(s<=0) return r;
+  return {eqs:r.eqs, pesos:p.map(function(x){return x/s;}), aviso:r.aviso};
+};
+const _serAntesCC=serializeState;
+serializeState=function(){ const o=JSON.parse(_serAntesCC.apply(this,arguments)); o.COSTO=COSTO; return JSON.stringify(o); };
+const _appAntesCC=applyState;
+applyState=function(s){ _appAntesCC.apply(this,arguments); COSTO=(s&&s.COSTO&&typeof s.COSTO==='object')?s.COSTO:{}; };
 
 </script>

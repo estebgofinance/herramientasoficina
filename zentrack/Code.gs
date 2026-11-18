@@ -91,3 +91,16 @@ function saveState(payload) {
     lock.releaseLock();
   }
 }
+
+/**
+ * TRM oficial (Superfinanciera, datos.gov.co) para la herramienta. Desde el navegador de Apps Script no siempre se
+ * puede leer directo; el servidor sí. Devuelve el texto JSON tal cual, o '' si no se pudo. No calcula nada.
+ */
+function trmOficial() {
+  try {
+    var r = UrlFetchApp.fetch('https://www.datos.gov.co/resource/32sa-8pi3.json?$order=vigenciadesde%20DESC&$limit=10', {muteHttpExceptions: true});
+    return r.getResponseCode() === 200 ? r.getContentText() : '';
+  } catch (e) {
+    return '';
+  }
+}
